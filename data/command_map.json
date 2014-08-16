@@ -1,0 +1,19 @@
+{
+    "file_type": "command_map"
+  , "mappings": [
+        ["cancel", ""]
+      , ["accept", ""]
+      , ["north", "key_up"]
+      , ["south", "key_down"]
+      , ["east", "key_right"]
+      , ["west", "key_left"]
+      , ["zoom_in", "key_plus"]
+      , ["zoom_in", "key_kp_plus"]
+      , ["zoom_out", "key_minus"]
+      , ["zoom_out", "key_kb_minus"]
+      , ["scroll_n", "key_up", "ctrl"]
+      , ["scroll_s", "key_down", "ctrl"]
+      , ["scroll_e", "key_right", "ctrl"]
+      , ["scroll_w", "key_left", "ctrl"]
+    ]
+}

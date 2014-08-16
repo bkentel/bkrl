@@ -1,0 +1,23 @@
+{
+    "file_type": "texture_map"
+  , "mappings": [
+        ["invalid", 0]
+      , ["floor", 250]
+      , ["wall_none", 172]
+      , ["wall_n", 208]      
+      , ["wall_s", 210]
+      , ["wall_e", 198]
+      , ["wall_w", 181]      
+      , ["wall_nsw", 185]
+      , ["wall_ns", 186]
+      , ["wall_sw", 187]
+      , ["wall_nw", 188]
+      , ["wall_ne", 200]
+      , ["wall_se", 201]
+      , ["wall_new", 202]
+      , ["wall_sew", 203]
+      , ["wall_nse", 204]
+      , ["wall_ew", 205]
+      , ["wall_nsew", 206]
+      ]
+}
