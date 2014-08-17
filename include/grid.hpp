@@ -159,6 +159,34 @@ private:
     std::vector<attribute_texture_t> texture_;
 };
 
+//==============================================================================
+// room
+//==============================================================================
+class room : public grid_storage {
+public:
+    explicit room(bkrl::grid_region const bounds)
+      : grid_storage {bounds}
+      , location_    {{bounds.left, bounds.top}}
+    {
+    }
+
+    grid_region bounds() const {
+        auto const l = location_.x;
+        auto const t = location_.y;
+        auto const r = l + width();
+        auto const b = t + height();
+
+        return bkrl::grid_region {l, t, r, b};
+    }
+
+    room& translate(int dx, int dy) {
+        location_ = bkrl::translate(location_, dx, dy);
+        return *this;
+    }
+private:
+     grid_point location_;
+};
+
 constexpr int y_off9[9] = {-1, -1, -1
                           , 0,  0,  0
                           , 1,  1,  1};

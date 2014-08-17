@@ -188,7 +188,7 @@ public:
 
     SDL_Window* handle() { return window_.get(); }
 
-    using command_sink = std::function<void (command)>;
+    using command_sink = std::function<void (command_type)>;
     void on_command(command_sink sink) {
         command_sink_ = std::move(sink);
     }

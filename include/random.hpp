@@ -5,7 +5,10 @@
 namespace bkrl {
 namespace random {
 
-using generator = boost::mt19937;
+class generator : public boost::mt19937 {
+public:
+    using boost::mt19937::mersenne_twister_engine;
+};
 
 class uniform_int {
 public:

@@ -1,6 +1,10 @@
+//##############################################################################
+//! @author Brandon Kentel
+//!
+//! Texture types.
+//##############################################################################
 #pragma once
 
-#include "json11/json11.hpp"
 #include "enum_map.hpp"
 
 namespace bkrl {
@@ -9,7 +13,7 @@ using texture_id = unsigned;
 using texture_index = unsigned;
 
 //changes here must be reflected in the init function.
-enum class texture_type : unsigned {
+enum class texture_type : uint16_t {
     invalid
   , floor
   , wall_none
@@ -21,6 +25,7 @@ enum class texture_type : unsigned {
   , enum_size //must be last
 };
 
+//TODO neccessary?
 extern template struct enum_map<texture_type>;
 
 template <typename Enum, typename Value>

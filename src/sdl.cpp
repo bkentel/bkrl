@@ -127,9 +127,9 @@ void sdl_application::pump_events() {
         case SDL_MOUSEBUTTONUP : break;
         case SDL_MOUSEWHEEL :
             if (event_.wheel.y > 0) {
-                command_sink_(command::zoom_in);
+                command_sink_(command_type::zoom_in);
             } else if (event_.wheel.y < 0) {
-                command_sink_(command::zoom_out);
+                command_sink_(command_type::zoom_out);
             }
 
             break;
@@ -144,32 +144,32 @@ void sdl_application::handle_keyboard_event_(SDL_KeyboardEvent const& event) {
 
     switch (event.keysym.sym) {
     case SDLK_w :
-        if (event.keysym.mod == 0) { command_sink_(command::scroll_n); }
+        if (event.keysym.mod == 0) { command_sink_(command_type::scroll_n); }
         break;
     case SDLK_a :
-        if (event.keysym.mod == 0) { command_sink_(command::scroll_w); }
+        if (event.keysym.mod == 0) { command_sink_(command_type::scroll_w); }
         break;
     case SDLK_s :
-        if (event.keysym.mod == 0) { command_sink_(command::scroll_s); }
+        if (event.keysym.mod == 0) { command_sink_(command_type::scroll_s); }
         break;
     case SDLK_d :
-        if (event.keysym.mod == 0) { command_sink_(command::scroll_e); }
+        if (event.keysym.mod == 0) { command_sink_(command_type::scroll_e); }
         break;
     case SDLK_UP :
-        if (event.keysym.mod == 0) { command_sink_(command::north); }
+        if (event.keysym.mod == 0) { command_sink_(command_type::north); }
         break;
     case SDLK_DOWN :
-        if (event.keysym.mod == 0) { command_sink_(command::south); }
+        if (event.keysym.mod == 0) { command_sink_(command_type::south); }
         break;
     case SDLK_LEFT :
-        if (event.keysym.mod == 0) { command_sink_(command::west); }
+        if (event.keysym.mod == 0) { command_sink_(command_type::west); }
         break;
     case SDLK_RIGHT :
-        if (event.keysym.mod == 0) { command_sink_(command::east); }
+        if (event.keysym.mod == 0) { command_sink_(command_type::east); }
         break;
     case SDLK_KP_PLUS :
-    case SDLK_PLUS  : command_sink_(command::zoom_in); break;
+    case SDLK_PLUS  : command_sink_(command_type::zoom_in); break;
     case SDLK_KP_MINUS :
-    case SDLK_MINUS : command_sink_(command::zoom_out); break;
+    case SDLK_MINUS : command_sink_(command_type::zoom_out); break;
     }
 }
