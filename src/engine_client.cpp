@@ -12,73 +12,118 @@ namespace random = bkrl::random;
 
 namespace bkrl {
 
-void set_textures(grid_storage& grid, texture_map const& map) {
-    auto const w = grid.width();
-    auto const h = grid.height();
+template <bkrl::tile_type>
+texture_type get_texture(grid_storage& grid, grid_index const x, grid_index const y);
 
-    auto const floor_rule = [&](grid_index x, grid_index y) {
-        return texture_type::floor;
-    };
-
-    auto const wall_rule = [&](grid_index x, grid_index y) {
-        auto const n = check_grid_block5(grid, x, y, attribute::type, tile_type::wall);
-
-        switch (n) {
-        case (1<<2) : return texture_type::wall_none;
-
-        case (1<<0)|(1<<2) : return texture_type::wall_n;
-        case (1<<1)|(1<<2) : return texture_type::wall_w;
-        case (1<<2)|(1<<3) : return texture_type::wall_e;
-        case (1<<2)|(1<<4) : return texture_type::wall_s;
-
-        case (1<<0)|(1<<2)|(1<<4) : return texture_type::wall_ns;
-        case (1<<1)|(1<<2)|(1<<3) : return texture_type::wall_ew;
-        case (1<<2)|(1<<3)|(1<<4) : return texture_type::wall_se;
-        case (1<<1)|(1<<2)|(1<<4) : return texture_type::wall_sw;
-        case (1<<0)|(1<<2)|(1<<3) : return texture_type::wall_ne;
-        case (1<<0)|(1<<1)|(1<<2) : return texture_type::wall_nw;
-
-        case (1<<0)|(1<<2)|(1<<3)|(1<<4) : return texture_type::wall_nse;
-        case (1<<0)|(1<<1)|(1<<2)|(1<<4) : return texture_type::wall_nsw;
-        case (1<<0)|(1<<1)|(1<<2)|(1<<3) : return texture_type::wall_new;
-        case (1<<1)|(1<<2)|(1<<3)|(1<<4) : return texture_type::wall_sew;
-
-        case (1<<0)|(1<<1)|(1<<2)|(1<<3)|(1<<4) : return texture_type::wall_nsew;
-        }
-
-        return texture_type::wall_nsew;
-    };
-
-    auto const get_texture = [&](grid_index x, grid_index y) {
-        auto const type = grid.get(attribute::type, x, y);
-
-        switch (type) {
-        case tile_type::wall : return wall_rule(x, y);
-        case tile_type::floor : return floor_rule(x, y);
-        }
-
-        return texture_type::invalid;
-    };
-
-    for (grid_index y = 0; y < h; ++y) {
-        for (grid_index x = 0; x < w; ++x) {
-            auto const tex_type  = get_texture(x, y);
-            auto const tex_index = map[tex_type];
-            auto const tex = texture_info {tex_type, tex_index};
-            grid.set(attribute::texture, x, y, tex);
-        }
-    }
+template <>
+texture_type get_texture<tile_type::floor>(
+    grid_storage&    //grid
+  , grid_index const //x
+  , grid_index const //y
+) {
+    return texture_type::floor;
 }
 
-    class entity {
-    public:
-        entity()
-          : position {{0, 0}}
-        {
-        }
+template <>
+texture_type get_texture<tile_type::wall>(
+    grid_storage&    grid
+  , grid_index const x
+  , grid_index const y
+) {
+    auto const n = check_grid_block5(grid, x, y, attribute::tile_type, tile_type::wall);
 
-        bkrl::grid_point position;
+    switch (n) {
+    case (1<<2) : return texture_type::wall_none;
+
+    case (1<<0)|(1<<2) : return texture_type::wall_n;
+    case (1<<1)|(1<<2) : return texture_type::wall_w;
+    case (1<<2)|(1<<3) : return texture_type::wall_e;
+    case (1<<2)|(1<<4) : return texture_type::wall_s;
+
+    case (1<<0)|(1<<2)|(1<<4) : return texture_type::wall_ns;
+    case (1<<1)|(1<<2)|(1<<3) : return texture_type::wall_ew;
+    case (1<<2)|(1<<3)|(1<<4) : return texture_type::wall_se;
+    case (1<<1)|(1<<2)|(1<<4) : return texture_type::wall_sw;
+    case (1<<0)|(1<<2)|(1<<3) : return texture_type::wall_ne;
+    case (1<<0)|(1<<1)|(1<<2) : return texture_type::wall_nw;
+
+    case (1<<0)|(1<<2)|(1<<3)|(1<<4) : return texture_type::wall_nse;
+    case (1<<0)|(1<<1)|(1<<2)|(1<<4) : return texture_type::wall_nsw;
+    case (1<<0)|(1<<1)|(1<<2)|(1<<3) : return texture_type::wall_new;
+    case (1<<1)|(1<<2)|(1<<3)|(1<<4) : return texture_type::wall_sew;
+
+    case (1<<0)|(1<<1)|(1<<2)|(1<<3)|(1<<4) : return texture_type::wall_nsew;
+
+    default: BK_TODO_FAIL(); break;
+    }
+
+    return texture_type::wall_nsew;
+}
+
+texture_type get_texture(
+    grid_storage&      grid
+  , grid_index const   x
+  , grid_index const   y
+) {
+    auto const type = grid.get(attribute::tile_type, x, y);
+
+    switch (type) {
+    case tile_type::wall  : return get_texture<tile_type::wall>(grid, x, y);
+    case tile_type::floor : return get_texture<tile_type::floor>(grid, x, y);
+    }
+
+    return texture_type::invalid;
+}
+
+void set_texture_type(grid_storage& grid) {
+    for_each_xy(grid, [&](grid_index const x, grid_index const y) {
+        auto const tex = get_texture(grid, x, y);
+        grid.set(attribute::texture_type, x, y, tex);
+    });
+}
+
+void set_texture_id(grid_storage& grid, texture_map const& map) {
+    for_each_xy(grid, [&](grid_index const x, grid_index const y) {
+        auto const type = grid.get(attribute::texture_type, x, y);
+        auto const id   = map[type];
+        grid.set(attribute::texture_id, x, y, id);    
+    });
+}
+
+class entity {
+public:
+    entity()
+        : position {{0, 0}}
+    {
+    }
+
+    bkrl::grid_point position;
+};
+
+void merge_walls(grid_storage& grid, grid_region const bounds) {
+    static auto const can_merge = [](unsigned const n) {
+        constexpr auto s0 = (1<<4)|(1<<0)|(1<<1)|(1<<2);
+        constexpr auto s1 = (1<<4)|(1<<0)|(1<<3)|(1<<6);
+        constexpr auto s2 = (1<<4)|(1<<2)|(1<<5)|(1<<8);
+        constexpr auto s3 = (1<<4)|(1<<6)|(1<<7)|(1<<8);
+        constexpr auto s4 = (1<<0)|(1<<1)|(1<<2)|(1<<3)|(1<<4)|(1<<5)|(1<<6)|(1<<7);
+
+        return (n == s4)
+            || (((n & s0) == s0) && ((n & (1 << 7)) == 0))
+            || (((n & s1) == s1) && ((n & (1 << 5)) == 0))
+            || (((n & s2) == s2) && ((n & (1 << 3)) == 0))
+            || (((n & s3) == s3) && ((n & (1 << 1)) == 0));
     };
+
+    bkrl::for_each_edge(bounds, [&](grid_index const x, grid_index const y) {
+        auto const n = check_grid_block9(grid, x, y, attribute::tile_type, tile_type::wall);
+
+        if (can_merge(n)) {
+            grid.set(attribute::tile_type, x, y, bkrl::tile_type::floor);
+        }
+    });
+}
+
 } //namespace bkrl
 
 
@@ -120,31 +165,11 @@ public:
         }
 
         for (auto const& r : rooms) {
-            bkrl::for_each_edge(r.bounds(), [&](bkrl::grid_index x, bkrl::grid_index y) {
-                //auto const t = map_.get(bkrl::attribute::type, x, y);
-                //BK_ASSERT(t == bkrl::tile_type::wall);
-
-                auto const n = bkrl::check_grid_block9(map_, x, y, bkrl::attribute::type, bkrl::tile_type::wall);
-
-                constexpr auto s0 = (1<<4)|(1<<0)|(1<<1)|(1<<2);
-                constexpr auto s1 = (1<<4)|(1<<0)|(1<<3)|(1<<6);
-                constexpr auto s2 = (1<<4)|(1<<2)|(1<<5)|(1<<8);
-                constexpr auto s3 = (1<<4)|(1<<6)|(1<<7)|(1<<8);
-                constexpr auto s4 = (1<<0)|(1<<1)|(1<<2)|(1<<3)|(1<<4)|(1<<5)|(1<<6)|(1<<7);
-
-                if (
-                    (n == s4)
-                    || (((n & s0) == s0) && ((n & (1 << 7)) == 0))
-                    || (((n & s1) == s1) && ((n & (1 << 5)) == 0))
-                    || (((n & s2) == s2) && ((n & (1 << 3)) == 0))
-                    || (((n & s3) == s3) && ((n & (1 << 1)) == 0))
-                ) {
-                    map_.set(bkrl::attribute::type, x, y, bkrl::tile_type::floor);
-                }
-            });
+            merge_walls(map_, r.bounds());
         }
 
-        bkrl::set_textures(map_, texture_map_);
+        set_texture_type(map_);
+        set_texture_id(map_, texture_map_);
 
         while (app_) {
             app_.pump_events();
@@ -161,10 +186,10 @@ public:
         for (bkrl::grid_index y = 0; y < h; ++y) {
             for (bkrl::grid_index x = 0; x < w; ++x) {
 
-                auto const type    = map_.get(bkrl::attribute::type,    x, y);
-                auto const texture = map_.get(bkrl::attribute::texture, x, y);
+                auto const type    = map_.get(attribute::tile_type,  x, y);
+                auto const texture = map_.get(attribute::texture_id, x, y);
 
-                r.draw_tile(sheet_, texture.index, x, y);
+                r.draw_tile(sheet_, texture, x, y);
             }
         }
 

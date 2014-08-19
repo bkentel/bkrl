@@ -35,15 +35,15 @@ room simple_room::generate(random::generator& gen, grid_region const bounds) {
             auto const y = yi + top;
 
             if (xi == 0 || yi == 0 || xi == w - 1 || yi == h - 1) {
-                result.set(attribute::type, x, y, tile_type::wall);
+                result.set(attribute::tile_type, x, y, tile_type::wall);
             } else {
-                result.set(attribute::type, x, y, tile_type::floor);
+                result.set(attribute::tile_type, x, y, tile_type::floor);
             }
         }
     }
 
     //tmp
-    result.set(attribute::type, left + 2, top + 2, tile_type::wall);
+    result.set(attribute::tile_type, left + 2, top + 2, tile_type::wall);
 
     return result;
 }

@@ -10,7 +10,6 @@
 namespace bkrl {
 
 using texture_id = unsigned;
-using texture_index = unsigned;
 
 //changes here must be reflected in the init function.
 enum class texture_type : uint16_t {
@@ -28,6 +27,11 @@ enum class texture_type : uint16_t {
 //TODO neccessary?
 extern template struct enum_map<texture_type>;
 
+//==============================================================================
+// mapping_info
+//
+// helper class for mapping between an enum and a string, and string and enum.
+//==============================================================================
 template <typename Enum, typename Value>
 struct mapping_info {
     static_assert(std::is_enum<Enum>::value, "");
