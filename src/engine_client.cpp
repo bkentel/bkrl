@@ -116,10 +116,16 @@ void merge_walls(grid_storage& grid, grid_region const bounds) {
     };
 
     bkrl::for_each_edge(bounds, [&](grid_index const x, grid_index const y) {
-        auto const n = check_grid_block9(grid, x, y, attribute::tile_type, tile_type::wall);
+        auto const walls = check_grid_block9(grid, x, y, attribute::tile_type, tile_type::wall);
 
-        if (can_merge(n)) {
-            grid.set(attribute::tile_type, x, y, bkrl::tile_type::floor);
+        if (can_merge(walls)) {
+            auto const floors = check_grid_block9(grid, x, y, attribute::tile_type, tile_type::floor);
+
+            if (floors) {
+                grid.set(attribute::tile_type, x, y, bkrl::tile_type::floor);
+            } else {
+                grid.set(attribute::tile_type, x, y, bkrl::tile_type::invalid);
+            }
         }
     });
 }
@@ -140,22 +146,35 @@ public:
             on_command(cmd);
         });
 
+        auto const on_split = [](grid_region const r) {
+            return true;
+        };
+
+        grid_region const reserve {20, 20, 40, 40};
+
         bkrl::random::generator gen {100};
 
-        generate::bsp_layout bsp;
-        bsp.generate(gen);
+        generate::bsp_layout bsp {on_split};
+        bsp.generate(gen, reserve);
 
         generate::simple_room room_gen {};
+        generate::circle_room circle_gen {};
         
         std::vector<room> rooms;
         
         for (auto const& r : bsp.nodes_) {
-            if (!r.is_leaf()) continue;
-            if (bkrl::random::uniform_range(gen, 0, 100) < 50) continue;
+            if (r.child_index == 0) {
+                rooms.emplace_back(
+                    circle_gen.generate(gen, r.region)
+                );
+            } else {
+                if (!r.is_leaf()) continue;
+                if (bkrl::random::uniform_range(gen, 0, 100) < 50) continue;
 
-            rooms.emplace_back(
-                room_gen.generate(gen, r.region)
-            );
+                rooms.emplace_back(
+                    room_gen.generate(gen, r.region)
+                );
+            }
 
             auto& last_room = rooms.back();
             auto const x = r.region.left;
