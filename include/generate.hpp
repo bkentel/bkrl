@@ -13,21 +13,6 @@ namespace generate {
 
 //==============================================================================
 //==============================================================================
-using split_result = std::tuple<bool, grid_region, grid_region>;
-
-////TODO combine these somehow?
-//split_result split_y(
-//    random::range_generator const& gen
-//  , grid_region                    region
-//  , unsigned                       minimum = 0
-//);
-//
-//split_result split_x(
-//    random::range_generator const& gen
-//  , grid_region                    region
-//  , unsigned                       minimum = 0
-//);
-
 using region_pair = std::tuple<grid_region, grid_region>;
 
 inline region_pair split_y(grid_region const region, grid_index const split) {

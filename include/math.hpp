@@ -1,5 +1,7 @@
 #pragma once
 
+#include "assert.hpp"
+
 namespace bkrl {
 
 template <typename T>
@@ -51,6 +53,9 @@ inline bool operator!=(axis_aligned_rect<T> const a, axis_aligned_rect<T> const 
 }
 
 inline size_t linearize(size_t const w, size_t const h, size_t const x, size_t const y) {
+    BK_PRECONDITION(x < w);
+    BK_PRECONDITION(y < h);
+
     return y*w + x;
 }
 

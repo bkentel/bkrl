@@ -16,6 +16,15 @@ template <bkrl::tile_type>
 texture_type get_texture(grid_storage& grid, grid_index const x, grid_index const y);
 
 template <>
+texture_type get_texture<tile_type::door>(
+    grid_storage&    //grid
+  , grid_index const //x
+  , grid_index const //y
+) {
+    return texture_type::door_closed;
+}
+
+template <>
 texture_type get_texture<tile_type::floor>(
     grid_storage&    //grid
   , grid_index const //x
@@ -70,6 +79,7 @@ texture_type get_texture(
     switch (type) {
     case tile_type::wall  : return get_texture<tile_type::wall>(grid, x, y);
     case tile_type::floor : return get_texture<tile_type::floor>(grid, x, y);
+    case tile_type::door  : return get_texture<tile_type::door>(grid, x, y);
     }
 
     return texture_type::invalid;

@@ -1,0 +1,105 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{bea1c922-6b78-4993-b31f-179c9663b0b2}</UniqueIdentifier>
+      <Extensions>.cpp</Extensions>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{64abef08-2661-46ef-bbf1-b71241e5957f}</UniqueIdentifier>
+      <Extensions>.hpp</Extensions>
+    </Filter>
+    <Filter Include="test">
+      <UniqueIdentifier>{c88c20e6-a61b-4fb9-a305-04c7e286f93a}</UniqueIdentifier>
+      <Extensions>.t.cpp</Extensions>
+    </Filter>
+    <Filter Include="lib">
+      <UniqueIdentifier>{90cc854b-e898-4e21-a245-792861a72d34}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\engine_client.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\test\engine_client.t.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\json11\json11.cpp">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\texture_type.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\sdl.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\util.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\generate.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\test\algorithm.t.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="..\test\main.t.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\command_type.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\pch.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\engine_client.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\texture_type.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\enum_map.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\types.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\algorithm.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\util.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\sdl.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\math.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\grid.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\tile_type.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\exception.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\assert.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\command_type.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\random.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\generate.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

@@ -7,59 +7,53 @@
 ////////////////////////////////////////////////////////////////////////////////
 // ::bkrl::enum_map<::bkrl::texture_type>
 ////////////////////////////////////////////////////////////////////////////////
-template struct ::bkrl::enum_map<::bkrl::texture_type>;
-
-#define BK_ENUM_STRING_SHORT(ENUM, VALUE) \
-[]() -> ::bkrl::string_ref { \
-    static char const string[] {#VALUE}; \
-    return {string, ::bkrl::string_len(string)}; \
-}()
+template class ::bkrl::enum_map<::bkrl::texture_type>;
 
 namespace {
-    using map_t = ::bkrl::enum_map<::bkrl::texture_type>;
+    using map_t    = ::bkrl::enum_map<::bkrl::texture_type>;
+    using vector_t = std::vector<map_t::value_type>;
 
-    std::vector<map_t::value_type> init_string_to_value() {
-        std::vector<map_t::value_type> result;
+    vector_t init_string_to_value() {
+        using texture_type = bkrl::texture_type;
 
-        #define BK_ADD_STRING(ENUM, VALUE) result.emplace_back(BK_ENUM_STRING_SHORT(ENUM, VALUE), ENUM::VALUE)
+        vector_t result;
 
-        BK_ADD_STRING(bkrl::texture_type, invalid);
-        BK_ADD_STRING(bkrl::texture_type, floor);
-        BK_ADD_STRING(bkrl::texture_type, wall_none);
-        BK_ADD_STRING(bkrl::texture_type, wall_n);
-        BK_ADD_STRING(bkrl::texture_type, wall_s);
-        BK_ADD_STRING(bkrl::texture_type, wall_e);
-        BK_ADD_STRING(bkrl::texture_type, wall_w);
-        BK_ADD_STRING(bkrl::texture_type, wall_ns);
-        BK_ADD_STRING(bkrl::texture_type, wall_ew);
-        BK_ADD_STRING(bkrl::texture_type, wall_se);
-        BK_ADD_STRING(bkrl::texture_type, wall_sw);
-        BK_ADD_STRING(bkrl::texture_type, wall_ne);
-        BK_ADD_STRING(bkrl::texture_type, wall_nw);
-        BK_ADD_STRING(bkrl::texture_type, wall_nse);
-        BK_ADD_STRING(bkrl::texture_type, wall_nsw);
-        BK_ADD_STRING(bkrl::texture_type, wall_sew);
-        BK_ADD_STRING(bkrl::texture_type, wall_new);
-        BK_ADD_STRING(bkrl::texture_type, wall_nsew);
-
-        #undef BK_ADD_STRING
-    
+        BK_ENUMMAP_ADD_STRING(result, texture_type, invalid);
+        BK_ENUMMAP_ADD_STRING(result, texture_type, floor);
+        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_none);
+        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_n);
+        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_s);
+        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_e);
+        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_w);
+        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_ns);
+        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_ew);
+        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_se);
+        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_sw);
+        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_ne);
+        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_nw);
+        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_nse);
+        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_nsw);
+        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_sew);
+        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_new);
+        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_nsew);
+        BK_ENUMMAP_ADD_STRING(result, texture_type, door_closed);
+        BK_ENUMMAP_ADD_STRING(result, texture_type, door_opened);
+   
         bkrl::sort(result, map_t::value_type::less_hash);
 
         return result;
     }
 
-    std::vector<map_t::value_type> init_value_to_string(std::vector<map_t::value_type> string_to_value) {
+    //take a copy of string_to_value
+    vector_t init_value_to_string(vector_t string_to_value) {
         bkrl::sort(string_to_value, map_t::value_type::less_enum);
         return string_to_value;
     }
 }
 
-#undef BK_ENUM_STRING_SHORT
-
-std::vector<map_t::value_type> const map_t::string_to_value_ = init_string_to_value();
-std::vector<map_t::value_type> const map_t::value_to_string_ = init_value_to_string(map_t::string_to_value_);
-bool                           const map_t::checked_         = map_t::check();
+vector_t const map_t::string_to_value_ = init_string_to_value();
+vector_t const map_t::value_to_string_ = init_value_to_string(map_t::string_to_value_);
+bool     const map_t::checked_         = map_t::check();
 
 ////////////////////////////////////////////////////////////////////////////////
 // ::bkrl::texture_map

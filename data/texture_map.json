@@ -19,5 +19,7 @@
       , ["wall_nse", 204]
       , ["wall_ew", 205]
       , ["wall_nsew", 206]
+      , ["door_closed", 197]
+      , ["door_opened", 234]
       ]
 }

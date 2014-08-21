@@ -13,6 +13,8 @@ using std::uint8_t;
 using hash_t = ::uint32_t;
 using string_ref = ::boost::string_ref;
 
+using utf8string = std::string;
+
 enum class command_type : uint16_t;
 enum class tile_type    : uint16_t;
 enum class texture_type : uint16_t;

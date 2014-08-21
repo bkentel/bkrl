@@ -8,7 +8,9 @@
 
 namespace bkrl {
 //==============================================================================
-// enum_string
+//! enum_string
+//!
+//! Value class used to represent a mapping from enum <-> string.
 //==============================================================================
 template <typename Enum>
 struct enum_string {
@@ -37,54 +39,87 @@ struct enum_string {
         return value == rhs.value;
     }
 
-    string_ref string {};
-    hash_t     hash   {};
-    Enum       value  {};
+    string_ref string {}; //!< The stringified enum.
+    hash_t     hash   {}; //!< The string's hash.
+    Enum       value  {}; //!< The enum value.
 };
 
 //==============================================================================
-// enum_map
+//! enum_map
+//!
+//! statically creates a map between strings and enum values.
+//!
+//! @tparam T and enum type to be mapped.
 //==============================================================================
 template <typename T>
-struct enum_map {
+class enum_map {
+public:
     static_assert(std::is_enum<T>::value, "");
-
     using value_type = enum_string<T>;
 
+    //--------------------------------------------------------------------------
+    //! string -> mapping.
+    //--------------------------------------------------------------------------
     static value_type get(string_ref const string) {
         auto const hash = slash_hash32(string.data(), string.length());
         return get(hash);
     }
 
+    //--------------------------------------------------------------------------
+    //! string (hash) -> mapping.
+    //--------------------------------------------------------------------------
     static value_type get(hash_t const hash) {
         return lower_bound_or(string_to_value_, hash, [](value_type const& v, hash_t const h) {
             return v.hash < h;
         });
     }
     
+    //--------------------------------------------------------------------------
+    //! enum -> mapping.
+    //--------------------------------------------------------------------------
     static value_type get(T const value) {
         auto const i = static_cast<size_t>(value);
         return value_to_string_[i];
     }
 
+    //--------------------------------------------------------------------------
+    //! sanity checks
+    //--------------------------------------------------------------------------
     static bool check() {
+        //check for duplicates => hash collision
         auto const it = std::adjacent_find(
             std::cbegin(string_to_value_), std::cend(string_to_value_)
         );
 
         BK_ASSERT(it == std::cend(string_to_value_)); //hash collision
 
-        //sparse enum
+        //check for "sparse" enums
         for (size_t i = 0; i < value_to_string_.size(); ++i) {
+            //TODO
             BK_ASSERT(i == static_cast<size_t>(value_to_string_[i].value));
         }
 
         return true; //TODO
     }
-
-    static const std::vector<value_type> string_to_value_;
-    static const std::vector<value_type> value_to_string_;
+private:
+    static const std::vector<value_type> string_to_value_; //sorted by hash
+    static const std::vector<value_type> value_to_string_; //sorted by enum value
     static const bool checked_; //TODO could remove?
 };
 
 } //namespace bkrl
+
+//==============================================================================
+//! convenience macro get a unique reference to a compile-time cstring.
+//==============================================================================
+#define BK_ENUMMAP_MAKE_STRING(ENUM, VALUE) \
+[]() -> ::bkrl::string_ref { \
+    static char const string[] {#VALUE}; \
+    return {string, ::bkrl::string_len(string)}; \
+}()
+
+//==============================================================================
+//! convenience macro to add a mapping,
+//==============================================================================
+#define BK_ENUMMAP_ADD_STRING(OUT, ENUM, VALUE) \
+    OUT.emplace_back(BK_ENUMMAP_MAKE_STRING(ENUM, VALUE), ENUM::VALUE)

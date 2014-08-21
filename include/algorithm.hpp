@@ -4,20 +4,58 @@
 
 namespace bkrl {
 
-template <typename Container, typename Type, typename Predicate>
-inline auto lower_bound(Container& container, const Type& value, Predicate predicate) {
-    return std::lower_bound(std::begin(container), std::end(container), value, predicate);
+//==============================================================================
+//! as std::lower_bound, but for the entire container
+//==============================================================================
+template <
+    typename Container
+  , typename Type
+  , typename Predicate
+>
+inline auto lower_bound(
+    Container&  container
+  , Type const& value
+  , Predicate&& predicate
+) {
+    return std::lower_bound(
+        std::begin(container)
+      , std::end(container)
+      , value
+      , predicate
+    );
 }
 
-template <typename Container, typename Predicate>
-inline void sort(Container& container, Predicate predicate) {
-    std::sort(std::begin(container), std::end(container), predicate);
+//==============================================================================
+//! as std::sort, but for the entire container
+//==============================================================================
+template <typename Container, typename Predicate = std::less<Container::value_type>>
+inline void sort(Container& container, Predicate&& predicate = {}) {
+    std::sort(
+        std::begin(container)
+      , std::end(container)
+      , predicate
+    );
 }
 
-template <typename Container, typename Type, typename Predicate, typename Fallback = typename Container::value_type>
-auto lower_bound_or(Container& container, const Type& value, Predicate predicate, const Fallback& fallback = Fallback {}) {
+//==============================================================================
+//! as std::lower_bound, but for the entire container, and with 
+//==============================================================================
+template <
+    typename Container
+  , typename Type
+  , typename Predicate
+  , typename Fallback = typename Container::value_type
+>
+inline decltype(auto) lower_bound_or(
+    Container&  container
+  , Type const& value
+  , Predicate&& predicate
+  , Fallback&&  fallback = Fallback {}
+) {
     auto const it = bkrl::lower_bound(container, value, predicate);
-    return it == std::end(container) ? fallback : *it;
+    return (it == std::end(container))
+      ? fallback
+      : *it;
 }
 
 } //namespace bkrl

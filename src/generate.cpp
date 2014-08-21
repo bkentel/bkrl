@@ -4,7 +4,6 @@
 using bkrl::generate::bsp_layout;
 using bkrl::generate::simple_room;
 namespace random = bkrl::random;
-using bkrl::generate::split_result;
 using bkrl::room;
 using bkrl::grid_region;
 
@@ -29,90 +28,34 @@ room simple_room::generate(random::generator& gen, grid_region const bounds) {
     auto const right  = left + w;
     auto const bottom = top + h;
 
+    auto const edge_count = [w, h](grid_index const x, grid_index const y) {
+        return ((x == 0) || (x == w - 1) ? 1 : 0u)
+             + ((y == 0) || (y == h - 1) ? 1 : 0u);
+    };
+
     for (grid_index yi = 0; yi < h; ++yi) {
         for (grid_index xi = 0; xi < w; ++xi) {
             auto const x = xi + left;
             auto const y = yi + top;
 
-            if (xi == 0 || yi == 0 || xi == w - 1 || yi == h - 1) {
-                result.set(attribute::tile_type, x, y, tile_type::wall);
-            } else {
+            switch (edge_count(xi, yi)) {
+            case 0 :
                 result.set(attribute::tile_type, x, y, tile_type::floor);
+                break;
+            case 1 :
+                if (xi + yi == w + h - 4) {
+                    result.set(attribute::tile_type, x, y, tile_type::door);
+                    break;
+                }
+            case 2 :
+                result.set(attribute::tile_type, x, y, tile_type::wall);
+                break;
             }
         }
     }
 
-    //tmp
-    //result.set(attribute::tile_type, left + 2, top + 2, tile_type::wall);
-
     return result;
 }
-
-////////////////////////////////////////////////////////////////////////////////
-//
-////////////////////////////////////////////////////////////////////////////////
-
-//split_result bkrl::generate::split_y(
-//    random::range_generator const& gen
-//  , grid_region const              region
-//  , unsigned const                 minimum 
-//) {
-//    auto const w = region.width();
-//
-//    if (w <= minimum * 2) {
-//        return std::make_tuple(false, region, region);
-//    }
-//
-//    auto const slack = w - minimum * 2;
-//    auto const split = gen(0, slack);
-//    
-//    auto const l0 = region.left;
-//    auto const t0 = region.top;
-//    auto const r0 = l0 + minimum + split;
-//    auto const b0 = region.bottom;
-//
-//    auto const l1 = r0;
-//    auto const t1 = region.top;
-//    auto const r1 = region.right;
-//    auto const b1 = region.bottom;
-//
-//    return std::make_tuple(
-//        true
-//      , bkrl::grid_region {l0, t0, r0, b0}
-//      , bkrl::grid_region {l1, t1, r1, b1}
-//    );
-//}
-//
-//split_result bkrl::generate::split_x(
-//    random::range_generator const& gen
-//  , grid_region const              region
-//  , unsigned const                 minimum
-//) {
-//    auto const h = region.height();
-//
-//    if (h <= minimum * 2) {
-//        return std::make_tuple(false, region, region);
-//    }
-//
-//    auto const slack = h - minimum * 2;
-//    auto const split = gen(0, slack);
-//
-//    auto const l0 = region.left;
-//    auto const t0 = region.top;
-//    auto const r0 = region.right;
-//    auto const b0 = t0 + minimum + split;
-//
-//    auto const l1 = region.left;
-//    auto const t1 = b0;
-//    auto const r1 = region.right;
-//    auto const b1 = region.bottom;
-//
-//    return std::make_tuple(
-//        true
-//        , bkrl::grid_region {l0, t0, r0, b0}
-//        , bkrl::grid_region {l1, t1, r1, b1}
-//    );
-//}
 
 
 ////////////////////////////////////////////////////////////////////////////////
