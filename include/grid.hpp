@@ -12,6 +12,15 @@ using grid_index  = unsigned;
 using grid_point  = bkrl::point2d<grid_index>;
 using grid_region = bkrl::axis_aligned_rect<grid_index>;
 
+using grid_data_value = uint32_t;
+
+union grid_data {
+    grid_data() : value {0} {}
+
+    void*           ptr;
+    grid_data_value value;
+};
+
 //==============================================================================
 // attributes
 //==============================================================================
@@ -23,6 +32,7 @@ namespace attribute {
     struct texture_type_t {};
     struct texture_id_t   {};
     struct room_id_t      {};
+    struct data_t         {};
 
     //--------------------------------------------------------------------------
     // attribute instances
@@ -31,6 +41,7 @@ namespace attribute {
     constexpr texture_type_t texture_type {};
     constexpr texture_id_t   texture_id   {};
     constexpr room_id_t      room_id      {};
+    constexpr data_t         data         {};
 
     //--------------------------------------------------------------------------
     // attribute traits
@@ -49,6 +60,10 @@ namespace attribute {
         using type = bkrl::texture_id;
     };
 
+    template <> struct traits<data_t> {
+        using type = bkrl::grid_data;
+    };
+
     //
     template <typename T>
     using value_t = typename traits<T>::type;
@@ -62,6 +77,7 @@ public:
     using tile_type_t    = attribute::value_t<attribute::tile_type_t>;
     using texture_type_t = attribute::value_t<attribute::texture_type_t>;
     using texture_id_t   = attribute::value_t<attribute::texture_id_t>;
+    using data_t         = attribute::value_t<attribute::data_t>;
 
     grid_storage(grid_size const w, grid_size const h)
       : width_  {w}
@@ -72,6 +88,7 @@ public:
         tile_type_.resize(    size, tile_type_t    {} );
         texture_type_.resize( size, texture_type_t {} );
         texture_id_.resize(   size, texture_id_t   {} );
+        data_.resize(         size, data_t         {} );
     }
 
     explicit grid_storage(grid_region const bounds)
@@ -170,6 +187,18 @@ private:
         auto const i = linearize(width_, height_, x, y);
         texture_id_[i] = value;
     }
+    //--------------------------------------------------------------------------
+    // data
+    //--------------------------------------------------------------------------
+    data_t get_(attribute::data_t, grid_index const x, grid_index const y) const {
+        auto const i = linearize(width_, height_, x, y);
+        return data_[i];
+    }
+
+    void set_(attribute::data_t, grid_index const x, grid_index const y, data_t const value) {
+        auto const i = linearize(width_, height_, x, y);
+        data_[i] = value;
+    }
 private:
     size_t width_;
     size_t height_;
@@ -177,6 +206,7 @@ private:
     std::vector<tile_type_t>    tile_type_;
     std::vector<texture_type_t> texture_type_;
     std::vector<texture_id_t>   texture_id_;
+    std::vector<data_t>         data_;
 };
 
 //TODO specialize for other Function type (ie. return bool to break out)
@@ -261,28 +291,83 @@ void for_each_edge(grid_region region, Function&& function) {
 };
 
 //TODO could refactor these to share common code?
+template <typename Attribute, typename Predicate>
+inline uint8_t check_grid_block5f(
+    grid_storage const& grid
+  , grid_index   const  x
+  , grid_index   const  y
+  , Attribute    const  attribute
+  , Predicate&&         predicate
+) {
+    auto const get = [&](size_t const i) -> uint8_t {
+        auto const xx = x + x_off5[i];
+        auto const yy = y + y_off5[i];
+
+        return (grid.is_valid(xx, yy) && predicate(grid.get(attribute, xx, yy)))
+            ? 1u : 0u;
+    };
+
+    //skip the "here" position
+    return                 (get(0) << 0)
+        |  (get(1) << 1) |               (get(3) << 2)
+        |                  (get(4) << 3);
+}
+
+
 template <typename Attribute, typename Value>
 inline uint8_t check_grid_block5(
+    grid_storage const& grid
+  , grid_index   const  x
+  , grid_index   const  y
+  , Attribute    const  attribute
+  , Value        const  value
+) {
+    return check_grid_block5f(grid, x, y, attribute, [&](tile_type const type) {
+        return type == value;
+    });
+}
+
+enum : unsigned {
+    g9nw, g9n, g9ne, g9w, g9e, g9sw, g9s, g9se
+};
+
+inline grid_point grid_check_to_point(unsigned const x, unsigned const y, uint8_t const n) {
+    std::bitset<8> const bits {n};
+    
+    for (size_t i = 0; i < 4; ++i) {
+        if (bits[i]) {
+            return {x + x_off9[i], y + y_off9[i]};
+        }
+    }
+
+    for (size_t i = 4; i < 8; ++i) {
+        if (bits[i]) {
+            return {x + x_off9[i+1], y + y_off9[i+1]};
+        }
+    }
+
+    return {0u, 0u};
+}
+
+template <typename Attribute, typename Predicate>
+inline uint8_t check_grid_block9f(
     grid_storage const& grid
   , grid_index const x
   , grid_index const y
   , Attribute const attribute
-  , Value const value
+  , Predicate&& predicate
 ) {
-    uint8_t result = 0;
+    auto const get = [&](size_t const i) -> uint8_t {
+        auto const xx = x + x_off9[i];
+        auto const yy = y + y_off9[i];
 
-    for (int i = 0; i < 5; ++i) {
-        auto const xx = x + x_off5[i];
-        auto const yy = y + y_off5[i];
+        return (grid.is_valid(xx, yy) && predicate(grid.get(attribute, xx, yy)))
+            ? 1u : 0u;
+    };
 
-        if (grid.is_valid(xx, yy) &&
-            grid.get(attribute, xx, yy) == value
-        ) {
-            result |= (1 << i);
-        }
-    }
-
-    return result;
+    return (get(0) << 0) | (get(1) << 1) | (get(2) << 2)
+         | (get(3) << 3) |                 (get(5) << 4)
+         | (get(6) << 5) | (get(7) << 6) | (get(8) << 7);
 }
 
 template <typename Attribute, typename Value>
@@ -293,20 +378,48 @@ inline uint8_t check_grid_block9(
   , Attribute const attribute
   , Value const value
 ) {
-    uint8_t result = 0;
+    return check_grid_block9f(grid, x, y, attribute, [&](tile_type const type) {
+        return type == value;
+    });
+}
 
-    for (int i = 0; i < 9; ++i) {
-        auto const xx = x + x_off9[i];
-        auto const yy = y + y_off9[i];
+///
 
-        if (grid.is_valid(xx, yy) &&
-            grid.get(attribute, xx, yy) == value
-        ) {
-            result |= (1 << i);
-        }
+struct door_data {
+    enum flag : uint32_t {
+        is_open_flag   = (1 << 0)
+      , is_locked_flag = (1 << 1)
+      , is_broken_flag = (1 << 2)
+    };
+
+    door_data(grid_data const data)
+      : value {data.value}
+    {
     }
 
-    return result;
-}
+    operator grid_data const&() const {
+        return reinterpret_cast<grid_data const&>(*this);
+    }
+
+    void clear(flag const f) {
+        value &= ~f;
+    }
+
+    void set(flag const f) {
+        value |= f;
+    }
+
+    bool get(flag const f) const {
+        return (value & f) != 0;
+    }
+
+    bool is_closed() const { return !get(is_open_flag); }
+    void close() { clear(is_open_flag); }
+
+    bool is_open() const { return get(is_open_flag); }
+    void open() { set(is_open_flag); }
+
+    grid_data_value value;
+};
 
 } //namespace bkrl

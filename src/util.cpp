@@ -7,13 +7,13 @@ bkrl::uint64_t bkrl::slash_hash64(char const* s, size_t const len) {
         uint64_t h;
         uint8_t  u[8];
     };
+
     h = len ? len : ::strlen(s);
 
-    for (size_t i = 0; (i < len) && *s; ++i) {
-        auto const index = i % 8;
+    for (size_t i = 0u; (i < len) && *s; ++i) {
         auto const shift = (h / (i + 1)) % 5;
 
-        u[i % 8] += *s + i + (*s >> shift);
+        u[i % 8] += static_cast<uint8_t>(*s + i + (*s >> shift));
         s++;
     }
     

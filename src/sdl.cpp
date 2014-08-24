@@ -112,17 +112,20 @@ void sdl_application::pump_events() {
         case SDL_QUIT :
             running_ = false;
             break;
-        case SDL_WINDOWEVENT : break;
+        case SDL_WINDOWEVENT :
+            handle_window_event_(event_.window);
+            break;
         case SDL_SYSWMEVENT  : break;
         case SDL_KEYDOWN :
             handle_keyboard_event_(event_.key);
             break;
         case SDL_KEYUP :
-            //handle_keyboard_event_(event_.key);
             break;
         case SDL_TEXTEDITING : break;
         case SDL_TEXTINPUT : break;
-        case SDL_MOUSEMOTION : break;
+        case SDL_MOUSEMOTION :
+            handle_mousemotion_event_(event_.motion);
+            break;
         case SDL_MOUSEBUTTONDOWN : break;
         case SDL_MOUSEBUTTONUP : break;
         case SDL_MOUSEWHEEL :
@@ -134,6 +137,66 @@ void sdl_application::pump_events() {
 
             break;
         }
+    }
+}
+
+void sdl_application::handle_mousemotion_event_(SDL_MouseMotionEvent const& event) {
+    if (event.state == SDL_BUTTON_RMASK) {
+        //TODO this is weird
+        if (event.xrel > 0) { command_sink_(command_type::scroll_w); }
+        if (event.xrel < 0) { command_sink_(command_type::scroll_e); }
+        if (event.yrel > 0) { command_sink_(command_type::scroll_n); }
+        if (event.yrel < 0) { command_sink_(command_type::scroll_s); }
+    }
+}
+
+void sdl_application::handle_window_event_(SDL_WindowEvent const& event) {
+    switch (event.event) {
+    case SDL_WINDOWEVENT_NONE :
+        std::cout << "SDL_WINDOWEVENT_NONE" << std::endl;
+        break;
+    case SDL_WINDOWEVENT_SHOWN :
+        std::cout << "SDL_WINDOWEVENT_SHOWN" << std::endl;
+        break;
+    case SDL_WINDOWEVENT_HIDDEN :
+        std::cout << "SDL_WINDOWEVENT_HIDDEN" << std::endl;
+        break;
+    case SDL_WINDOWEVENT_EXPOSED :
+        std::cout << "SDL_WINDOWEVENT_EXPOSED" << std::endl;
+        break;
+    case SDL_WINDOWEVENT_MOVED :
+        std::cout << "SDL_WINDOWEVENT_MOVED" << std::endl;
+        break;
+    case SDL_WINDOWEVENT_RESIZED :
+        std::cout << "SDL_WINDOWEVENT_RESIZED" << std::endl;
+        break;
+    case SDL_WINDOWEVENT_SIZE_CHANGED :
+        std::cout << "SDL_WINDOWEVENT_SIZE_CHANGED" << std::endl;
+        break;
+    case SDL_WINDOWEVENT_MINIMIZED :
+        std::cout << "SDL_WINDOWEVENT_MINIMIZED" << std::endl;
+        break;
+    case SDL_WINDOWEVENT_MAXIMIZED :
+        std::cout << "SDL_WINDOWEVENT_MAXIMIZED" << std::endl;
+        break;
+    case SDL_WINDOWEVENT_RESTORED :
+        std::cout << "SDL_WINDOWEVENT_RESTORED" << std::endl;
+        break;
+    case SDL_WINDOWEVENT_ENTER :
+        std::cout << "SDL_WINDOWEVENT_ENTER" << std::endl;
+        break;
+    case SDL_WINDOWEVENT_LEAVE :
+        std::cout << "SDL_WINDOWEVENT_LEAVE" << std::endl;
+        break;
+    case SDL_WINDOWEVENT_FOCUS_GAINED :
+        std::cout << "SDL_WINDOWEVENT_FOCUS_GAINED" << std::endl;
+        break;
+    case SDL_WINDOWEVENT_FOCUS_LOST :
+        std::cout << "SDL_WINDOWEVENT_FOCUS_LOST" << std::endl;
+        break;
+    case SDL_WINDOWEVENT_CLOSE :
+        std::cout << "SDL_WINDOWEVENT_CLOSE" << std::endl;
+        break;
     }
 }
 
@@ -154,6 +217,12 @@ void sdl_application::handle_keyboard_event_(SDL_KeyboardEvent const& event) {
         break;
     case SDLK_d :
         if (event.keysym.mod == 0) { command_sink_(command_type::scroll_e); }
+        break;
+    case SDLK_o :
+        if (event.keysym.mod == 0) { command_sink_(command_type::open); }
+        break;
+    case SDLK_c :
+        if (event.keysym.mod == 0) { command_sink_(command_type::close); }
         break;
     case SDLK_UP :
         if (event.keysym.mod == 0) { command_sink_(command_type::north); }

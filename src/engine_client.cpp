@@ -39,29 +39,32 @@ texture_type get_texture<tile_type::wall>(
   , grid_index const x
   , grid_index const y
 ) {
-    auto const n = check_grid_block5(grid, x, y, attribute::tile_type, tile_type::wall);
+    //auto const wall = check_grid_block5(grid, x, y, attribute::tile_type, tile_type::wall);
+    auto const wall = check_grid_block5f(grid, x, y, attribute::tile_type, [](tile_type const type) {
+        return type == tile_type::wall || type == tile_type::door;
+    });
 
-    switch (n) {
-    case (1<<2) : return texture_type::wall_none;
+    switch (wall) {
+    case 0 : return texture_type::wall_none;
 
-    case (1<<0)|(1<<2) : return texture_type::wall_n;
-    case (1<<1)|(1<<2) : return texture_type::wall_w;
-    case (1<<2)|(1<<3) : return texture_type::wall_e;
-    case (1<<2)|(1<<4) : return texture_type::wall_s;
+    case (1<<0) : return texture_type::wall_n;
+    case (1<<1) : return texture_type::wall_w;
+    case (1<<2) : return texture_type::wall_e;
+    case (1<<3) : return texture_type::wall_s;
 
-    case (1<<0)|(1<<2)|(1<<4) : return texture_type::wall_ns;
-    case (1<<1)|(1<<2)|(1<<3) : return texture_type::wall_ew;
-    case (1<<2)|(1<<3)|(1<<4) : return texture_type::wall_se;
-    case (1<<1)|(1<<2)|(1<<4) : return texture_type::wall_sw;
-    case (1<<0)|(1<<2)|(1<<3) : return texture_type::wall_ne;
-    case (1<<0)|(1<<1)|(1<<2) : return texture_type::wall_nw;
+    case (1<<0)|(1<<3) : return texture_type::wall_ns;
+    case (1<<1)|(1<<2) : return texture_type::wall_ew;
+    case (1<<2)|(1<<3) : return texture_type::wall_se;
+    case (1<<1)|(1<<3) : return texture_type::wall_sw;
+    case (1<<0)|(1<<2) : return texture_type::wall_ne;
+    case (1<<0)|(1<<1) : return texture_type::wall_nw;
 
-    case (1<<0)|(1<<2)|(1<<3)|(1<<4) : return texture_type::wall_nse;
-    case (1<<0)|(1<<1)|(1<<2)|(1<<4) : return texture_type::wall_nsw;
-    case (1<<0)|(1<<1)|(1<<2)|(1<<3) : return texture_type::wall_new;
-    case (1<<1)|(1<<2)|(1<<3)|(1<<4) : return texture_type::wall_sew;
+    case (1<<0)|(1<<2)|(1<<3) : return texture_type::wall_nse;
+    case (1<<0)|(1<<1)|(1<<3) : return texture_type::wall_nsw;
+    case (1<<0)|(1<<1)|(1<<2) : return texture_type::wall_new;
+    case (1<<1)|(1<<2)|(1<<3) : return texture_type::wall_sew;
 
-    case (1<<0)|(1<<1)|(1<<2)|(1<<3)|(1<<4) : return texture_type::wall_nsew;
+    case (1<<0)|(1<<1)|(1<<2)|(1<<3) : return texture_type::wall_nsew;
 
     default: BK_TODO_FAIL(); break;
     }
@@ -112,21 +115,25 @@ public:
 
 void merge_walls(grid_storage& grid, grid_region const bounds) {
     static auto const can_merge = [](unsigned const n) {
-        constexpr auto s0 = (1<<4)|(1<<0)|(1<<1)|(1<<2);
-        constexpr auto s1 = (1<<4)|(1<<0)|(1<<3)|(1<<6);
-        constexpr auto s2 = (1<<4)|(1<<2)|(1<<5)|(1<<8);
-        constexpr auto s3 = (1<<4)|(1<<6)|(1<<7)|(1<<8);
-        constexpr auto s4 = (1<<0)|(1<<1)|(1<<2)|(1<<3)|(1<<4)|(1<<5)|(1<<6)|(1<<7);
+        constexpr auto s0 = (1<<0)|(1<<1)|(1<<2);
+        constexpr auto s1 = (1<<0)|(1<<3)|(1<<5);
+        constexpr auto s2 = (1<<2)|(1<<4)|(1<<7);
+        constexpr auto s3 = (1<<5)|(1<<6)|(1<<7);
+        constexpr auto s4 = (1<<0)|(1<<1)|(1<<2)|(1<<3)|(1<<4)|(1<<5)|(1<<6);
 
         return (n == s4)
-            || (((n & s0) == s0) && ((n & (1 << 7)) == 0))
-            || (((n & s1) == s1) && ((n & (1 << 5)) == 0))
+            || (((n & s0) == s0) && ((n & (1 << 6)) == 0))
+            || (((n & s1) == s1) && ((n & (1 << 4)) == 0))
             || (((n & s2) == s2) && ((n & (1 << 3)) == 0))
             || (((n & s3) == s3) && ((n & (1 << 1)) == 0));
     };
 
     bkrl::for_each_edge(bounds, [&](grid_index const x, grid_index const y) {
-        auto const walls = check_grid_block9(grid, x, y, attribute::tile_type, tile_type::wall);
+        auto const walls = check_grid_block9f(grid, x, y, attribute::tile_type, [](tile_type const type) {
+            return type == tile_type::wall || type == tile_type::door;
+        });
+
+        //auto const walls = check_grid_block9(grid, x, y, attribute::tile_type, tile_type::wall);
 
         if (can_merge(walls)) {
             auto const floors = check_grid_block9(grid, x, y, attribute::tile_type, tile_type::floor);
@@ -227,35 +234,93 @@ public:
         r.present();
     }
 
+    void scroll(signed const dx, signed const dy) {
+        auto const x = renderer_.get_translation_x();
+        auto const y = renderer_.get_translation_y();
+
+        auto const sx = renderer_.get_scale_x();
+        auto const sy = renderer_.get_scale_y();
+
+        BK_ASSERT(sx > 0.0f);
+        BK_ASSERT(sy > 0.0f);
+
+        auto const delta_x = dx * 4.0f * (1.0f / sx);
+        auto const delta_y = dy * 4.0f * (1.0f / sy);
+
+        if (dx) {
+            renderer_.set_translation_x(x + delta_x);   
+        }
+
+        if (dy) {
+            renderer_.set_translation_y(y + delta_y);
+        }
+    }
+
+    void move_player(signed const dx, signed const dy) {
+        player_.position.x += dx;
+        player_.position.y += dy;
+
+        std::cout << player_.position.x << " " << player_.position.y << std::endl;
+    }
+
+    void do_open() {
+        auto const x = player_.position.x;
+        auto const y = player_.position.y;
+
+        auto const doors = check_grid_block9(map_, x, y, attribute::tile_type, tile_type::door);
+        auto const count = std::bitset<8> {doors}.count();
+
+        if (count == 1) {
+            auto const where = grid_check_to_point(x, y, doors);
+            BK_ASSERT(map_.get(attribute::tile_type, where.x, where.y) == tile_type::door);
+
+            auto data = bkrl::door_data {map_.get(attribute::data, where.x, where.y)};
+            if (data.is_open()) {
+                return;
+            }
+
+            data.open();
+            map_.set(attribute::data, where.x, where.y, data);
+            map_.set(attribute::texture_type, where.x, where.y, texture_type::door_opened);
+            map_.set(attribute::texture_id, where.x, where.y, texture_map_[texture_type::door_opened]);
+        } else if (count > 1) {
+        }
+    }
+
+    void do_close() {
+    }
+
     void on_command(command_type const cmd) {
         switch (cmd) {
+        case command_type::open :
+            do_open();
+            break;
+        case command_type::close :
+            do_close();
+            break;
         case command_type::scroll_n :
-            renderer_.set_translation_y(renderer_.get_translation_y() + 4 * renderer_.get_scale_y());
+            scroll(0, 1);
             break;
         case command_type::scroll_s :
-            renderer_.set_translation_y(renderer_.get_translation_y() - 4 * renderer_.get_scale_y());
+            scroll(0, -1);
             break;
         case command_type::scroll_e :
-            renderer_.set_translation_x(renderer_.get_translation_x() - 4 * renderer_.get_scale_x());
+            scroll(-1, 0);
             break;
         case command_type::scroll_w :
-            renderer_.set_translation_x(renderer_.get_translation_x() + 4 * renderer_.get_scale_x());
+            scroll(1, 0);
             break;
         case command_type::north :
-            player_.position.y -= 1;
-            std::cout << player_.position.x << " " << player_.position.y << std::endl;
+            move_player(0, -1);
             break;
         case command_type::south :
-            player_.position.y += 1;
-            std::cout << player_.position.x << " " << player_.position.y << std::endl;
+            move_player(0, 1);
             break;
         case command_type::east :
-            player_.position.x += 1;
-            std::cout << player_.position.x << " " << player_.position.y << std::endl;
+            move_player(1, 0);
             break;
         case command_type::west :
-            player_.position.x -= 1;
-            std::cout << player_.position.x << " " << player_.position.y << std::endl;
+            move_player(-1, 0);
             break;
         case command_type::zoom_in :
             renderer_.set_scale_x(renderer_.get_scale_x() * 1.1f);

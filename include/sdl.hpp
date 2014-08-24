@@ -183,6 +183,8 @@ public:
     void pump_events();
 
     void handle_keyboard_event_(SDL_KeyboardEvent const& event);
+    void handle_window_event_(SDL_WindowEvent const& event);
+    void handle_mousemotion_event_(SDL_MouseMotionEvent const& event);
 
     explicit operator bool() const { return running_; }
 
