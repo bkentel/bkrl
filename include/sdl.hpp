@@ -4,6 +4,7 @@
 #include "exception.hpp"
 #include "assert.hpp"
 #include "command_type.hpp"
+#include "math.hpp"
 
 namespace bkrl {
 
@@ -59,33 +60,67 @@ inline sdl_error make_sdl_error(char const* api) {
 // deleters
 //==============================================================================
 template <typename T>
+struct ft_deleter;
+
+template <>
+struct ft_deleter<FT_Library> {
+    void operator()(FT_Library ptr) const noexcept {
+        auto const result = ::FT_Done_FreeType(ptr);
+        if (result) {
+            BK_TODO_FAIL();
+        }
+    }
+};
+
+template <>
+struct ft_deleter<FT_Face> {
+    void operator()(FT_Face ptr) const noexcept {
+        auto const result = ::FT_Done_Face(ptr);
+        if (result) {
+            BK_TODO_FAIL();
+        }
+    }
+};
+
+template <typename T, typename U = std::remove_pointer_t<T>>
+using ft_unique = std::unique_ptr<U, ft_deleter<T>>;
+//////
+
+template <typename T>
 struct sdl_deleter;
 
 template <>
 struct sdl_deleter<SDL_Window> {
-    void operator()(SDL_Window* ptr) const {
+    void operator()(SDL_Window* ptr) const noexcept {
         ::SDL_DestroyWindow(ptr);
     }
 };
 
 template <>
 struct sdl_deleter<SDL_Renderer> {
-    void operator()(SDL_Renderer* ptr) const {
+    void operator()(SDL_Renderer* ptr) const noexcept {
         ::SDL_DestroyRenderer(ptr);
     }
 };
 
 template <>
 struct sdl_deleter<SDL_Texture> {
-    void operator()(SDL_Texture* ptr) const {
+    void operator()(SDL_Texture* ptr) const noexcept {
         ::SDL_DestroyTexture(ptr);
     }
 };
 
 template <>
 struct sdl_deleter<SDL_Surface> {
-    void operator()(SDL_Surface* ptr) const {
+    void operator()(SDL_Surface* ptr) const noexcept {
         ::SDL_FreeSurface(ptr);
+    }
+};
+
+template <>
+struct sdl_deleter<SDL_PixelFormat> {
+    void operator()(SDL_PixelFormat* ptr) const noexcept {
+        ::SDL_FreeFormat(ptr);
     }
 };
 
@@ -115,6 +150,7 @@ struct sdl_state {
 // sdl_renderer
 //==============================================================================
 class sdl_renderer {
+//TODO should use pimpl
 public:
     sdl_renderer(sdl_renderer&) = delete;
     sdl_renderer& operator=(sdl_renderer&) = delete;
@@ -126,6 +162,9 @@ public:
         if (result != 0) {
             BK_ASSERT(false); //TODO
         }
+
+        ::SDL_RenderSetScale(handle(), 1.0f, 1.0f);
+        draw_text("Hello", text_rect{20.0f, 20.0f, 100.0f, 100.0f});
     }
 
     void present() {
@@ -169,9 +208,14 @@ public:
     SDL_Renderer* handle() {
         return renderer_.get();
     }
+
+    using text_rect = axis_aligned_rect<float>;
+    void draw_text(string_ref string, text_rect rect);
 private:
     sdl_unique<SDL_Renderer> renderer_;
     sdl_unique<SDL_Texture>  texture_;
+    ft_unique<FT_Library>    ft_lib_;
+    ft_unique<FT_Face>       ft_face_;
 
     float scale_x_;
     float scale_y_;

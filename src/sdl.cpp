@@ -3,6 +3,7 @@
 using bkrl::sdl_renderer;
 using bkrl::sdl_application;
 using bkrl::sdl_unique;
+using bkrl::ft_unique;
 namespace error = bkrl::error;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -10,11 +11,31 @@ namespace error = bkrl::error;
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
 
+static ft_unique<FT_Library> create_freetype() {
+    FT_Library library;
+	auto const result = FT_Init_FreeType(&library);
+    if (result) {
+        BK_TODO_FAIL();
+    }
+
+    return ft_unique<FT_Library> {library};
+}
+
+static ft_unique<FT_Face> create_fontface(FT_Library library) {
+    FT_Face face;
+	auto const result = FT_New_Face(library, R"(C:\windows\fonts\meiryo.ttc)", 0, &face);
+    if (result) {
+        BK_TODO_FAIL();
+    }
+
+    return ft_unique<FT_Face> {face};
+}
+
 static sdl_unique<SDL_Renderer> create_renderer(SDL_Window* window) {
     auto const result = SDL_CreateRenderer(
         window
-        , -1
-        , SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
+      , -1
+      , SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
     );
 
     if (result == nullptr) {
@@ -62,11 +83,86 @@ static sdl_unique<SDL_Window> create_window() {
 sdl_renderer::sdl_renderer(SDL_Window* const window)
     : renderer_ {create_renderer(window)}
     , texture_  {create_texture(renderer_.get())}
+    , ft_lib_   {create_freetype()}
+    , ft_face_  {create_fontface(ft_lib_.get())}
     , scale_x_ {1.0f}
     , scale_y_ {1.0f}
     , trans_x_ {0.0f}
     , trans_y_ {0.0f}
 {
+    FT_Set_Pixel_Sizes(ft_face_.get(), 0, 16);
+}
+
+void sdl_renderer::draw_text(bkrl::string_ref string, text_rect rect) {
+    auto const renderer = renderer_.get();
+    auto const face     = ft_face_.get();
+
+    auto texture_w = 64;
+    auto texture_h = 64;
+
+    sdl_unique<SDL_Texture> sdl_texture {
+        ::SDL_CreateTexture(
+            renderer
+		  , SDL_PIXELFORMAT_RGBA8888
+		  , SDL_TEXTUREACCESS_STREAMING
+		  , texture_w
+		  , texture_h
+        )
+    };
+
+    sdl_unique<SDL_PixelFormat> sdl_format {SDL_AllocFormat(SDL_PIXELFORMAT_RGBA8888)};
+    
+    auto const copy_glyph = [&](FT_Bitmap const& bitmap) {
+        auto const texture = sdl_texture.get();
+        auto const format  = sdl_format.get();
+
+        if (bitmap.width > texture_w || bitmap.rows > texture_h) {
+            BK_TODO_FAIL();
+        }
+
+        uint32_t* out   = nullptr;
+        int       pitch = 0;
+        
+        //TODO need a RAII object for this -- scope_guard?
+        SDL_LockTexture(texture, nullptr, reinterpret_cast<void**>(&out), &pitch);
+
+        for (int y = 0; y < bitmap.rows; ++y) {
+            for (int x = 0; x < bitmap.width; ++x) {
+                auto const src_i = y * bitmap.pitch + x;
+                auto const dst_i = y * (pitch / 4) + x;
+
+                auto const a     = bitmap.buffer[src_i];
+                auto const value = SDL_MapRGBA(format, 200, 100, 100, a);
+
+                out[dst_i] = value;
+            }
+        }
+
+        SDL_UnlockTexture(texture);
+
+        return SDL_Rect {0, 0, bitmap.width, bitmap.rows};
+    };
+    
+    auto x = static_cast<int>(rect.left);
+    auto y = static_cast<int>(rect.top);
+
+    SDL_SetTextureBlendMode(sdl_texture.get(), SDL_BLENDMODE_BLEND);
+
+    for (auto const c : string) {
+        FT_Load_Char(face, c, FT_LOAD_RENDER);
+
+        auto const& metrics = face->glyph->metrics;
+
+        auto src_rect = copy_glyph(face->glyph->bitmap);
+        auto dst_rect = src_rect;
+        
+        dst_rect.x = x + (metrics.horiBearingX >> 6);
+        dst_rect.y = y - (metrics.horiBearingY >> 6);
+
+        SDL_RenderCopy(renderer, sdl_texture.get(), &src_rect, &dst_rect);
+
+        x += metrics.horiAdvance >> 6;
+    }
 }
 
 void sdl_renderer::draw_tile(
