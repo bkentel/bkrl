@@ -159,8 +159,16 @@ public:
       , sheet_ {288, 288, 18, 18}
       , texture_map_ {bkrl::read_file("./data/texture_map.json")}
     {
-        app_.on_command([&](bkrl::command_type const cmd) {
+        app_.on_command([&](command_type const cmd) {
             on_command(cmd);
+        });
+
+        app_.on_resize([&](unsigned const w, unsigned const h) {
+            on_resize(w, h);
+        });
+
+        app_.on_mouse_move([&](signed const dx, signed const dy, std::bitset<8> const buttons) {
+            on_mouse_move(dx, dy, buttons);
         });
 
         auto const on_split = [](grid_region const r) {
@@ -216,13 +224,16 @@ public:
     void render(renderer& r) {
         r.clear();
 
+        r.set_translation(display_x_ + scroll_x_, display_y_ + scroll_y_);
+        r.set_scale(zoom_, zoom_);
+
         auto const w = map_.width();
         auto const h = map_.height();
 
         for (bkrl::grid_index y = 0; y < h; ++y) {
             for (bkrl::grid_index x = 0; x < w; ++x) {
 
-                auto const type    = map_.get(attribute::tile_type,  x, y);
+                //auto const type    = map_.get(attribute::tile_type,  x, y);
                 auto const texture = map_.get(attribute::texture_id, x, y);
 
                 r.draw_tile(sheet_, texture, x, y);
@@ -235,59 +246,102 @@ public:
     }
 
     void scroll(signed const dx, signed const dy) {
-        auto const x = renderer_.get_translation_x();
-        auto const y = renderer_.get_translation_y();
+        auto const delta_x = dx * (1.0f / zoom_);
+        auto const delta_y = dy * (1.0f / zoom_);
 
-        auto const sx = renderer_.get_scale_x();
-        auto const sy = renderer_.get_scale_y();
+        scroll_x_ += delta_x;
+        scroll_y_ += delta_y;
+    }
 
-        BK_ASSERT(sx > 0.0f);
-        BK_ASSERT(sy > 0.0f);
-
-        auto const delta_x = dx * 4.0f * (1.0f / sx);
-        auto const delta_y = dy * 4.0f * (1.0f / sy);
-
-        if (dx) {
-            renderer_.set_translation_x(x + delta_x);   
+    bool can_move_to(entity const& e, signed const dx, signed const dy) {
+        if (std::abs(dx) > 1 || std::abs(dy) > 1) {
+            BK_TODO_FAIL();
         }
 
-        if (dy) {
-            renderer_.set_translation_y(y + delta_y);
+        auto const to = translate(e.position, dx, dy);
+
+        if (!map_.is_valid(to)) {
+            return false;
         }
+
+        auto const type = map_.get(attribute::tile_type, to);
+
+        switch (type) {
+        case tile_type::floor :
+        case tile_type::invalid :
+            return true;
+        case tile_type::door :
+            return door_data {map_, to}.is_open();
+        }
+
+        return false;
     }
 
     void move_player(signed const dx, signed const dy) {
+        if (!can_move_to(player_, dx, dy)) {
+            return;
+        }
+
         player_.position.x += dx;
         player_.position.y += dy;
+
+        set_zoom(zoom_);
 
         std::cout << player_.position.x << " " << player_.position.y << std::endl;
     }
 
+    std::bitset<8> get_doors_next_to(grid_point const p) const {
+        return {
+            check_grid_block9(map_, p.x, p.y, attribute::tile_type, tile_type::door)
+        };
+    }
+
+    void set_door_data(grid_point const p, door_data const door, texture_type const texture) {
+        map_.set(attribute::data, p, door);
+        map_.set(attribute::texture_type, p, texture);
+        map_.set(attribute::texture_id, p, texture_map_[texture]);
+    }
+
     void do_open() {
-        auto const x = player_.position.x;
-        auto const y = player_.position.y;
+        auto const p     = player_.position;
+        auto const doors = get_doors_next_to(p);
+        auto const n     = doors.count();
 
-        auto const doors = check_grid_block9(map_, x, y, attribute::tile_type, tile_type::door);
-        auto const count = std::bitset<8> {doors}.count();
+        if (n == 1) {
+            //TODO change grid_check_to_point to accept bitset
+            auto const where = grid_check_to_point(p, doors.to_ulong());
 
-        if (count == 1) {
-            auto const where = grid_check_to_point(x, y, doors);
-            BK_ASSERT(map_.get(attribute::tile_type, where.x, where.y) == tile_type::door);
-
-            auto data = bkrl::door_data {map_.get(attribute::data, where.x, where.y)};
-            if (data.is_open()) {
+            door_data door {map_, where};
+            if (door.is_open()) {
                 return;
             }
 
-            data.open();
-            map_.set(attribute::data, where.x, where.y, data);
-            map_.set(attribute::texture_type, where.x, where.y, texture_type::door_opened);
-            map_.set(attribute::texture_id, where.x, where.y, texture_map_[texture_type::door_opened]);
-        } else if (count > 1) {
+            door.open();
+            set_door_data(where, door, texture_type::door_opened);
+        } else if (n > 1) {
+            //TODO
         }
     }
 
     void do_close() {
+        auto const p     = player_.position;
+        auto const doors = get_doors_next_to(p);
+        auto const n     = doors.count();
+
+        if (n == 1) {
+            //TODO change grid_check_to_point to accept bitset
+            auto const where = grid_check_to_point(p, doors.to_ulong());
+
+            door_data door {map_, where};
+            if (door.is_closed()) {
+                return;
+            }
+
+            door.close();
+            set_door_data(where, door, texture_type::door_closed);
+        } else if (n > 1) {
+            //TODO
+        }
     }
 
     void on_command(command_type const cmd) {
@@ -299,16 +353,16 @@ public:
             do_close();
             break;
         case command_type::scroll_n :
-            scroll(0, 1);
+            scroll(0, 4);
             break;
         case command_type::scroll_s :
-            scroll(0, -1);
+            scroll(0, -4);
             break;
         case command_type::scroll_e :
-            scroll(-1, 0);
+            scroll(-4, 0);
             break;
         case command_type::scroll_w :
-            scroll(1, 0);
+            scroll(4, 0);
             break;
         case command_type::north :
             move_player(0, -1);
@@ -322,33 +376,81 @@ public:
         case command_type::west :
             move_player(-1, 0);
             break;
+        case command_type::north_west :
+            move_player(-1, -1);
+            break;
+        case command_type::north_east :
+            move_player(1, -1);
+            break;
+        case command_type::south_west :
+            move_player(-1, 1);
+            break;
+        case command_type::south_east :
+            move_player(1, 1);
+            break;
         case command_type::zoom_in :
-            renderer_.set_scale_x(renderer_.get_scale_x() * 1.1f);
-            renderer_.set_scale_y(renderer_.get_scale_y() * 1.1f);
-
-            renderer_.set_translation_x(renderer_.get_translation_x() * 1.1f);
-            renderer_.set_translation_y(renderer_.get_translation_y() * 1.1f);
+            set_zoom(zoom_ * 1.1f);
             break;
         case command_type::zoom_out :
-            renderer_.set_scale_x(renderer_.get_scale_x() * 0.9f);
-            renderer_.set_scale_y(renderer_.get_scale_y() * 0.9f);
-
-            renderer_.set_translation_x(renderer_.get_translation_x() * 0.9f);
-            renderer_.set_translation_y(renderer_.get_translation_y() * 0.9f);
+            set_zoom(zoom_ * 0.9f);
             break;
         default:
             break;
         }
     }
+
+    void on_resize(unsigned const w, unsigned const h) {
+        display_w_ = static_cast<float>(w);
+        display_h_ = static_cast<float>(h);
+
+        set_zoom(zoom_);
+    }
+
+    //TODO rename this to something more meaningful
+    void set_zoom(float const zoom) {
+        zoom_ = (zoom < 0.1f)
+          ? 0.1f
+          : (zoom > 10.0f)
+            ? 10.0f
+            : zoom;
+
+        auto const sw = sheet_.sprite_width;
+        auto const sh = sheet_.sprite_height;
+
+        auto const px = -static_cast<float>(player_.position.x) * sw;
+        auto const py = -static_cast<float>(player_.position.y) * sh;
+
+        display_x_ = px + (display_w_ / 2.0f / zoom_);
+        display_y_ = py + (display_h_ / 2.0f / zoom_);
+    }
+
+    void on_mouse_move(signed const dx, signed const dy, std::bitset<8> const buttons) {
+        if (buttons[2]) {
+            scroll(dx, dy);
+        } else if (buttons.any()) {
+            //std::cout << "button";
+        }
+    }
 private:
-    bkrl::application  app_;
-    bkrl::renderer     renderer_;
-    bkrl::grid_storage map_;
+    application  app_;
+    renderer     renderer_;
+    grid_storage map_;
 
-    bkrl::sprite_sheet sheet_;
-    bkrl::texture_map  texture_map_;
+    sprite_sheet sheet_;
+    texture_map  texture_map_;
 
-    bkrl::entity       player_;
+    entity       player_;
+
+    float display_w_ = 0.0f;
+    float display_h_ = 0.0f;
+
+    float display_x_ = 0.0f;
+    float display_y_ = 0.0f;
+
+    float scroll_x_ = 0.0f;
+    float scroll_y_ = 0.0f;
+
+    float zoom_ = 1.0f;
 };
 
 engine_client::~engine_client() = default;

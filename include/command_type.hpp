@@ -17,10 +17,15 @@ enum class command_type : uint16_t {
   , cancel
   , accept
 
+  , here
   , north
   , south
   , east
   , west
+  , north_west
+  , north_east
+  , south_west
+  , south_east
 
   , zoom_in
   , zoom_out

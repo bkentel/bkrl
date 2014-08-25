@@ -126,8 +126,6 @@ public:
         if (result != 0) {
             BK_ASSERT(false); //TODO
         }
-
-        ::SDL_RenderSetScale(handle(), scale_x_, scale_y_);
     }
 
     void present() {
@@ -137,9 +135,17 @@ public:
 
     void draw_tile(sprite_sheet& sheet, unsigned index, unsigned x, unsigned y);
 
-    void set_scale(float scale_x, float scale_y);
-    void set_scale_x(float const scale) { scale_x_ = scale; }
-    void set_scale_y(float const scale) { scale_y_ = scale; }
+    void set_scale(float const scale_x, float const scale_y) {
+        BK_ASSERT(scale_x > 0.0f && scale_y > 0.0f);
+
+        scale_x_ = scale_x;
+        scale_y_ = scale_y;
+
+        ::SDL_RenderSetScale(handle(), scale_x_, scale_y_);
+    }
+
+    void set_scale_x(float const scale) { set_scale(scale, scale_y_); }
+    void set_scale_y(float const scale) { set_scale(scale_x_, scale); }
 
     void set_translation(float const x, float const y) {
         set_translation_x(x);
@@ -194,6 +200,22 @@ public:
     void on_command(command_sink sink) {
         command_sink_ = std::move(sink);
     }
+
+    using resize_sink = std::function<void (unsigned w, unsigned h)>;
+    void on_resize(resize_sink sink) {
+        resize_sink_ = std::move(sink);
+
+        int w = 0;
+        int h = 0;
+        SDL_GetWindowSize(window_.get(), &w, &h);
+
+        resize_sink_(w, h);
+    }
+
+    using mouse_move_sink = std::function<void (signed dx, signed dy, std::bitset<8> buttons)>;
+    void on_mouse_move(mouse_move_sink sink) {
+        mouse_move_sink_ = std::move(sink);
+    }
 private:
     sdl_state              state_;
     sdl_unique<SDL_Window> window_;
@@ -201,6 +223,8 @@ private:
     bool                   running_;
 
     command_sink command_sink_;
+    resize_sink  resize_sink_;
+    mouse_move_sink mouse_move_sink_;
 };
 
 } //namespace bkrl

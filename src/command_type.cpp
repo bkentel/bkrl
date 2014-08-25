@@ -21,10 +21,15 @@ namespace {
         BK_ENUMMAP_ADD_STRING(result, command, none);
         BK_ENUMMAP_ADD_STRING(result, command, cancel);
         BK_ENUMMAP_ADD_STRING(result, command, accept);
+        BK_ENUMMAP_ADD_STRING(result, command, here);
         BK_ENUMMAP_ADD_STRING(result, command, north);
         BK_ENUMMAP_ADD_STRING(result, command, south);
         BK_ENUMMAP_ADD_STRING(result, command, east);
         BK_ENUMMAP_ADD_STRING(result, command, west);
+        BK_ENUMMAP_ADD_STRING(result, command, north_west);
+        BK_ENUMMAP_ADD_STRING(result, command, north_east);
+        BK_ENUMMAP_ADD_STRING(result, command, south_west);
+        BK_ENUMMAP_ADD_STRING(result, command, south_east);
         BK_ENUMMAP_ADD_STRING(result, command, zoom_in);
         BK_ENUMMAP_ADD_STRING(result, command, zoom_out);
         BK_ENUMMAP_ADD_STRING(result, command, scroll_n);

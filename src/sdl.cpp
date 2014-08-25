@@ -141,13 +141,15 @@ void sdl_application::pump_events() {
 }
 
 void sdl_application::handle_mousemotion_event_(SDL_MouseMotionEvent const& event) {
-    if (event.state == SDL_BUTTON_RMASK) {
-        //TODO this is weird
-        if (event.xrel > 0) { command_sink_(command_type::scroll_w); }
-        if (event.xrel < 0) { command_sink_(command_type::scroll_e); }
-        if (event.yrel > 0) { command_sink_(command_type::scroll_n); }
-        if (event.yrel < 0) { command_sink_(command_type::scroll_s); }
+    if (!mouse_move_sink_) {
+        return;
     }
+
+    std::bitset<8> const buttons {event.state};
+    auto const dx = event.xrel;
+    auto const dy = event.yrel;
+
+    mouse_move_sink_(dx, dy, buttons);
 }
 
 void sdl_application::handle_window_event_(SDL_WindowEvent const& event) {
@@ -171,6 +173,9 @@ void sdl_application::handle_window_event_(SDL_WindowEvent const& event) {
         std::cout << "SDL_WINDOWEVENT_RESIZED" << std::endl;
         break;
     case SDL_WINDOWEVENT_SIZE_CHANGED :
+        if (resize_sink_) {
+            resize_sink_(event.data1, event.data2);
+        }
         std::cout << "SDL_WINDOWEVENT_SIZE_CHANGED" << std::endl;
         break;
     case SDL_WINDOWEVENT_MINIMIZED :
@@ -200,41 +205,91 @@ void sdl_application::handle_window_event_(SDL_WindowEvent const& event) {
     }
 }
 
+//TODO
+//struct key_binding {
+//    unsigned           keycode;
+//    std::bitset<8>     modifiers;
+//    bkrl::command_type command;
+//
+//    bool operator<(key_binding const& rhs) const {
+//        return keycode < rhs.keycode && modifiers.to_ulong() < rhs.modifiers.to_ulong();
+//    }
+//};
+
 void sdl_application::handle_keyboard_event_(SDL_KeyboardEvent const& event) {
     if (!command_sink_) {
         return; //TODO
     }
 
-    switch (event.keysym.sym) {
+    auto vkey = event.keysym.sym;
+
+    switch (event.keysym.scancode) {
+    case SDL_SCANCODE_KP_0 : vkey = SDLK_KP_0; break;
+    case SDL_SCANCODE_KP_1 : vkey = SDLK_KP_1; break;
+    case SDL_SCANCODE_KP_2 : vkey = SDLK_KP_2; break;
+    case SDL_SCANCODE_KP_3 : vkey = SDLK_KP_3; break;
+    case SDL_SCANCODE_KP_4 : vkey = SDLK_KP_4; break;
+    case SDL_SCANCODE_KP_5 : vkey = SDLK_KP_5; break;
+    case SDL_SCANCODE_KP_6 : vkey = SDLK_KP_6; break;
+    case SDL_SCANCODE_KP_7 : vkey = SDLK_KP_7; break;
+    case SDL_SCANCODE_KP_8 : vkey = SDLK_KP_8; break;
+    case SDL_SCANCODE_KP_9 : vkey = SDLK_KP_9; break;
+    }
+
+    auto const no_mods = [&event] {
+        return (event.keysym.mod & (
+            KMOD_LSHIFT | KMOD_RSHIFT
+          | KMOD_LCTRL  | KMOD_RCTRL 
+          | KMOD_LALT   | KMOD_RALT
+        )) == 0;
+    };
+
+    switch (vkey) {
     case SDLK_w :
-        if (event.keysym.mod == 0) { command_sink_(command_type::scroll_n); }
+        if (no_mods()) { command_sink_(command_type::scroll_n); }
         break;
     case SDLK_a :
-        if (event.keysym.mod == 0) { command_sink_(command_type::scroll_w); }
+        if (no_mods()) { command_sink_(command_type::scroll_w); }
         break;
     case SDLK_s :
-        if (event.keysym.mod == 0) { command_sink_(command_type::scroll_s); }
+        if (no_mods()) { command_sink_(command_type::scroll_s); }
         break;
     case SDLK_d :
-        if (event.keysym.mod == 0) { command_sink_(command_type::scroll_e); }
+        if (no_mods()) { command_sink_(command_type::scroll_e); }
         break;
     case SDLK_o :
-        if (event.keysym.mod == 0) { command_sink_(command_type::open); }
+        if (no_mods()) { command_sink_(command_type::open); }
         break;
     case SDLK_c :
-        if (event.keysym.mod == 0) { command_sink_(command_type::close); }
+        if (no_mods()) { command_sink_(command_type::close); }
         break;
+    case SDLK_KP_7 :
+        if (no_mods()) { command_sink_(command_type::north_west); }
+        break;
+    case SDLK_KP_9 :
+        if (no_mods()) { command_sink_(command_type::north_east); }
+        break;
+    case SDLK_KP_1 :
+        if (no_mods()) { command_sink_(command_type::south_west); }
+        break;
+    case SDLK_KP_3 :
+        if (no_mods()) { command_sink_(command_type::south_east); }
+        break;
+    case SDLK_KP_8 :
     case SDLK_UP :
-        if (event.keysym.mod == 0) { command_sink_(command_type::north); }
+        if (no_mods()) { command_sink_(command_type::north); }
         break;
+    case SDLK_KP_2 :
     case SDLK_DOWN :
-        if (event.keysym.mod == 0) { command_sink_(command_type::south); }
+        if (no_mods()) { command_sink_(command_type::south); }
         break;
+    case SDLK_KP_4 :
     case SDLK_LEFT :
-        if (event.keysym.mod == 0) { command_sink_(command_type::west); }
+        if (no_mods()) { command_sink_(command_type::west); }
         break;
+    case SDLK_KP_6 :
     case SDLK_RIGHT :
-        if (event.keysym.mod == 0) { command_sink_(command_type::east); }
+        if (no_mods()) { command_sink_(command_type::east); }
         break;
     case SDLK_KP_PLUS :
     case SDLK_PLUS  : command_sink_(command_type::zoom_in); break;

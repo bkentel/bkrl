@@ -16,6 +16,7 @@ using grid_data_value = uint32_t;
 
 union grid_data {
     grid_data() : value {0} {}
+    explicit grid_data(grid_data_value const value) : value {value} {}
 
     void*           ptr;
     grid_data_value value;
@@ -149,6 +150,10 @@ public:
 
     bool is_valid(grid_index const x, grid_index const y) const {
         return x < width() && y < height();
+    }
+
+    bool is_valid(grid_point const p) const {
+        return is_valid(p.x, p.y);
     }
 private:
     //--------------------------------------------------------------------------
@@ -349,6 +354,10 @@ inline grid_point grid_check_to_point(unsigned const x, unsigned const y, uint8_
     return {0u, 0u};
 }
 
+inline grid_point grid_check_to_point(grid_point const& p, uint8_t const n) {
+    return grid_check_to_point(p.x, p.y, n);
+}
+
 template <typename Attribute, typename Predicate>
 inline uint8_t check_grid_block9f(
     grid_storage const& grid
@@ -387,39 +396,41 @@ inline uint8_t check_grid_block9(
 
 struct door_data {
     enum flag : uint32_t {
-        is_open_flag   = (1 << 0)
-      , is_locked_flag = (1 << 1)
-      , is_broken_flag = (1 << 2)
+        is_open_flag
+      , is_locked_flag
+      , is_broken_flag
     };
 
-    door_data(grid_data const data)
-      : value {data.value}
+    door_data(grid_storage const& grid, grid_point const where)
+      : value_ {grid.get(attribute::data, where).value}
     {
+        BK_ASSERT(grid.get(attribute::tile_type, where) == tile_type::door);
     }
 
-    operator grid_data const&() const {
-        return reinterpret_cast<grid_data const&>(*this);
+    operator grid_data() const {
+        return grid_data {value_.to_ulong()};
     }
 
-    void clear(flag const f) {
-        value &= ~f;
+    bool is_closed() const {
+        return !value_.test(is_open_flag);
+    }
+    
+    void close() {
+        BK_ASSERT(!is_closed());
+        value_.reset(is_open_flag);
     }
 
-    void set(flag const f) {
-        value |= f;
+    bool is_open() const {
+        return value_.test(is_open_flag);
     }
 
-    bool get(flag const f) const {
-        return (value & f) != 0;
+    void open() {
+        BK_ASSERT(!is_open());
+        value_.set(is_open_flag);
     }
 
-    bool is_closed() const { return !get(is_open_flag); }
-    void close() { clear(is_open_flag); }
-
-    bool is_open() const { return get(is_open_flag); }
-    void open() { set(is_open_flag); }
-
-    grid_data_value value;
+private:
+    std::bitset<sizeof(grid_data_value)*8> value_;
 };
 
 } //namespace bkrl

@@ -19,7 +19,7 @@ public:
     engine_client();
     ~engine_client();
 
-    void on_command(bkrl::command_type const cmd);
+    void on_command(command_type const cmd);
 
     void render(renderer& r);
 private:
