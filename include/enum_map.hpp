@@ -1,3 +1,9 @@
+//##############################################################################
+//! @file
+//! @author Brandon Kentel
+//!
+//! Mapping between enum types and strings.
+//##############################################################################
 #pragma once
 
 #include <vector>
@@ -8,13 +14,25 @@
 
 namespace bkrl {
 //==============================================================================
-//! enum_string
-//!
 //! Value class used to represent a mapping from enum <-> string.
 //==============================================================================
 template <typename Enum>
 struct enum_string {
     static_assert(std::is_enum<Enum>::value, "");
+
+    //--------------------------------------------------------------------------
+    //! comparison by hash predicate.
+    //--------------------------------------------------------------------------
+    static bool less_hash(enum_string const& a, enum_string const& b) {
+        return a.hash < b.hash;
+    }
+
+    //--------------------------------------------------------------------------
+    //! comparison by enum value predicate.
+    //--------------------------------------------------------------------------
+    static bool less_enum(enum_string const& a, enum_string const& b) {
+        return a.value < b.value;
+    }
 
     enum_string() = default;
     enum_string(enum_string const&) = default;
@@ -27,16 +45,12 @@ struct enum_string {
     {
     }
 
-    static bool less_hash(enum_string const& a, enum_string const& b) {
-        return a.hash < b.hash;
-    }
-
-    static bool less_enum(enum_string const& a, enum_string const& b) {
-        return a.value < b.value;
-    }
-
     bool operator==(enum_string const& rhs) const {
-        return value == rhs.value;
+        auto const result = value == rhs.value;
+
+        BK_ASSERT(!result || hash == rhs.hash);
+
+        return result;
     }
 
     string_ref string {}; //!< The stringified enum.
@@ -45,8 +59,6 @@ struct enum_string {
 };
 
 //==============================================================================
-//! enum_map
-//!
 //! statically creates a map between strings and enum values.
 //!
 //! @tparam T and enum type to be mapped.
@@ -73,7 +85,7 @@ public:
             return v.hash < h;
         });
     }
-    
+
     //--------------------------------------------------------------------------
     //! enum -> mapping.
     //--------------------------------------------------------------------------

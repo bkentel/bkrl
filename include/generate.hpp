@@ -69,35 +69,7 @@ private:
 //==============================================================================
 class circle_room {
 public:
-    room generate(random::generator& gen, grid_region bounds) {
-        auto const w = bounds.width();
-        auto const h = bounds.height();
-        auto const x0 = w / 2;
-        auto const y0 = h / 2;
-        
-        auto const r = std::min(w, h) / 2.0;
-        auto const r2 = static_cast<unsigned>(std::floor(r*r));
-        auto const rr = static_cast<unsigned>(std::floor((r - 1.25)*(r - 1.25))); //hack
-
-        room result {bounds};
-
-        for_each_xy(result, [&](unsigned x, unsigned y) {
-            signed const xx = x - x0;
-            signed const yy = y - y0;
-
-            if (xx*xx + yy*yy <= r2) {
-
-                if (xx*xx + yy*yy >= rr) {
-                    result.set(attribute::tile_type, x, y, tile_type::wall);
-                } else {
-                    result.set(attribute::tile_type, x, y, tile_type::floor);
-                }
-
-            } 
-        });
-    
-        return result;
-    }
+    room generate(random::generator& gen, grid_region bounds);
 private:
 };
 
@@ -146,7 +118,7 @@ public:
     using split_callback = std::function<bool (grid_region bounds)>;
 
     explicit bsp_layout(split_callback on_split, params_t const& params = params_t{});
-  
+
     void generate(random::generator& gen);
     void generate(random::generator& gen, grid_region reserve);
 

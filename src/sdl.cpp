@@ -1,5 +1,23 @@
 #include "sdl.hpp"
 
+template <typename T>
+struct scope_exit_t {
+    scope_exit_t(T&& f) : f_{std::move(f)} {}
+    ~scope_exit_t() { f_(); }
+private:
+    std::remove_reference_t<T> f_;
+};
+
+template <typename T>
+scope_exit_t<T> scope_exit(T&& f) {
+    return scope_exit_t<T> {std::forward<T>(f)};
+}
+
+#define BK_CONCAT_(x, y) x ## y
+#define BK_CONCAT(x, y) BK_CONCAT_(x, y)
+
+#define BK_SCOPE_EXIT(F) auto BK_CONCAT(bk_scope_exit_, __LINE__) {scope_exit(F)}
+
 using bkrl::sdl_renderer;
 using bkrl::sdl_application;
 using bkrl::sdl_unique;
@@ -23,7 +41,12 @@ static ft_unique<FT_Library> create_freetype() {
 
 static ft_unique<FT_Face> create_fontface(FT_Library library) {
     FT_Face face;
-	auto const result = FT_New_Face(library, R"(C:\windows\fonts\meiryo.ttc)", 0, &face);
+	auto result = FT_New_Face(library, R"(C:\windows\fonts\meiryo.ttc)", 0, &face);
+    if (result) {
+        BK_TODO_FAIL();
+    }
+
+    result = FT_Set_Pixel_Sizes(face, 0, 24);
     if (result) {
         BK_TODO_FAIL();
     }
@@ -78,90 +101,146 @@ static sdl_unique<SDL_Window> create_window() {
     return sdl_unique<SDL_Window> {result};
 }
 
+static sdl_unique<SDL_PixelFormat> create_pixel_format() {
+    auto const result = ::SDL_AllocFormat(SDL_PIXELFORMAT_RGBA8888);
+    if (result == nullptr) {
+        BOOST_THROW_EXCEPTION(error::make_sdl_error("SDL_AllocFormat"));
+    }
+
+    return sdl_unique<SDL_PixelFormat> {result};
+}
+
 } //namespace
+
+
+//////////////////
+
+bkrl::text_renderer::text_renderer() 
+  : ft_lib_   {create_freetype()}
+  , ft_face_  {create_fontface(ft_lib_.get())}
+  , basic_latin_ {ft_face_.get(), 0x00, 0x80}
+  , has_kerning_  {FT_HAS_KERNING(ft_face_.get()) != 0}
+{
+}
+
+/////
 
 sdl_renderer::sdl_renderer(SDL_Window* const window)
     : renderer_ {create_renderer(window)}
     , texture_  {create_texture(renderer_.get())}
-    , ft_lib_   {create_freetype()}
-    , ft_face_  {create_fontface(ft_lib_.get())}
+    , text_renderer_ {}
+    , pixel_format_ {create_pixel_format()}
     , scale_x_ {1.0f}
     , scale_y_ {1.0f}
     , trans_x_ {0.0f}
     , trans_y_ {0.0f}
 {
-    FT_Set_Pixel_Sizes(ft_face_.get(), 0, 16);
+    auto texture = ::SDL_CreateTexture(
+        renderer_.get()
+      , SDL_PIXELFORMAT_RGBA8888
+      , SDL_TEXTUREACCESS_STREAMING
+      , text_renderer_.required_w()
+      , text_renderer_.required_h()
+    );
+
+    if (texture == nullptr) {
+        BOOST_THROW_EXCEPTION(error::make_sdl_error("SDL_CreateTexture"));
+    }
+
+    glyph_texture_.reset(texture);
+
+    auto const result = ::SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+    if (result) {
+        BK_TODO_FAIL();
+    }
+
+    for (int i = 0; i < 0x80; ++i) {
+        auto glyph = text_renderer_.get_glyph(i);
+        if (glyph == nullptr) {
+            continue;
+        }
+
+        BK_ASSERT(glyph->format == FT_GLYPH_FORMAT_BITMAP);
+
+        auto const bmp = reinterpret_cast<FT_BitmapGlyph>(glyph);
+        auto const r   = text_renderer_.get_glyph_rect(i);
+        auto const dst = SDL_Rect {r.left, r.top, r.width(), r.height()};
+
+        write_glyph_(texture, dst, bmp->bitmap);
+    }
+}
+
+SDL_Texture* sdl_renderer::get_glyph_texture_(int w, int h) {
+    if (!glyph_texture_ || glyph_texture_w_ < w || glyph_texture_h_ < h) {
+        if (glyph_texture_w_ < w) { glyph_texture_w_ = w; }
+        if (glyph_texture_h_ < h) { glyph_texture_h_ = h; }
+
+        auto texture = ::SDL_CreateTexture(
+            renderer_.get()
+		  , SDL_PIXELFORMAT_RGBA8888
+		  , SDL_TEXTUREACCESS_STREAMING
+		  , glyph_texture_w_
+		  , glyph_texture_h_
+        );
+
+        if (texture == nullptr) {
+            BOOST_THROW_EXCEPTION(error::make_sdl_error("SDL_CreateTexture"));
+        }
+
+        glyph_texture_.reset(texture);
+
+        ::SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+    }
+
+    return glyph_texture_.get();
+}
+
+void sdl_renderer::write_glyph_(SDL_Texture* texture, SDL_Rect const& dst, FT_Bitmap const& bitmap) {
+    auto const format  = pixel_format_.get();
+
+    uint32_t*  out         = nullptr;
+    int        pitch       = 0;
+    auto const lock_result = ::SDL_LockTexture(texture, &dst, reinterpret_cast<void**>(&out), &pitch);
+    if (lock_result) {
+        BK_TODO_FAIL();
+    }
+
+    BK_SCOPE_EXIT([&texture] {
+        ::SDL_UnlockTexture(texture);
+    });
+
+    for (int y = 0; y < bitmap.rows; ++y) {
+        for (int x = 0; x < bitmap.width; ++x) {
+            auto const src_i = y * bitmap.pitch + x;
+            auto const dst_i = y * (pitch / 4) + x;
+
+            auto const a     = bitmap.buffer[src_i];
+            auto const value = SDL_MapRGBA(format, 200, 100, 100, a);
+
+            out[dst_i] = value;
+        }
+    }
 }
 
 void sdl_renderer::draw_text(bkrl::string_ref string, text_rect rect) {
     auto const renderer = renderer_.get();
-    auto const face     = ft_face_.get();
 
-    auto texture_w = 64;
-    auto texture_h = 64;
-
-    sdl_unique<SDL_Texture> sdl_texture {
-        ::SDL_CreateTexture(
-            renderer
-		  , SDL_PIXELFORMAT_RGBA8888
-		  , SDL_TEXTUREACCESS_STREAMING
-		  , texture_w
-		  , texture_h
-        )
-    };
-
-    sdl_unique<SDL_PixelFormat> sdl_format {SDL_AllocFormat(SDL_PIXELFORMAT_RGBA8888)};
-    
-    auto const copy_glyph = [&](FT_Bitmap const& bitmap) {
-        auto const texture = sdl_texture.get();
-        auto const format  = sdl_format.get();
-
-        if (bitmap.width > texture_w || bitmap.rows > texture_h) {
-            BK_TODO_FAIL();
-        }
-
-        uint32_t* out   = nullptr;
-        int       pitch = 0;
-        
-        //TODO need a RAII object for this -- scope_guard?
-        SDL_LockTexture(texture, nullptr, reinterpret_cast<void**>(&out), &pitch);
-
-        for (int y = 0; y < bitmap.rows; ++y) {
-            for (int x = 0; x < bitmap.width; ++x) {
-                auto const src_i = y * bitmap.pitch + x;
-                auto const dst_i = y * (pitch / 4) + x;
-
-                auto const a     = bitmap.buffer[src_i];
-                auto const value = SDL_MapRGBA(format, 200, 100, 100, a);
-
-                out[dst_i] = value;
-            }
-        }
-
-        SDL_UnlockTexture(texture);
-
-        return SDL_Rect {0, 0, bitmap.width, bitmap.rows};
-    };
-    
     auto x = static_cast<int>(rect.left);
     auto y = static_cast<int>(rect.top);
 
-    SDL_SetTextureBlendMode(sdl_texture.get(), SDL_BLENDMODE_BLEND);
-
     for (auto const c : string) {
-        FT_Load_Char(face, c, FT_LOAD_RENDER);
+        auto const glyph      = text_renderer_.get_glyph(c);
+        auto const glyph_rect = text_renderer_.get_glyph_rect(c);
 
-        auto const& metrics = face->glyph->metrics;
+        BK_ASSERT(glyph->format == FT_GLYPH_FORMAT_BITMAP);
+        auto const bmp = reinterpret_cast<FT_BitmapGlyph>(glyph);
 
-        auto src_rect = copy_glyph(face->glyph->bitmap);
-        auto dst_rect = src_rect;
+        auto src_rect = SDL_Rect {glyph_rect.left, glyph_rect.top, glyph_rect.width(), glyph_rect.height()};
+        auto dst_rect = SDL_Rect {x + bmp->left, y - bmp->top, bmp->bitmap.width, bmp->bitmap.rows};
         
-        dst_rect.x = x + (metrics.horiBearingX >> 6);
-        dst_rect.y = y - (metrics.horiBearingY >> 6);
+        x += glyph->advance.x >> 16;
 
-        SDL_RenderCopy(renderer, sdl_texture.get(), &src_rect, &dst_rect);
-
-        x += metrics.horiAdvance >> 6;
+        SDL_RenderCopy(renderer, glyph_texture_.get(), &src_rect, &dst_rect);
     }
 }
 

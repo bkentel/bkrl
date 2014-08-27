@@ -1,4 +1,5 @@
 //##############################################################################
+//! @file
 //! @author Brandon Kentel
 //!
 //! Game commands.
@@ -54,7 +55,7 @@ extern template class enum_map<command_type>;
 //    //! @param source The json describing the mappings.
 //    //--------------------------------------------------------------------------
 //    explicit texture_map(utf8string const& source);
-//    
+//
 //    //needed for pimpl
 //    ~texture_map();
 //

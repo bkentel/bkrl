@@ -1,4 +1,5 @@
 //##############################################################################
+//! @file
 //! @author Brandon Kentel
 //!
 //! Game engine client.
@@ -8,7 +9,7 @@
 
 namespace bkrl {
 
-using renderer = class sdl_renderer;
+using renderer    = class sdl_renderer;
 using application = class sdl_application;
 
 //==============================================================================

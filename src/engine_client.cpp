@@ -171,7 +171,7 @@ public:
             on_mouse_move(dx, dy, buttons);
         });
 
-        auto const on_split = [](grid_region const r) {
+        auto const on_split = [](grid_region const) {
             return true;
         };
 

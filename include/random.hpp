@@ -1,3 +1,9 @@
+//##############################################################################
+//! @file
+//! @author Brandon Kentel
+//!
+//! (Pseudo) random number generation.
+//##############################################################################
 #pragma once
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>

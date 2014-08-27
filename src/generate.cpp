@@ -3,11 +3,11 @@
 
 using bkrl::generate::bsp_layout;
 using bkrl::generate::simple_room;
+using bkrl::generate::circle_room;
+
 namespace random = bkrl::random;
 using bkrl::room;
 using bkrl::grid_region;
-
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // simple_room
@@ -57,6 +57,38 @@ room simple_room::generate(random::generator& gen, grid_region const bounds) {
     return result;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// circle_room
+////////////////////////////////////////////////////////////////////////////////
+room circle_room::generate(random::generator&, grid_region bounds) {
+    auto const w = bounds.width();
+    auto const h = bounds.height();
+    auto const x0 = w / 2;
+    auto const y0 = h / 2;
+        
+    auto const r = std::min(w, h) / 2.0;
+    auto const r2 = static_cast<unsigned>(std::floor(r*r));
+    auto const rr = static_cast<unsigned>(std::floor((r - 1.25)*(r - 1.25))); //hack
+
+    room result {bounds};
+
+    for_each_xy(result, [&](unsigned x, unsigned y) {
+        auto const xx = static_cast<unsigned>(x - x0);
+        auto const yy = static_cast<unsigned>(y - y0);
+
+        if (xx*xx + yy*yy <= r2) {
+
+            if (xx*xx + yy*yy >= rr) {
+                result.set(attribute::tile_type, x, y, tile_type::wall);
+            } else {
+                result.set(attribute::tile_type, x, y, tile_type::floor);
+            }
+
+        } 
+    });
+    
+    return result;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // bsp_layout
@@ -102,7 +134,7 @@ void bsp_layout::split(random::generator& gen) {
     auto beg = 0;
     auto end = nodes_.size();
 
-    while (true) {
+    for (;;) {
         auto const new_end = split_all(beg, end);
 
         if (new_end - end == 0) {

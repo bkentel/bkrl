@@ -175,7 +175,7 @@ private:
         auto const i = linearize(width_, height_, x, y);
         return texture_type_[i];
     }
-    
+
     void set_(attribute::texture_type_t, grid_index const x, grid_index const y, texture_type_t const value) {
         auto const i = linearize(width_, height_, x, y);
         texture_type_[i] = value;
@@ -338,7 +338,7 @@ enum : unsigned {
 
 inline grid_point grid_check_to_point(unsigned const x, unsigned const y, uint8_t const n) {
     std::bitset<8> const bits {n};
-    
+
     for (size_t i = 0; i < 4; ++i) {
         if (bits[i]) {
             return {x + x_off9[i], y + y_off9[i]};
@@ -414,7 +414,7 @@ struct door_data {
     bool is_closed() const {
         return !value_.test(is_open_flag);
     }
-    
+
     void close() {
         BK_ASSERT(!is_closed());
         value_.reset(is_open_flag);

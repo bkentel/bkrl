@@ -1,3 +1,9 @@
+//##############################################################################
+//! @file
+//! @author Brandon Kentel
+//!
+//! Modified std algorithms.
+//##############################################################################
 #pragma once
 
 #include <algorithm>
@@ -10,12 +16,12 @@ namespace bkrl {
 template <
     typename Container
   , typename Type
-  , typename Predicate
+  , typename Predicate = std::less<>
 >
 inline auto lower_bound(
     Container&  container
   , Type const& value
-  , Predicate&& predicate
+  , Predicate&& predicate = Predicate{}
 ) {
     return std::lower_bound(
         std::begin(container)
@@ -28,8 +34,14 @@ inline auto lower_bound(
 //==============================================================================
 //! as std::sort, but for the entire container
 //==============================================================================
-template <typename Container, typename Predicate = std::less<Container::value_type>>
-inline void sort(Container& container, Predicate&& predicate = {}) {
+template <
+    typename Container
+  , typename Predicate = std::less<>
+>
+inline void sort(
+    Container& container
+  , Predicate&& predicate = {}
+) {
     std::sort(
         std::begin(container)
       , std::end(container)
@@ -38,7 +50,7 @@ inline void sort(Container& container, Predicate&& predicate = {}) {
 }
 
 //==============================================================================
-//! as std::lower_bound, but for the entire container, and with 
+//! as std::lower_bound, but for the entire container, and with
 //==============================================================================
 template <
     typename Container

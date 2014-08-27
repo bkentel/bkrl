@@ -1,7 +1,11 @@
+//##############################################################################
+//! @file
+//! @author Brandon Kentel
+//!
+//! Various utilities.
+//##############################################################################
 #pragma once
-
 #include <string>
-
 #include "types.hpp"
 
 namespace bkrl {
@@ -35,5 +39,23 @@ inline size_t string_len(T const (&)[N]) {
     return N - 1;
 }
 
+template <size_t Bytes> struct unsigned_int {
+    static_assert(Bytes >= 1, "");
+    static_assert(Bytes <= 9, "");
+
+    using type =
+    std::conditional_t<
+        Bytes <= 1, uint8_t, std::conditional_t<
+            Bytes <= 2, uint16_t, std::conditional_t<
+                Bytes <= 4, uint32_t, std::conditional_t<
+                    Bytes <= 8, uint64_t, std::false_type
+                >
+            >
+        >
+    >;
+};
+
+template <size_t Bytes>
+using unsigned_int_t = typename unsigned_int<Bytes>::type;
 
 } //namespace bkrl

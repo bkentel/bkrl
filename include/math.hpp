@@ -1,16 +1,18 @@
+//##############################################################################
+//! @file
+//! @author Brandon Kentel
+//!
+//! Math and geometry.
+//##############################################################################
 #pragma once
 
 #include "assert.hpp"
 
 namespace bkrl {
 
-////! "magic"
-//inline unsigned number_of_set_bits(uint32_t i) {
-//    i = i - ((i >> 1) & 0x55555555);
-//    i = (i & 0x33333333) + ((i >> 2) & 0x33333333);
-//    return (((i + (i >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
-//}
-
+//==============================================================================
+//! point2d @TODO
+//==============================================================================
 template <typename T>
 struct point2d {
     T x, y;
@@ -24,9 +26,11 @@ point2d<T> translate(point2d<T> const p, R const dx, R const dy) {
     };
 }
 
-////
 
-////
+
+//==============================================================================
+//! axis_aligned_rect @TODO
+//==============================================================================
 template <typename T>
 struct axis_aligned_rect {
     T width()  const { return right - left; }
@@ -59,6 +63,9 @@ inline bool operator!=(axis_aligned_rect<T> const a, axis_aligned_rect<T> const 
     return !(a == b);
 }
 
+//==============================================================================
+//! linearize a 2d value to a 1d value.
+//==============================================================================
 inline size_t linearize(size_t const w, size_t const h, size_t const x, size_t const y) {
     BK_PRECONDITION(x < w);
     BK_PRECONDITION(y < h);
