@@ -259,6 +259,7 @@
     <ClInclude Include="..\include\exception.hpp" />
     <ClInclude Include="..\include\generate.hpp" />
     <ClInclude Include="..\include\grid.hpp" />
+    <ClInclude Include="..\include\keyboard.hpp" />
     <ClInclude Include="..\include\math.hpp" />
     <ClInclude Include="..\include\pch.hpp" />
     <ClInclude Include="..\include\random.hpp" />

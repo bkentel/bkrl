@@ -171,45 +171,41 @@ public:
             on_mouse_move(dx, dy, buttons);
         });
 
-        auto const on_split = [](grid_region const) {
-            return true;
-        };
-
-        grid_region const reserve {20, 20, 40, 40};
-
-        bkrl::random::generator gen {100};
-
-        generate::bsp_layout bsp {on_split};
-        bsp.generate(gen, reserve);
+        ////////////////////////////////////////////////////
+        random::generator gen {100};
 
         generate::simple_room room_gen {};
         generate::circle_room circle_gen {};
         
         std::vector<room> rooms;
-        
-        for (auto const& r : bsp.nodes_) {
-            if (r.child_index == 0) {
-                rooms.emplace_back(
-                    circle_gen.generate(gen, r.region)
-                );
-            } else {
-                if (!r.is_leaf()) continue;
-                if (bkrl::random::uniform_range(gen, 0, 100) < 50) continue;
 
-                rooms.emplace_back(
-                    room_gen.generate(gen, r.region)
-                );
-            }
+        auto const on_split = [](grid_region const) {
+            return true;
+        };
 
-            auto& last_room = rooms.back();
-            auto const x = r.region.left;
-            auto const y = r.region.top;
+        auto const on_room_gen = [&rooms, &gen, &room_gen](grid_region const bounds) {
+            rooms.emplace_back(room_gen.generate(gen, bounds));
+        };
 
-            map_.write(last_room, bkrl::grid_point {x, y});
+        grid_region const reserve {20, 20, 40, 40};
+
+        auto layout = generate::bsp_layout::generate(
+            gen
+          , generate::bsp_layout::params_t {}
+          , on_split
+          , on_room_gen
+          , reserve
+        );
+
+        for (auto const& room : rooms) {
+            auto const x = room.bounds().left;
+            auto const y = room.bounds().top;
+
+            map_.write(room, grid_point {x, y});
         }
 
-        for (auto const& r : rooms) {
-            merge_walls(map_, r.bounds());
+        for (auto const& room : rooms) {
+            merge_walls(map_, room.bounds());
         }
 
         set_texture_type(map_);

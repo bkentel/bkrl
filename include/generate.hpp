@@ -74,107 +74,53 @@ private:
 };
 
 //==============================================================================
-//! bsp_layout
+//! BSP based map generation.
+//! PIMPL based.
 //==============================================================================
 class bsp_layout {
 public:
-    using index_t = unsigned;
+    using room_callback  = std::function<void (grid_region bounds)>;
+    using split_callback = std::function<bool (grid_region bounds)>;
 
-    struct node_t {
-        enum : index_t {
-            index_reserved = 0
-          , index_none = static_cast<unsigned>(-1)
-        };
-
-        explicit node_t(
-            grid_region const region
-          , index_t     const parent_index = index_none
-          , index_t     const child_index  = index_none
-        )
-          : region {region}
-          , child_index {child_index}
-          , parent_index {parent_index}
-        {
-        }
-
-        bool is_leaf() const { return child_index == index_none; }
-        bool is_reserved() const { return child_index == index_reserved; }
-
-        grid_region region;
-        index_t     child_index  = index_none;
-        index_t     parent_index = index_none;
-    };
-public:
     struct params_t {
+        unsigned width  = 100;
+        unsigned height = 100;
+
         unsigned min_region_w = 4;
         unsigned min_region_h = 4;
         unsigned max_region_w = 20;
         unsigned max_region_h = 20;
-        unsigned split_chance = 50;
-        float    max_aspect_ratio = 16.0f / 10.0f;
+
+        unsigned split_chance    = 50;
+        unsigned room_gen_change = 50;
+
+        float max_aspect_ratio = 16.0f / 10.0f;
     };
+public:
+    static bsp_layout generate(
+        random::generator&    gen
+      , params_t       const& params
+      , split_callback const& on_split
+      , room_callback  const& on_room_gen
+      , grid_region    const& reserve = grid_region {}
+    );
 
-    using room_callback = std::function<void (grid_region bounds)>;
-    using split_callback = std::function<bool (grid_region bounds)>;
+    BK_NO_COPY(bsp_layout);
 
-    explicit bsp_layout(split_callback on_split, params_t const& params = params_t{});
+    bsp_layout(bsp_layout&& other);
 
-    void generate(random::generator& gen);
-    void generate(random::generator& gen, grid_region reserve);
+    ~bsp_layout();
+private:
+    class impl_t;
+    std::unique_ptr<impl_t> impl_;
 
-    void split(
-        node_t&           parent
-      , index_t     const index
-      , region_pair const children
-    ) {
-        BK_PRECONDITION(parent.is_leaf());
-
-        node_t n0 {std::get<0>(children), index};
-        node_t n1 {std::get<1>(children), index};
-
-        auto const ok0 = on_split_(n0.region);
-        auto const ok1 = on_split_(n1.region);
-
-        if (!ok0) {
-            n0.child_index = node_t::index_reserved;
-        }
-
-        if (!ok1) {
-            n1.child_index = node_t::index_reserved;
-        }
-
-        parent.child_index = nodes_.size();
-
-        nodes_.push_back(n0);
-        nodes_.push_back(n1);
-    }
-
-    //vertical
-    void split_y(index_t const index, grid_index const where) {
-        BK_PRECONDITION(index < nodes_.size());
-
-        auto& node = nodes_[index];
-        split(node, index, generate::split_y(node.region, where));
-    }
-
-    //horizontal
-    void split_x(index_t const index, grid_index const where) {
-        BK_PRECONDITION(index < nodes_.size());
-
-        auto& node = nodes_[index];
-        split(node, index, generate::split_x(node.region, where));
-    }
-
-
-    void split(random::generator& gen);
-
-    bool split(random::generator& gen, index_t node);
-
-//private:
-    split_callback on_split_;
-
-    params_t params_;
-    std::vector<node_t> nodes_;
+    explicit bsp_layout(
+        random::generator&    gen
+      , params_t       const& params
+      , split_callback const& on_split
+      , room_callback  const& on_room_gen
+      , grid_region    const& reserve
+    );
 };
 
 } //namespace generate
