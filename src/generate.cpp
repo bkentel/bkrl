@@ -17,8 +17,8 @@ room simple_room::generate(random::generator& gen, grid_region const bounds) {
 
     random::uniform_int dist;
 
-    auto const w = dist.generate(gen, 4u, bounds.width());
-    auto const h = dist.generate(gen, 4u, bounds.height());
+    auto const w = bounds.width(); //dist.generate(gen, 4u, bounds.width());
+    auto const h = bounds.height(); //dist.generate(gen, 4u, bounds.height());
 
     auto const slack_w = bounds.width()  - w;
     auto const slack_h = bounds.height() - h;
@@ -93,6 +93,8 @@ room circle_room::generate(random::generator&, grid_region bounds) {
 ////////////////////////////////////////////////////////////////////////////////
 // bsp_layout
 ////////////////////////////////////////////////////////////////////////////////
+
+//! implementation
 class bsp_layout::impl_t {
 public:
     using index_t = unsigned;
@@ -152,27 +154,34 @@ public:
         split(gen);
     }
 
-    //vertical
+    //--------------------------------------------------------------------------
+    //! split along the y (vertical) axis.
+    //--------------------------------------------------------------------------
     void split_y(index_t const index, grid_index const where) {
         BK_PRECONDITION(index < nodes_.size());
 
         auto& node = nodes_[index];
-        split(node, index, generate::split_y(node.region, where));
+        add_children(index, generate::split_y(node.region, where));
     }
 
-    //horizontal
+    //--------------------------------------------------------------------------
+    //! split along the x (horizontal) axis.
+    //--------------------------------------------------------------------------
     void split_x(index_t const index, grid_index const where) {
         BK_PRECONDITION(index < nodes_.size());
 
         auto& node = nodes_[index];
-        split(node, index, generate::split_x(node.region, where));
+        add_children(index, generate::split_x(node.region, where));
     }
 
-    void split(
-        node_t_&          parent
-      , index_t     const index
-      , region_pair const children
-    ) {
+    //--------------------------------------------------------------------------
+    //! Add @children to the node at @index.
+    //--------------------------------------------------------------------------
+    void add_children(index_t const index, region_pair const children) {
+        BK_PRECONDITION(index < nodes_.size());
+
+        auto& parent = nodes_[index];
+
         BK_PRECONDITION(parent.is_leaf());
 
         node_t_ n0 {std::get<0>(children), index};
@@ -195,7 +204,13 @@ public:
         nodes_.push_back(n1);
     }
 
+    //--------------------------------------------------------------------------
+    //! Top-level split function. Recursively divide breadth-first.
+    //--------------------------------------------------------------------------
     void split(random::generator& gen) {
+        //
+        // split all nodes from [beg, end).
+        //
         auto const split_all = [&](size_t const beg, size_t const end) {
             for (auto i = beg; i < end; ++i) {
                 auto const did_split = split(gen, i);
@@ -230,86 +245,146 @@ public:
         }
     }
 
-    bool split(random::generator& gen, index_t const index) {
-        auto const& node = nodes_[index];
-    
+    //--------------------------------------------------------------------------
+    //! Decide if node can be split.
+    //! @returns true if @p node can be split, false otherwise.
+    //--------------------------------------------------------------------------
+    bool can_split(node_t_ const& node) const {
         if (!node.is_leaf()) {
             return false;
         } else if (node.is_reserved()) {
             return false;
         }
 
-        auto const& region = node.region;
-        auto const  w      = region.width();
-        auto const  h      = region.height();
-
+        auto const  w = node.region.width();
+        auto const  h = node.region.height();
         auto const& p = params_;
-        //--------------------------------------------------------------------------
-        //if small enough, decide randomly whether to split
-        if ((w < p.max_region_w) && (h < p.max_region_h)) {
-            auto const split_chance = params_.split_chance;
-            auto const do_split     = random::uniform_range(gen, 0, 100) < split_chance;
 
-            if (!do_split) {
-                return false;
+        if (w < p.min_region_w * 2 && h < p.min_region_h * 2) {
+            //too small - can't split
+            return false;
+        }
+
+        return true;
+    }
+
+    //--------------------------------------------------------------------------
+    //! split axis.
+    //--------------------------------------------------------------------------
+    enum class split_type {
+        split_none, split_x, split_y
+    };
+
+    //--------------------------------------------------------------------------
+    //! Decide which axis to split @node along.
+    //! @pre can_split(gen, node)
+    //--------------------------------------------------------------------------
+    split_type choose_split_type(random::generator& gen, node_t_ const& node) const {
+        auto const& p = params_;
+        auto const  w = node.region.width();
+        auto const  h = node.region.height();
+
+        auto const ok_x = h >= p.min_region_h * 2;
+        auto const ok_y = w >= p.min_region_w * 2;
+
+        BK_PRECONDITION(ok_x || ok_y);
+
+        //TODO could be simplified?
+        if (ok_x && !ok_y) {
+            return split_type::split_x;
+        } else if (!ok_x && ok_y) {
+            return split_type::split_y;
+        }
+
+        //
+        // if the max aspect ration is exceeded, split
+        //
+        auto const aspect = (w >= h)
+          ? (static_cast<float>(w) / h)
+          : (static_cast<float>(h) / w);
+
+        if (aspect > p.max_aspect_ratio) {
+            return (w >= h) ? split_type::split_y : split_type::split_x;
+        }
+
+        //
+        // else, if small enough, reject split based on params_t::split_chance
+        //
+        if (w <= p.max_region_w && h <= p.max_region_h) {
+            auto const roll = random::uniform_range(gen, 0, 100);
+            if (roll < p.split_chance) {
+                return split_type::split_none;
             }
         }
 
-        //--------------------------------------------------------------------------
-        // choose a split direction for this node
-        enum {
-            split_none, split_x_axis, split_y_axis
-        };
+        //
+        // otherwise, split randomly 50/50
+        //
+        auto const roll = random::uniform_range(gen, 0, 100);
+        return roll < 50 ? split_type::split_y : split_type::split_x;
+    }
 
-        auto const get_split_type = [&] {
-            auto const ok_x = (h >= p.min_region_h * 2);
-            auto const ok_y = (w >= p.min_region_w * 2);
+    //--------------------------------------------------------------------------
+    //! Split one node into two nodes.
+    //! @returns true if the node was split, false otherwise.
+    //! @pre index < nodes_.size()
+    //--------------------------------------------------------------------------
+    bool split(random::generator& gen, index_t const index) {
+        BK_PRECONDITION(index < nodes_.size());
 
-            if (
-                (w > h) && (ok_y)
-             && (static_cast<float>(w) / h > p.max_aspect_ratio)
-            ) {
-                return split_y_axis;
-            } else if (
-                (h > w) && (ok_x)
-             && (static_cast<float>(h) / w > p.max_aspect_ratio)
-            ) {
-                return split_x_axis;
-            } else if (ok_x && ok_y) {
-                return (random::uniform_range(gen, 0, 100) < 50)
-                  ? split_x_axis
-                  : split_y_axis;
-            } else if (ok_x) {
-                return split_x_axis;
-            } else if (ok_y) {
-                return split_y_axis;
-            }
+        auto const& node = nodes_[index];
+    
+        if (!can_split(node)) {
+            return false;
+        }
 
-            return split_none; 
-        };
-        //--------------------------------------------------------------------------
+        auto const& p = params_;
+        auto const  w = node.region.width();
+        auto const  h = node.region.height();
+
+        auto const split_dir = choose_split_type(gen, node);
 
         auto distribution = [&](unsigned const lo, unsigned const hi) {
             return random::uniform_range(gen, lo, hi);
         };
 
-        auto const do_split_x = [&] {
-            split_x(index, region.top + distribution(p.min_region_h, h - p.min_region_h));
-        };
-
-        auto const do_split_y = [&] {
-            split_y(index, region.left + distribution(p.min_region_w, w - p.min_region_w));
-        };
-
-        switch (get_split_type()) {
-        case split_x_axis : do_split_x(); return true;
-        case split_y_axis : do_split_y(); return true;
-        case split_none   : //fallthrough
-        default           : break;
+        if (split_dir == split_type::split_x) {
+            auto const where = distribution(p.min_region_h, h - p.min_region_h);
+            split_x(index, node.region.top + where);
+        } else if (split_dir == split_type::split_y) {
+            auto const where = distribution(p.min_region_w, w - p.min_region_w);
+            split_y(index, node.region.left + where);
+        } else if (split_dir == split_type::split_none) {
+            return false;
         }
 
-        return false;
+        return true;
     }
+
+    std::vector<index_t> connect(random::generator& gen, index_t const i) {
+        BK_PRECONDITION(i < nodes_.size());
+
+        auto const& node = nodes_[i];
+
+        if (node.is_leaf()) {
+            return {i};
+        }
+
+        auto const i0 = node.child_index + 0;
+        auto const i1 = node.child_index + 1;
+
+        return connect(gen, i0, i1);
+    }
+
+    std::vector<index_t> connect(random::generator& gen, index_t const left, index_t const right) {
+        auto const lhs = connect(gen, left);
+        auto const rhs = connect(gen, right);
+
+        auto const i_left  = random::uniform_range(gen, 0, lhs.size() - 1);
+        auto const i_right = random::uniform_range(gen, 0, rhs.size() - 1);
+
+    }
+
 private:
     std::vector<node_t_> nodes_;
     room_callback        on_room_gen_;
