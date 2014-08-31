@@ -26,7 +26,25 @@ point2d<T> translate(point2d<T> const p, R const dx, R const dy) {
     };
 }
 
+//==============================================================================
+//! range
+//==============================================================================
+template <
+    typename T
+  , typename Lo = std::greater_equal<>
+  , typename Hi = std::less_equal<>
+>
+struct range {
+    T size() const {
+        return hi - lo; //TODO
+    }
 
+    explicit operator bool() const {
+        return lo <= hi;
+    }
+
+    T lo, hi;
+};
 
 //==============================================================================
 //! axis_aligned_rect @TODO
@@ -35,6 +53,10 @@ template <typename T>
 struct axis_aligned_rect {
     T width()  const { return right - left; }
     T height() const { return bottom - top; }
+
+    explicit operator bool() const {
+        return left <= right && top <= bottom;
+    }
 
     T left, top, right, bottom;
 };
@@ -62,6 +84,61 @@ template <typename T>
 inline bool operator!=(axis_aligned_rect<T> const a, axis_aligned_rect<T> const b) {
     return !(a == b);
 }
+
+template <
+    typename T
+  , typename P = axis_aligned_rect<T>
+  , typename R = std::pair<P, P>
+>
+inline R split_y(P const& rect, T const split) {
+    BK_PRECONDITION(!!rect);
+    BK_PRECONDITION(split >= rect.left);
+    BK_PRECONDITION(split <= rect.right);
+
+    auto const l0 = rect.left;
+    auto const t0 = rect.top;
+    auto const r0 = split;
+    auto const b0 = rect.bottom;
+
+    auto const l1 = r0;
+    auto const t1 = rect.top;
+    auto const r1 = rect.right;
+    auto const b1 = rect.bottom;
+
+    return std::make_pair(
+        P {l0, t0, r0, b0}
+      , P {l1, t1, r1, b1}
+    );
+}
+
+template <
+    typename T
+  , typename P = axis_aligned_rect<T>
+  , typename R = std::pair<P, P>
+>
+inline R split_x(P const& rect, T const split) {
+    BK_PRECONDITION(!!rect);
+    BK_PRECONDITION(split >= rect.top);
+    BK_PRECONDITION(split <= rect.bottom);
+
+    auto const l0 = rect.left;
+    auto const t0 = rect.top;
+    auto const r0 = rect.right;
+    auto const b0 = split;
+
+    auto const l1 = rect.left;
+    auto const t1 = b0;
+    auto const r1 = rect.right;
+    auto const b1 = rect.bottom;
+
+    return std::make_pair(
+        P {l0, t0, r0, b0}
+      , P {l1, t1, r1, b1}
+    );
+}
+
+using grid_index  = uint32_t;
+using grid_region = axis_aligned_rect<grid_index>;
 
 //==============================================================================
 //! linearize a 2d value to a 1d value.

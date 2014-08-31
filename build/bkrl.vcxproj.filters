@@ -16,6 +16,9 @@
     <Filter Include="lib">
       <UniqueIdentifier>{90cc854b-e898-4e21-a245-792861a72d34}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include\detail">
+      <UniqueIdentifier>{43b39a0e-bd24-468f-a472-580ebb5aac42}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\main.cpp">
@@ -50,6 +53,12 @@
     </ClCompile>
     <ClCompile Include="..\src\command_type.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\bsp_layout.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\test\bsp_layout.t.cpp">
+      <Filter>test</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -103,6 +112,12 @@
     </ClInclude>
     <ClInclude Include="..\include\keyboard.hpp">
       <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\bsp_layout.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\detail\bsp_layout.i.hpp">
+      <Filter>include\detail</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

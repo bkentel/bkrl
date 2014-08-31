@@ -203,6 +203,7 @@
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">Level3</WarningLevel>
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Level3</WarningLevel>
     </ClCompile>
+    <ClCompile Include="..\src\bsp_layout.cpp" />
     <ClCompile Include="..\src\command_type.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
     </ClCompile>
@@ -238,6 +239,9 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\test\bsp_layout.t.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\test\engine_client.t.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
@@ -253,7 +257,9 @@
   <ItemGroup>
     <ClInclude Include="..\include\algorithm.hpp" />
     <ClInclude Include="..\include\assert.hpp" />
+    <ClInclude Include="..\include\bsp_layout.hpp" />
     <ClInclude Include="..\include\command_type.hpp" />
+    <ClInclude Include="..\include\detail\bsp_layout.i.hpp" />
     <ClInclude Include="..\include\engine_client.hpp" />
     <ClInclude Include="..\include\enum_map.hpp" />
     <ClInclude Include="..\include\exception.hpp" />

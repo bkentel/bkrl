@@ -5,6 +5,7 @@
 #include "command_type.hpp"
 #include "random.hpp"
 #include "generate.hpp"
+#include "bsp_layout.hpp"
 
 using bkrl::engine_client;
 using bkrl::command_type;
@@ -183,17 +184,17 @@ public:
             return true;
         };
 
-        auto const on_room_gen = [&rooms, &gen, &room_gen](grid_region const bounds) {
+        auto const on_room_gen = [&rooms, &gen, &room_gen](grid_region const bounds, unsigned const id) {
             rooms.emplace_back(room_gen.generate(gen, bounds));
         };
 
         grid_region const reserve {20, 20, 40, 40};
 
-        auto layout = generate::bsp_layout::generate(
+        auto layout = bsp_layout::generate(
             gen
-          , generate::bsp_layout::params_t {}
           , on_split
           , on_room_gen
+          , bsp_layout::params_t {}
           , reserve
         );
 
