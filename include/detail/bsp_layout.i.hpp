@@ -4,11 +4,8 @@
 
 namespace bkrl { namespace detail {
 
-class bsp_layout_impl {
+class bsp_layout_impl : public bsp_layout_base {
 public:
-    using params_t       = bsp_layout::params_t;
-    using room_callback  = bsp_layout::room_callback;
-    using split_callback = bsp_layout::split_callback;
     using index_t        = unsigned;
 
     struct node_t_ {
@@ -92,19 +89,17 @@ public:
 
     using range_t = range<unsigned>;
 
-    void connect(random::generator& gen);
+    void connect(random::generator& gen, connect_callback on_connect);
 
     range_t connect(random::generator& gen, index_t const i);
-
-    void connect(random::generator& gen, index_t const left, index_t const right);
-
 private:
     std::vector<node_t_> nodes_;
     std::vector<index_t> connected_nodes_;
     room_callback        on_room_gen_;
     split_callback       on_split_;
     params_t             params_;
-    unsigned             next_room_id_ = 0;
+    unsigned             next_room_id_ = 1;
+    connect_callback     on_connect_;
 };
 
 //--------------------------------------------------------------------------
@@ -137,6 +132,9 @@ bsp_layout_impl::bsp_layout_impl(
     }
 
     split(gen);
+
+    on_room_gen_  = room_callback  {};
+    on_split_     = split_callback {};
 }
 
 //--------------------------------------------------------------------------
@@ -356,10 +354,14 @@ bsp_layout_impl::split(
 void
 bsp_layout_impl::connect(
     random::generator& gen
+  , connect_callback   on_connect
 ) {
     BK_ASSERT(connected_nodes_.empty());
     connected_nodes_.reserve(next_room_id_);
+
+    on_connect_ = on_connect;
     connect(gen, 0);
+    on_connect_ = connect_callback {};
 }
 
 //--------------------------------------------------------------------------
@@ -406,21 +408,11 @@ bsp_layout_impl::connect(
     auto const which0 = random::uniform_range(gen, lhs.lo, lhs.hi - 1);
     auto const which1 = random::uniform_range(gen, rhs.lo, rhs.hi - 1);
 
-    connect(gen, which0, which1);
+    on_connect_(node.region, which0, which1);
 
     BK_ASSERT(lhs.hi == rhs.lo);
 
     return range_t {lhs.lo, rhs.hi};
-}
-
-//--------------------------------------------------------------------------
-void
-bsp_layout_impl::connect(
-    random::generator& gen
-  , index_t const left
-  , index_t const right
-) {
-    std::cout << "connected\t" << left << "\tand\t" << right << std::endl;
 }
 
 }} //namespace bkrl::detail

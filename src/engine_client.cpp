@@ -186,6 +186,7 @@ public:
 
         auto const on_room_gen = [&rooms, &gen, &room_gen](grid_region const bounds, unsigned const id) {
             rooms.emplace_back(room_gen.generate(gen, bounds));
+            BK_ASSERT(id == rooms.size());
         };
 
         grid_region const reserve {20, 20, 40, 40};
@@ -205,12 +206,24 @@ public:
             map_.write(room, grid_point {x, y});
         }
 
+        layout.connect(gen, [&](grid_region const& bounds, unsigned const id0, unsigned const id1) {
+            std::cout << "connect\t" << id0 << "\t-> " << id1 << std::endl;
+            return true;
+        });
+
         for (auto const& room : rooms) {
             merge_walls(map_, room.bounds());
         }
 
         set_texture_type(map_);
         set_texture_id(map_, texture_map_);
+
+        //TODO temp
+        auto const& r0 = rooms[0];
+        auto const& bounds = r0.bounds();
+        player_.position.x = bounds.left + 1;
+        player_.position.y = bounds.top + 1;
+
 
         while (app_) {
             app_.pump_events();

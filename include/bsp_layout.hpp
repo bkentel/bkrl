@@ -10,10 +10,12 @@ namespace bkrl {
 namespace random { class generator; }
 namespace detail { class bsp_layout_impl; }
 
-class bsp_layout {
-public:
-    using room_callback  = std::function<void (grid_region bounds, unsigned id)>;
-    using split_callback = std::function<bool (grid_region bounds)>;
+namespace detail {
+struct bsp_layout_base {
+    using room_id = uint16_t;
+    using room_callback    = std::function<void (grid_region bounds, room_id id)>;
+    using split_callback   = std::function<bool (grid_region bounds)>;
+    using connect_callback = std::function<bool (grid_region bounds, room_id id0, room_id id1)>;
 
     struct params_t {
         unsigned width  = 100;
@@ -29,6 +31,11 @@ public:
 
         float max_aspect_ratio = 16.0f / 10.0f;
     };
+};
+
+} //namespace detail
+
+class bsp_layout : public detail::bsp_layout_base {
 public:
     static bsp_layout generate(
         random::generator&    gen
@@ -45,7 +52,7 @@ public:
     bsp_layout& operator=(bsp_layout&&);
     ~bsp_layout();
 
-    void connect(random::generator& gen);
+    void connect(random::generator& gen, connect_callback on_connect);
 private:
     bsp_layout(
         random::generator&    gen

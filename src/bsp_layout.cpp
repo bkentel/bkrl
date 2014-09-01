@@ -35,6 +35,6 @@ bsp_layout bsp_layout::generate(
     return bsp_layout {gen, params, on_split, on_room_gen, reserve};
 }
 
-void bsp_layout::connect(random::generator& gen) {
-    impl_->connect(gen);
+void bsp_layout::connect(random::generator& gen, connect_callback on_connect) {
+    impl_->connect(gen, on_connect);
 }
