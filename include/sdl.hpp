@@ -439,6 +439,7 @@ public:
     void handle_keyboard_event_(SDL_KeyboardEvent const& event);
     void handle_window_event_(SDL_WindowEvent const& event);
     void handle_mousemotion_event_(SDL_MouseMotionEvent const& event);
+    void handle_mouse_button_event_(SDL_MouseButtonEvent const& event);
 
     explicit operator bool() const { return running_; }
 
@@ -464,6 +465,11 @@ public:
     void on_mouse_move(mouse_move_sink sink) {
         mouse_move_sink_ = std::move(sink);
     }
+
+    using mouse_button_sink = std::function<void (signed x, signed y)>;
+    void on_mouse_button(mouse_button_sink sink) {
+        mouse_button_sink_ = std::move(sink);
+    }
 private:
     sdl_state              state_;
     sdl_unique<SDL_Window> window_;
@@ -473,6 +479,7 @@ private:
     command_sink command_sink_;
     resize_sink  resize_sink_;
     mouse_move_sink mouse_move_sink_;
+    mouse_button_sink mouse_button_sink_;
 };
 
 } //namespace bkrl

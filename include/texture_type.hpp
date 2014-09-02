@@ -27,6 +27,8 @@ enum class texture_type : uint16_t {
   , door_closed
   , door_opened
 
+  , corridor
+
   , enum_size //must be last
 };
 

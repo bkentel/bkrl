@@ -78,6 +78,11 @@ struct axis_aligned_rect {
         };
     }
 
+    bool contains(point2d<T> const p) const {
+        return (p.x >= left && p.x < right)
+            && (p.y >= top  && p.y < bottom);
+    }
+
     T left, top, right, bottom;
 };
 

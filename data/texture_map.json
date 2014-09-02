@@ -21,5 +21,6 @@
       , ["wall_nsew", 206]
       , ["door_closed", 234]
       , ["door_opened", 249]
+      , ["corridor", 176]
       ]
 }

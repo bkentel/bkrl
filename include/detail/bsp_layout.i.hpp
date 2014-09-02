@@ -1,6 +1,7 @@
 #pragma once
 #include "bsp_layout.hpp"
 #include "generate.hpp"
+#include "random.hpp"
 
 namespace bkrl { namespace detail {
 
@@ -376,7 +377,7 @@ bsp_layout_impl::split(
         auto const where = distribution(p.min_region_w, w - p.min_region_w);
         split_y(index, r.left + where);
     } else if (split_dir == split_type::split_none) {
-        node.child_index = node_t_::index_reserved;
+        node.child_index = node_t_::index_none;
         return false;
     }
 

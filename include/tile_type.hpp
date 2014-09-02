@@ -18,6 +18,7 @@ enum class tile_type : uint16_t {
   , wall
   , door
   , stair
+  , corridor
 
   , enum_size //last
 };

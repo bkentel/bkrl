@@ -38,6 +38,7 @@ namespace {
         BK_ENUMMAP_ADD_STRING(result, texture_type, wall_nsew);
         BK_ENUMMAP_ADD_STRING(result, texture_type, door_closed);
         BK_ENUMMAP_ADD_STRING(result, texture_type, door_opened);
+        BK_ENUMMAP_ADD_STRING(result, texture_type, corridor);
    
         bkrl::sort(result, map_t::value_type::less_hash);
 

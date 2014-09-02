@@ -21,8 +21,8 @@ struct bsp_layout_base {
         unsigned width  = 100;
         unsigned height = 100;
 
-        unsigned min_region_w = 4;
-        unsigned min_region_h = 4;
+        unsigned min_region_w = 10;
+        unsigned min_region_h = 10;
         unsigned max_region_w = 20;
         unsigned max_region_h = 20;
 
@@ -31,7 +31,7 @@ struct bsp_layout_base {
         unsigned split_chance = 50;
 
         //! The percent chance that a room will be generated in a given region.
-        unsigned room_gen_chance = 50;
+        unsigned room_gen_chance = 100;
 
         //! The maximum aspect ratio for generated regions.
         float max_aspect_ratio = 16.0f / 10.0f;

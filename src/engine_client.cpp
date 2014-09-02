@@ -17,6 +17,15 @@ template <bkrl::tile_type>
 texture_type get_texture(grid_storage& grid, grid_index const x, grid_index const y);
 
 template <>
+texture_type get_texture<tile_type::corridor>(
+    grid_storage&    //grid
+  , grid_index const //x
+  , grid_index const //y
+) {
+    return texture_type::corridor;
+}
+
+template <>
 texture_type get_texture<tile_type::door>(
     grid_storage&    //grid
   , grid_index const //x
@@ -81,9 +90,10 @@ texture_type get_texture(
     auto const type = grid.get(attribute::tile_type, x, y);
 
     switch (type) {
-    case tile_type::wall  : return get_texture<tile_type::wall>(grid, x, y);
-    case tile_type::floor : return get_texture<tile_type::floor>(grid, x, y);
-    case tile_type::door  : return get_texture<tile_type::door>(grid, x, y);
+    case tile_type::wall     : return get_texture<tile_type::wall>(grid, x, y);
+    case tile_type::floor    : return get_texture<tile_type::floor>(grid, x, y);
+    case tile_type::door     : return get_texture<tile_type::door>(grid, x, y);
+    case tile_type::corridor : return get_texture<tile_type::corridor>(grid, x, y);
     }
 
     return texture_type::invalid;
@@ -134,8 +144,6 @@ void merge_walls(grid_storage& grid, grid_region const bounds) {
             return type == tile_type::wall || type == tile_type::door;
         });
 
-        //auto const walls = check_grid_block9(grid, x, y, attribute::tile_type, tile_type::wall);
-
         if (can_merge(walls)) {
             auto const floors = check_grid_block9(grid, x, y, attribute::tile_type, tile_type::floor);
 
@@ -164,7 +172,7 @@ template <> struct binary_number<1> {
     enum : unsigned { value = 1 };
 };
 
-void connect_rooms(
+bool connect_rooms(
     random::generator& gen
   , grid_storage& map
   , grid_region const& bounds
@@ -172,7 +180,7 @@ void connect_rooms(
   , room const& dst_room
 ) {
     constexpr auto segment_randomness = 2;
-    constexpr auto min_segment_len = 1u;
+    constexpr auto min_segment_len = 2u;
     constexpr auto max_segment_len = 10u;
 
     auto const beg = src_room.center();
@@ -185,15 +193,17 @@ void connect_rooms(
     //
     // generate a path segment length
     //
-    auto const gen_segment_len = [&](signed delta) {
-        while (delta == 0) {
-            delta = random::uniform_range(
+    auto const gen_segment_len = [&](signed delta, signed n) {
+        while (std::abs(delta) < n) {
+            delta += random::uniform_range(
                 gen, -segment_randomness, segment_randomness
             );
         }
 
-        auto const min = min_segment_len;
-        auto const max = static_cast<unsigned>(std::abs(delta));
+        auto const mag = static_cast<unsigned>(std::abs(delta));
+
+        auto const min = std::min(max_segment_len, std::max(mag, min_segment_len));
+        auto const max = std::min(mag, max_segment_len);
 
         auto const roll = random::uniform_range(gen, min, max);
 
@@ -209,11 +219,20 @@ void connect_rooms(
     // p - delta between cur and dst
     // returns pair {cur.x or cur.y, p.x or p.y}
     //
-    auto const choose_direction = [&](point2d<int> const p) {
+    auto const choose_direction = [&](point2d<int> const delta) {
+        auto const mag_x = std::abs(delta.x);
+        auto const mag_y = std::abs(delta.y);
+
+        if (mag_x > 2*mag_y) {
+            return std::pair<grid_index&, int> {cur.x, delta.x};
+        } else if (mag_y > 2*mag_x) {
+            return std::pair<grid_index&, int> {cur.y, delta.y};
+        }
+
         auto const roll = random::uniform_range(gen, 0u, 100u);
         return (roll < 50u)
-          ? std::pair<grid_index&, int> {cur.x, p.x}
-          : std::pair<grid_index&, int> {cur.y, p.y};
+           ? std::pair<grid_index&, int> {cur.x, delta.x}
+           : std::pair<grid_index&, int> {cur.y, delta.y};
     };
 
     auto const can_tunnel = [&](grid_point const cur) {
@@ -249,33 +268,31 @@ void connect_rooms(
         return true;
     };
 
-    for (auto limit = 0; limit < 100; ++limit) {
+    for (auto fail_limit = 0; fail_limit < 10;) {
         auto const delta = end - cur;
         auto const dir   = choose_direction(delta);
         auto&      out   = dir.first;
-        auto const seg   = gen_segment_len(dir.second);
-        auto const len   = seg.first;
+        auto const seg   = gen_segment_len(dir.second, fail_limit + 1);
+        auto       len   = seg.first;
         auto const sign  = seg.second;
 
         for (auto i = 0u; i < len; ++i) {
-            if (cur.x <  bounds.left
-             || cur.x >= bounds.right
-             || cur.y <  bounds.top
-             || cur.y >= bounds.bottom
-            ) {
-                break;
-            }
+            BK_ASSERT(bounds.contains(cur));
 
             auto const type = map.get(attribute::tile_type, cur);
             if (type == tile_type::invalid) {
-                map.set(attribute::tile_type, cur, tile_type::floor); //TODO
+                map.set(attribute::tile_type, cur, tile_type::corridor); //TODO
             } else if (type == tile_type::wall) {
                 if (!can_tunnel(cur)) {
-                    break;   
+                    out -= sign;
+                    fail_limit++;
+                    break;
                 }
 
-                auto const doors = check_grid_block9(map, cur.x, cur.y, attribute::tile_type, tile_type::door);
+                auto const doors = check_grid_block5(map, cur.x, cur.y, attribute::tile_type, tile_type::door);
                 if (doors) {
+                    out -= sign;
+                    fail_limit++;
                     break;
                 }
                 
@@ -284,12 +301,19 @@ void connect_rooms(
 
             auto const id = map.get(attribute::room_id, cur);
             if (id == dst_id) {
-                return;
+                return true;
             }
 
             out += sign;
+            if (!bounds.contains(cur)) {
+                out -= sign;
+                fail_limit++;
+                break;
+            }
         }
     }
+
+    return false;
 }
 
 
@@ -317,6 +341,9 @@ public:
             on_mouse_move(dx, dy, buttons);
         });
 
+        app_.on_mouse_button([&](signed const x, signed const y) {
+            on_mouse_button(x, y);
+        });
         ////////////////////////////////////////////////////
         random::generator gen {100};
 
@@ -351,28 +378,29 @@ public:
             map_.write(room, grid_point {x, y});
         }
 
-        layout.connect(gen, [&](grid_region const& bounds, unsigned const id0, unsigned const id1) {
-            //std::cout << "connect\t" << id0 << "\t-> " << id1 << std::endl;
-            
-            //if (id0 == 1) {
-                connect_rooms(gen, map_, bounds, rooms[id0-1], rooms[id1-1]);
-            //}
-            return true;
-        });
-
         for (auto const& room : rooms) {
             merge_walls(map_, room.bounds());
         }
+
+        layout.connect(gen, [&](grid_region const& bounds, unsigned const id0, unsigned const id1) {
+            auto const connected = connect_rooms(gen, map_, bounds, rooms[id0-1], rooms[id1-1]);
+            if (connected) {
+                std::cout << "connected " << id0 << " -> " << id1 << std::endl;
+            } else {
+                std::cout << "failed    " << id0 << " -> " << id1 << std::endl;
+            }
+
+            return true;
+        });
 
         set_texture_type(map_);
         set_texture_id(map_, texture_map_);
 
         //TODO temp
         auto const& r0 = rooms[0];
-        auto const& bounds = r0.bounds();
-        player_.position.x = bounds.left + 1;
-        player_.position.y = bounds.top + 1;
+        player_.position = r0.center();
 
+        set_zoom(zoom_);
 
         while (app_) {
             app_.pump_events();
@@ -391,10 +419,7 @@ public:
 
         for (bkrl::grid_index y = 0; y < h; ++y) {
             for (bkrl::grid_index x = 0; x < w; ++x) {
-
-                //auto const type    = map_.get(attribute::tile_type,  x, y);
                 auto const texture = map_.get(attribute::texture_id, x, y);
-
                 r.draw_tile(sheet_, texture, x, y);
             }
         }
@@ -427,7 +452,7 @@ public:
 
         switch (type) {
         case tile_type::floor :
-        case tile_type::invalid :
+        case tile_type::corridor :
             return true;
         case tile_type::door :
             return door_data {map_, to}.is_open();
@@ -589,6 +614,44 @@ public:
         } else if (buttons.any()) {
             //std::cout << "button";
         }
+    }
+
+    void on_mouse_button(signed const x, signed const y) {
+        auto const q = screen_to_grid(x, y);
+        if (q.x < 0 || q.y < 0) {
+            return;
+        }
+
+        auto const p = grid_point {
+            static_cast<grid_index>(q.x)
+          , static_cast<grid_index>(q.y)
+        };
+        if (!map_.is_valid(p)) {
+            return;
+        }
+
+        std::cout << "(" << p.x << ", " << p.y << ")" << std::endl;
+
+        auto const tex_type = map_.get(attribute::texture_type, p);
+        auto const tex_type_str = enum_map<texture_type>::get(tex_type);
+        
+        auto const room_id = map_.get(attribute::room_id, p);
+
+        std::cout << "texture_type = " << tex_type_str.string << std::endl;
+        std::cout << "room_id      = " << room_id << std::endl;
+    }
+
+    point2d<int> screen_to_grid(signed const x, signed const y) const {
+        auto const dx = display_x_ + scroll_x_;
+        auto const dy = display_y_ + scroll_y_;
+
+        auto const w = sheet_.sprite_width;
+        auto const h = sheet_.sprite_height;
+
+        auto const ix = static_cast<int>(std::trunc((x / zoom_ - dx) / w));
+        auto const iy = static_cast<int>(std::trunc((y / zoom_ - dy) / h));
+
+        return point2d<int> {ix, iy};
     }
 private:
     application  app_;

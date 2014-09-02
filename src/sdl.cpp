@@ -301,8 +301,10 @@ void sdl_application::pump_events() {
         case SDL_MOUSEMOTION :
             handle_mousemotion_event_(event_.motion);
             break;
-        case SDL_MOUSEBUTTONDOWN : break;
-        case SDL_MOUSEBUTTONUP : break;
+        case SDL_MOUSEBUTTONDOWN :
+        case SDL_MOUSEBUTTONUP :
+            handle_mouse_button_event_(event_.button);
+            break;
         case SDL_MOUSEWHEEL :
             if (event_.wheel.y > 0) {
                 command_sink_(command_type::zoom_in);
@@ -313,6 +315,14 @@ void sdl_application::pump_events() {
             break;
         }
     }
+}
+
+void sdl_application::handle_mouse_button_event_(SDL_MouseButtonEvent const& event) {
+    if (!mouse_button_sink_) {
+        return;
+    }
+
+    mouse_button_sink_(event.x, event.y);
 }
 
 void sdl_application::handle_mousemotion_event_(SDL_MouseMotionEvent const& event) {
