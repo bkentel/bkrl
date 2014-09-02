@@ -19,10 +19,21 @@ struct point2d {
 };
 
 template <typename T, typename R>
-point2d<T> translate(point2d<T> const p, R const dx, R const dy) {
+inline point2d<T> translate(point2d<T> const p, R const dx, R const dy) {
     return point2d<T> {
         static_cast<T>(p.x + dx)
       , static_cast<T>(p.y + dy)
+    };
+}
+
+template <
+    typename T
+  , typename U = std::make_signed_t<T>
+>
+inline point2d<U> operator-(point2d<T> const p, point2d<T> const q) {
+    return point2d<U> {
+        static_cast<U>(p.x) - static_cast<U>(q.x)
+      , static_cast<U>(p.y) - static_cast<U>(q.y)
     };
 }
 
@@ -56,6 +67,15 @@ struct axis_aligned_rect {
 
     explicit operator bool() const {
         return left <= right && top <= bottom;
+    }
+
+    template <typename R = T>
+    point2d<R> center() const {
+        auto const half = R {2};
+        return point2d<R> {
+            (static_cast<R>(left + (right  - left)) / half)
+          , (static_cast<R>(top  + (bottom - top )) / half)
+        };
     }
 
     T left, top, right, bottom;
@@ -136,9 +156,6 @@ inline R split_x(P const& rect, T const split) {
       , P {l1, t1, r1, b1}
     );
 }
-
-using grid_index  = uint32_t;
-using grid_region = axis_aligned_rect<grid_index>;
 
 //==============================================================================
 //! linearize a 2d value to a 1d value.

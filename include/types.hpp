@@ -9,6 +9,8 @@
 #include <cstdint>
 #include <boost/utility/string_ref.hpp>
 
+#include "math.hpp" //need math types
+
 namespace bkrl {
 
 using std::uint64_t;
@@ -30,5 +32,23 @@ using codepoint_t = uint32_t;
 enum class command_type : uint16_t;
 enum class tile_type    : uint16_t;
 enum class texture_type : uint16_t;
+
+using texture_id = unsigned;
+
+using grid_size   = unsigned;
+using grid_index  = unsigned;
+using grid_point  = point2d<grid_index>;
+using grid_region = axis_aligned_rect<grid_index>;
+using grid_data_value = uint32_t;
+
+union grid_data {
+    grid_data() : grid_data {0} {}
+    explicit grid_data(grid_data_value const value) : value {value} {}
+
+    void*           ptr;
+    grid_data_value value;
+};
+
+using room_id = unsigned;
 
 } //namespace bkrl

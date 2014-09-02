@@ -60,7 +60,7 @@ inline region_pair split_x(grid_region const region, grid_index const split) {
 //==============================================================================
 class simple_room {
 public:
-    room generate(random::generator& gen, grid_region bounds);
+    room generate(random::generator& gen, grid_region bounds, room_id id);
 private:
 };
 
@@ -69,7 +69,7 @@ private:
 //==============================================================================
 class circle_room {
 public:
-    room generate(random::generator& gen, grid_region bounds);
+    room generate(random::generator& gen, grid_region bounds, room_id id);
 private:
 };
 

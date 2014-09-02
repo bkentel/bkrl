@@ -24,7 +24,8 @@ public:
     }
 };
 
-inline unsigned uniform_range(generator& gen, unsigned lo, unsigned hi) {
+template <typename T>
+inline T uniform_range(generator& gen, T const lo, T const hi) {
     return uniform_int{}.generate(gen, lo, hi);
 }
 

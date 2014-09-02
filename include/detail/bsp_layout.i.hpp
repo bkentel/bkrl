@@ -91,14 +91,16 @@ public:
 
     void connect(random::generator& gen, connect_callback on_connect);
 
-    range_t connect(random::generator& gen, index_t const i);
+    range_t connect(random::generator& gen, index_t i, unsigned n = 0);
+
+    void gen_rooms(random::generator& gen, index_t i);
 private:
     std::vector<node_t_> nodes_;
     std::vector<index_t> connected_nodes_;
     room_callback        on_room_gen_;
     split_callback       on_split_;
     params_t             params_;
-    unsigned             next_room_id_ = 1;
+    unsigned             next_room_id_ = 0;
     connect_callback     on_connect_;
 };
 
@@ -128,7 +130,7 @@ bsp_layout_impl::bsp_layout_impl(
         split_y(3, reserve.left);
         split_x(6, reserve.top);
 
-        nodes_[8].child_index = 0;
+        nodes_[8].child_index = node_t_::index_reserved;
     }
 
     split(gen);
@@ -228,14 +230,45 @@ bsp_layout_impl::split(
         end = new_end;
     }
 
-    for (auto const& node : nodes_) {
-        if (node.is_leaf()) {
-            auto const roll = random::uniform_range(gen, 0, 100);
-            if (roll < params_.room_gen_change) {
-                on_room_gen_(node.region, next_room_id_++);
-            }
+    gen_rooms(gen, 0);
+}
+
+void
+bsp_layout_impl::gen_rooms(
+    random::generator& gen
+  , index_t const i
+) {
+    BK_PRECONDITION(i < nodes_.size());
+    auto& node = nodes_[i];
+
+    if (node.is_leaf()) {
+        auto const is_reserved = node.is_reserved();
+        auto const roll = random::uniform_range(gen, 0u, 100u);
+
+        if (is_reserved || roll < params_.room_gen_chance) {
+            std::cout << "room generated at index = " << i << std::endl;
+            node.child_index = node_t_::index_reserved;
+            on_room_gen_(node.region, ++next_room_id_);
         }
+
+        return;
     }
+
+    auto const lhs = node.child_index + 0;
+    auto const rhs = node.child_index + 1;
+
+    BK_ASSERT(lhs != node_t_::index_none);
+
+    auto const& left  = nodes_[lhs];
+    auto const& right = nodes_[rhs];
+
+    if (left.parent_index != right.parent_index) {
+        gen_rooms(gen, lhs);
+        return;
+    }
+
+    gen_rooms(gen, lhs);
+    gen_rooms(gen, rhs);
 }
 
 //--------------------------------------------------------------------------
@@ -298,7 +331,7 @@ bsp_layout_impl::choose_split_type(
     // else, if small enough, reject split based on params_t::split_chance
     //
     if (w <= p.max_region_w && h <= p.max_region_h) {
-        auto const roll = random::uniform_range(gen, 0, 100);
+        auto const roll = random::uniform_range(gen, 0u, 100u);
         if (roll < p.split_chance) {
             return split_type::split_none;
         }
@@ -343,7 +376,7 @@ bsp_layout_impl::split(
         auto const where = distribution(p.min_region_w, w - p.min_region_w);
         split_y(index, r.left + where);
     } else if (split_dir == split_type::split_none) {
-        node.child_index = node_t_::index_reserved; //a room was generated TODO
+        node.child_index = node_t_::index_reserved;
         return false;
     }
 
@@ -369,7 +402,11 @@ bsp_layout_impl::range_t
 bsp_layout_impl::connect(
     random::generator& gen
   , index_t const      i
+  , unsigned const n
 ) {
+    //std::cout << std::string(n*4, '-');
+    //std::cout << "connect " << i << " ";
+
     BK_PRECONDITION(i < nodes_.size());
     auto const& node = nodes_[i];
 
@@ -377,9 +414,11 @@ bsp_layout_impl::connect(
 
     if (node.is_leaf()) {
         if (node.is_reserved()) {
+            //std::cout << "leaf -> room" << std::endl;
             connected_nodes_.emplace_back(i);
             return range_t{size, size + 1};
         } else {
+            //std::cout << "leaf -> empty" << std::endl;
             return range_t{size, size};
         }
     }
@@ -393,11 +432,17 @@ bsp_layout_impl::connect(
     auto const& right = nodes_[i1];
 
     if (left.parent_index != right.parent_index) {
-        return connect(gen, i0);
+        //std::cout << "parent -> 1 child" << std::endl;
+        return connect(gen, i0, n+1);
     }
 
-    auto const lhs = connect(gen, i0);
-    auto const rhs = connect(gen, i1);
+    //std::cout << "parent -> 2 child" << std::endl;
+
+    auto const lhs = connect(gen, i0, n+1);
+    auto const rhs = connect(gen, i1, n+1);
+
+    //std::cout << std::string(n*4, '-');
+    //std::cout << "connected" << std::endl;
 
     if (lhs.size() == 0) {
         return rhs;
@@ -408,7 +453,7 @@ bsp_layout_impl::connect(
     auto const which0 = random::uniform_range(gen, lhs.lo, lhs.hi - 1);
     auto const which1 = random::uniform_range(gen, rhs.lo, rhs.hi - 1);
 
-    on_connect_(node.region, which0, which1);
+    on_connect_(node.region, which0 + 1, which1 + 1);
 
     BK_ASSERT(lhs.hi == rhs.lo);
 

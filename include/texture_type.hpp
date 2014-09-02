@@ -5,12 +5,10 @@
 //! Texture types.
 //##############################################################################
 #pragma once
+#include "types.hpp"
 #include "enum_map.hpp"
 
 namespace bkrl {
-
-//! An index into a tilemap.
-using texture_id = unsigned;
 
 //==============================================================================
 //! Visual variations for tile_types.

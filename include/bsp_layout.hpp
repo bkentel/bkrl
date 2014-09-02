@@ -3,7 +3,7 @@
 #include <memory>     //std::unique_ptr
 #include <functional> //std::function
 
-#include "math.hpp"
+#include "types.hpp"
 
 namespace bkrl {
 
@@ -26,15 +26,24 @@ struct bsp_layout_base {
         unsigned max_region_w = 20;
         unsigned max_region_h = 20;
 
-        unsigned split_chance    = 50;
-        unsigned room_gen_change = 50;
+        //! The percent chance that a given region will be split if it
+        //! its width < max_region_w and its height < max_region_h.
+        unsigned split_chance = 50;
 
+        //! The percent chance that a room will be generated in a given region.
+        unsigned room_gen_chance = 50;
+
+        //! The maximum aspect ratio for generated regions.
         float max_aspect_ratio = 16.0f / 10.0f;
     };
 };
 
 } //namespace detail
 
+//==============================================================================
+//! Map layout generatator based on binary space partitioning.
+//! @note pimpl based; moveable, but not copyable.
+//==============================================================================
 class bsp_layout : public detail::bsp_layout_base {
 public:
     static bsp_layout generate(
@@ -52,8 +61,14 @@ public:
     bsp_layout& operator=(bsp_layout&&);
     ~bsp_layout();
 
+    //--------------------------------------------------------------------------
+    //! Use @p on_connect to fully connect the generated layout.
+    //--------------------------------------------------------------------------
     void connect(random::generator& gen, connect_callback on_connect);
 private:
+    //--------------------------------------------------------------------------
+    //! Private; use bsp_layout::generate instead.
+    //--------------------------------------------------------------------------
     bsp_layout(
         random::generator&    gen
       , params_t       const& params

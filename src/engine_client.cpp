@@ -148,6 +148,151 @@ void merge_walls(grid_storage& grid, grid_region const bounds) {
     });
 }
 
+//MSB first
+template <int Bit, int... Bits>
+struct binary_number {
+    enum : unsigned {
+        value = (Bit << sizeof...(Bits)) | binary_number<Bits...>::value
+    };
+};
+
+template <> struct binary_number<0> {
+    enum : unsigned { value = 0 };
+};
+
+template <> struct binary_number<1> {
+    enum : unsigned { value = 1 };
+};
+
+void connect_rooms(
+    random::generator& gen
+  , grid_storage& map
+  , grid_region const& bounds
+  , room const& src_room
+  , room const& dst_room
+) {
+    constexpr auto segment_randomness = 2;
+    constexpr auto min_segment_len = 1u;
+    constexpr auto max_segment_len = 10u;
+
+    auto const beg = src_room.center();
+    auto const end = dst_room.center();
+    auto       cur = beg;
+
+    auto const src_id = src_room.id();
+    auto const dst_id = dst_room.id();
+
+    //
+    // generate a path segment length
+    //
+    auto const gen_segment_len = [&](signed delta) {
+        while (delta == 0) {
+            delta = random::uniform_range(
+                gen, -segment_randomness, segment_randomness
+            );
+        }
+
+        auto const min = min_segment_len;
+        auto const max = static_cast<unsigned>(std::abs(delta));
+
+        auto const roll = random::uniform_range(gen, min, max);
+
+        auto const sign = (delta > 0) ? 1 : -1;
+
+        return (roll > max_segment_len)
+          ? std::make_pair(max_segment_len, sign)
+          : std::make_pair(roll, sign);
+    };
+
+    //
+    // choose a direction to move
+    // p - delta between cur and dst
+    // returns pair {cur.x or cur.y, p.x or p.y}
+    //
+    auto const choose_direction = [&](point2d<int> const p) {
+        auto const roll = random::uniform_range(gen, 0u, 100u);
+        return (roll < 50u)
+          ? std::pair<grid_index&, int> {cur.x, p.x}
+          : std::pair<grid_index&, int> {cur.y, p.y};
+    };
+
+    auto const can_tunnel = [&](grid_point const cur) {
+        auto const n = check_grid_block9f(map, cur.x, cur.y, attribute::tile_type, [](tile_type const type) {
+            return type == tile_type::wall || type == tile_type::door;
+        });
+
+        constexpr auto i_NW = (1<<0);
+        constexpr auto i_Nx = (1<<1);
+        constexpr auto i_NE = (1<<2);
+        constexpr auto i_xW = (1<<3);
+        constexpr auto i_xE = (1<<4);
+        constexpr auto i_SW = (1<<5);
+        constexpr auto i_Sx = (1<<6);
+        constexpr auto i_SE = (1<<7);
+
+        auto const c0 = (n & i_Nx|i_NE|i_xE) == (i_Nx|i_xE);
+        auto const c1 = (n & i_Sx|i_SW|i_xW) == (i_Sx|i_xW);
+        auto const c2 = (n & i_Nx|i_NW|i_xW) == (i_Nx|i_xW);
+        auto const c3 = (n & i_Sx|i_SE|i_xE) == (i_Sx|i_xE);
+
+        auto const c4 = (n & ~(i_SW|i_Sx|i_SE)) == (i_Nx|i_xW|i_xE);
+        auto const c5 = (n & ~(i_NE|i_xE|i_SE)) == (i_Nx|i_xW|i_Sx);
+        auto const c6 = (n & ~(i_NW|i_Nx|i_NE)) == (i_xW|i_xE|i_Sx);
+        auto const c7 = (n & ~(i_NW|i_xW|i_SW)) == (i_Nx|i_xE|i_Sx);
+
+        auto const c8 = n == (i_Nx|i_xW|i_xE|i_Sx);
+
+        if (c0 || c1 || c2 || c3 || c4 || c5 || c6 || c7 || c8) {
+            return false;
+        }
+
+        return true;
+    };
+
+    for (auto limit = 0; limit < 100; ++limit) {
+        auto const delta = end - cur;
+        auto const dir   = choose_direction(delta);
+        auto&      out   = dir.first;
+        auto const seg   = gen_segment_len(dir.second);
+        auto const len   = seg.first;
+        auto const sign  = seg.second;
+
+        for (auto i = 0u; i < len; ++i) {
+            if (cur.x <  bounds.left
+             || cur.x >= bounds.right
+             || cur.y <  bounds.top
+             || cur.y >= bounds.bottom
+            ) {
+                break;
+            }
+
+            auto const type = map.get(attribute::tile_type, cur);
+            if (type == tile_type::invalid) {
+                map.set(attribute::tile_type, cur, tile_type::floor); //TODO
+            } else if (type == tile_type::wall) {
+                if (!can_tunnel(cur)) {
+                    break;   
+                }
+
+                auto const doors = check_grid_block9(map, cur.x, cur.y, attribute::tile_type, tile_type::door);
+                if (doors) {
+                    break;
+                }
+                
+                map.set(attribute::tile_type, cur, tile_type::door); //TODO
+            }
+
+            auto const id = map.get(attribute::room_id, cur);
+            if (id == dst_id) {
+                return;
+            }
+
+            out += sign;
+        }
+    }
+}
+
+
 } //namespace bkrl
 
 
@@ -185,7 +330,7 @@ public:
         };
 
         auto const on_room_gen = [&rooms, &gen, &room_gen](grid_region const bounds, unsigned const id) {
-            rooms.emplace_back(room_gen.generate(gen, bounds));
+            rooms.emplace_back(room_gen.generate(gen, bounds, id));
             BK_ASSERT(id == rooms.size());
         };
 
@@ -207,7 +352,11 @@ public:
         }
 
         layout.connect(gen, [&](grid_region const& bounds, unsigned const id0, unsigned const id1) {
-            std::cout << "connect\t" << id0 << "\t-> " << id1 << std::endl;
+            //std::cout << "connect\t" << id0 << "\t-> " << id1 << std::endl;
+            
+            //if (id0 == 1) {
+                connect_rooms(gen, map_, bounds, rooms[id0-1], rooms[id1-1]);
+            //}
             return true;
         });
 

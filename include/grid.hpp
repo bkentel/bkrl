@@ -6,22 +6,6 @@
 #include "tile_type.hpp"
 
 namespace bkrl {
-
-using grid_size   = unsigned;
-using grid_index  = unsigned;
-using grid_point  = bkrl::point2d<grid_index>;
-using grid_region = bkrl::axis_aligned_rect<grid_index>;
-
-using grid_data_value = uint32_t;
-
-union grid_data {
-    grid_data() : value {0} {}
-    explicit grid_data(grid_data_value const value) : value {value} {}
-
-    void*           ptr;
-    grid_data_value value;
-};
-
 //==============================================================================
 // attributes
 //==============================================================================
@@ -38,11 +22,11 @@ namespace attribute {
     //--------------------------------------------------------------------------
     // attribute instances
     //--------------------------------------------------------------------------
-    constexpr tile_type_t    tile_type    {};
-    constexpr texture_type_t texture_type {};
-    constexpr texture_id_t   texture_id   {};
-    constexpr room_id_t      room_id      {};
-    constexpr data_t         data         {};
+    constexpr tile_type_t    tile_type    {}; //<! base tile type
+    constexpr texture_type_t texture_type {}; //<! specific texture variant
+    constexpr texture_id_t   texture_id   {}; //<! texture tile map index
+    constexpr room_id_t      room_id      {}; //<! room id
+    constexpr data_t         data         {}; //<! tile specific data
 
     //--------------------------------------------------------------------------
     // attribute traits
@@ -59,6 +43,10 @@ namespace attribute {
 
     template <> struct traits<texture_id_t> {
         using type = bkrl::texture_id;
+    };
+
+    template <> struct traits<room_id_t> {
+        using type = bkrl::room_id;
     };
 
     template <> struct traits<data_t> {
@@ -78,6 +66,7 @@ public:
     using tile_type_t    = attribute::value_t<attribute::tile_type_t>;
     using texture_type_t = attribute::value_t<attribute::texture_type_t>;
     using texture_id_t   = attribute::value_t<attribute::texture_id_t>;
+    using room_id_t      = attribute::value_t<attribute::room_id_t>;
     using data_t         = attribute::value_t<attribute::data_t>;
 
     grid_storage(grid_size const w, grid_size const h)
@@ -89,6 +78,7 @@ public:
         tile_type_.resize(    size, tile_type_t    {} );
         texture_type_.resize( size, texture_type_t {} );
         texture_id_.resize(   size, texture_id_t   {} );
+        room_id_.resize(      size, room_id_t      {} );
         data_.resize(         size, data_t         {} );
     }
 
@@ -97,7 +87,8 @@ public:
     {
     }
 
-    ////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     template <typename Attribute, typename Value = attribute::value_t<Attribute>>
     Value get(Attribute const attribute, grid_index const x, grid_index const y) const {
         return get_(attribute, x, y);
@@ -117,7 +108,9 @@ public:
     void set(Attribute const attribute, grid_point const p, Value const value) {
         set_(attribute, p.x, p.y, value);
     }
-    ////
+
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     void write(grid_storage const& source, grid_point const where = {0, 0}) {
         write(source, where.x, where.y);
     }
@@ -133,6 +126,8 @@ public:
             set(attribute::tile_type,    to, source.get(attribute::tile_type,    from));
             set(attribute::texture_type, to, source.get(attribute::texture_type, from));
             set(attribute::texture_id,   to, source.get(attribute::texture_id,   from));
+            set(attribute::room_id,      to, source.get(attribute::room_id,      from));
+            set(attribute::data,         to, source.get(attribute::data,         from));
         };
 
         auto const h = source.height();
@@ -193,6 +188,18 @@ private:
         texture_id_[i] = value;
     }
     //--------------------------------------------------------------------------
+    // room_id
+    //--------------------------------------------------------------------------
+    texture_id_t get_(attribute::room_id_t, grid_index const x, grid_index const y) const {
+        auto const i = linearize(width_, height_, x, y);
+        return room_id_[i];
+    }
+
+    void set_(attribute::room_id_t, grid_index const x, grid_index const y, room_id_t const value) {
+        auto const i = linearize(width_, height_, x, y);
+        room_id_[i] = value;
+    }
+    //--------------------------------------------------------------------------
     // data
     //--------------------------------------------------------------------------
     data_t get_(attribute::data_t, grid_index const x, grid_index const y) const {
@@ -211,6 +218,7 @@ private:
     std::vector<tile_type_t>    tile_type_;
     std::vector<texture_type_t> texture_type_;
     std::vector<texture_id_t>   texture_id_;
+    std::vector<room_id_t>      room_id_;
     std::vector<data_t>         data_;
 };
 
@@ -232,9 +240,15 @@ void for_each_xy(T& grid, Function&& function) {
 //==============================================================================
 class room : public grid_storage {
 public:
-    explicit room(bkrl::grid_region const bounds)
+    room(
+        grid_region const bounds
+      , grid_point  const center
+      , room_id const id
+    )
       : grid_storage {bounds}
       , location_    {{bounds.left, bounds.top}}
+      , center_      {center}
+      , id_          {id}
     {
     }
 
@@ -244,7 +258,15 @@ public:
         auto const r = l + width();
         auto const b = t + height();
 
-        return bkrl::grid_region {l, t, r, b};
+        return grid_region {l, t, r, b};
+    }
+
+    room_id id() const {
+        return id_;
+    }
+
+    grid_point center() const {
+        return center_;
     }
 
     room& translate(int dx, int dy) {
@@ -253,6 +275,8 @@ public:
     }
 private:
      grid_point location_;
+     grid_point center_;
+     room_id    id_;
 };
 
 constexpr int y_off9[9] = {-1, -1, -1
