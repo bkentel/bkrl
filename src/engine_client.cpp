@@ -13,106 +13,218 @@ namespace random = bkrl::random;
 
 namespace bkrl {
 
-template <bkrl::tile_type>
-texture_type get_texture(grid_storage& grid, grid_index const x, grid_index const y);
+////////////////////////////////////////////////////////////////////////////////
+// texture_transform
+////////////////////////////////////////////////////////////////////////////////
 
-template <>
-texture_type get_texture<tile_type::corridor>(
-    grid_storage&    //grid
-  , grid_index const //x
-  , grid_index const //y
+//------------------------------------------------------------------------------
+// get_texture_type fallback
+//------------------------------------------------------------------------------
+template <tile_type Type>
+texture_type
+get_texture_type(
+    grid_storage const& //grid
+  , grid_point   const  //p
 ) {
-    return texture_type::corridor;
+    BK_TODO_FAIL();
+    //return texture_type::invalid;
 }
 
-template <>
-texture_type get_texture<tile_type::door>(
-    grid_storage&    //grid
-  , grid_index const //x
-  , grid_index const //y
+//------------------------------------------------------------------------------
+// get_texture_type passthrough overload
+//------------------------------------------------------------------------------
+template <tile_type Type>
+texture_type
+get_texture_type(
+    grid_storage const& grid
+  , grid_index   const  x
+  , grid_index   const  y
 ) {
-    return texture_type::door_closed;
+    return get_texture_type<Type>(grid, grid_point {x, y});
 }
 
+//------------------------------------------------------------------------------
+// tile_type::floor
+//------------------------------------------------------------------------------
 template <>
-texture_type get_texture<tile_type::floor>(
-    grid_storage&    //grid
-  , grid_index const //x
-  , grid_index const //y
+texture_type
+get_texture_type<tile_type::floor>(
+    grid_storage const& //grid
+  , grid_point   const  //p
 ) {
     return texture_type::floor;
 }
 
+//------------------------------------------------------------------------------
+// tile_type::corridor
+//------------------------------------------------------------------------------
 template <>
-texture_type get_texture<tile_type::wall>(
-    grid_storage&    grid
-  , grid_index const x
-  , grid_index const y
+texture_type
+get_texture_type<tile_type::corridor>(
+    grid_storage const& //grid
+  , grid_point   const  //p
 ) {
-    //auto const wall = check_grid_block5(grid, x, y, attribute::tile_type, tile_type::wall);
-    auto const wall = check_grid_block5f(grid, x, y, attribute::tile_type, [](tile_type const type) {
-        return type == tile_type::wall || type == tile_type::door;
-    });
-
-    switch (wall) {
-    case 0 : return texture_type::wall_none;
-
-    case (1<<0) : return texture_type::wall_n;
-    case (1<<1) : return texture_type::wall_w;
-    case (1<<2) : return texture_type::wall_e;
-    case (1<<3) : return texture_type::wall_s;
-
-    case (1<<0)|(1<<3) : return texture_type::wall_ns;
-    case (1<<1)|(1<<2) : return texture_type::wall_ew;
-    case (1<<2)|(1<<3) : return texture_type::wall_se;
-    case (1<<1)|(1<<3) : return texture_type::wall_sw;
-    case (1<<0)|(1<<2) : return texture_type::wall_ne;
-    case (1<<0)|(1<<1) : return texture_type::wall_nw;
-
-    case (1<<0)|(1<<2)|(1<<3) : return texture_type::wall_nse;
-    case (1<<0)|(1<<1)|(1<<3) : return texture_type::wall_nsw;
-    case (1<<0)|(1<<1)|(1<<2) : return texture_type::wall_new;
-    case (1<<1)|(1<<2)|(1<<3) : return texture_type::wall_sew;
-
-    case (1<<0)|(1<<1)|(1<<2)|(1<<3) : return texture_type::wall_nsew;
-
-    default: BK_TODO_FAIL(); break;
-    }
-
-    return texture_type::wall_nsew;
+    return texture_type::corridor;
 }
 
-texture_type get_texture(
-    grid_storage&      grid
-  , grid_index const   x
-  , grid_index const   y
+//------------------------------------------------------------------------------
+// tile_type::door
+//------------------------------------------------------------------------------
+template <>
+texture_type
+get_texture_type<tile_type::door>(
+    grid_storage const& grid
+  , grid_point   const  p
 ) {
-    auto const type = grid.get(attribute::tile_type, x, y);
+    door_data const door {grid, p};
+
+    if (door.is_open()) {
+        return texture_type::door_opened;
+    }
+
+    if (door.is_closed()) {
+        return texture_type::door_closed;
+    }
+
+    BK_TODO_FAIL();
+    //return texture_type::invalid;
+}
+
+//------------------------------------------------------------------------------
+// tile_type::wall
+//------------------------------------------------------------------------------
+template <>
+texture_type
+get_texture_type<tile_type::wall>(
+    grid_storage const& grid
+  , grid_point   const  p
+) {
+    constexpr auto iN = (1<<0);
+    constexpr auto iW = (1<<1);
+    constexpr auto iE = (1<<2);
+    constexpr auto iS = (1<<3);
+
+    auto const n = check_grid_block5f(
+        grid, p.x, p.y, attribute::tile_type
+      , [](tile_type const type) {
+            return type == tile_type::wall
+                || type == tile_type::door;
+        }
+    );
+
+    switch (n) {
+    case 0           : return texture_type::wall_none;
+    case iN          : return texture_type::wall_n;
+    case iW          : return texture_type::wall_w;
+    case iE          : return texture_type::wall_e;
+    case iS          : return texture_type::wall_s;
+    case iN|iS       : return texture_type::wall_ns;
+    case iE|iW       : return texture_type::wall_ew;
+    case iS|iE       : return texture_type::wall_se;
+    case iS|iW       : return texture_type::wall_sw;
+    case iN|iE       : return texture_type::wall_ne;
+    case iN|iW       : return texture_type::wall_nw;
+    case iN|iS|iE    : return texture_type::wall_nse;
+    case iN|iS|iW    : return texture_type::wall_nsw;
+    case iN|iE|iW    : return texture_type::wall_new;
+    case iS|iE|iW    : return texture_type::wall_sew;
+    case iN|iS|iE|iW : return texture_type::wall_nsew;
+    }
+
+    BK_TODO_FAIL();
+    //return texture_type::invalid;
+}
+
+//------------------------------------------------------------------------------
+// get_texture_type forward to specialization
+//------------------------------------------------------------------------------
+texture_type
+get_texture_type(
+    grid_storage const& grid
+  , grid_point   const  p
+  , tile_type    const  type
+) {
+    using tt = tile_type;
 
     switch (type) {
-    case tile_type::wall     : return get_texture<tile_type::wall>(grid, x, y);
-    case tile_type::floor    : return get_texture<tile_type::floor>(grid, x, y);
-    case tile_type::door     : return get_texture<tile_type::door>(grid, x, y);
-    case tile_type::corridor : return get_texture<tile_type::corridor>(grid, x, y);
+    case tt::empty    : return get_texture_type<tt::empty>(grid, p);
+    case tt::floor    : return get_texture_type<tt::floor>(grid, p);
+    case tt::wall     : return get_texture_type<tt::wall>(grid, p);
+    case tt::door     : return get_texture_type<tt::door>(grid, p);
+    case tt::stair    : return get_texture_type<tt::stair>(grid, p);
+    case tt::corridor : return get_texture_type<tt::corridor>(grid, p);
     }
 
     return texture_type::invalid;
 }
 
-void set_texture_type(grid_storage& grid) {
+void
+update_texture_type(
+    grid_storage&    grid
+  , grid_point const p
+) {
+    auto const type     = grid.get(attribute::tile_type, p);
+    auto const tex_type = get_texture_type(grid, p, type);
+
+    grid.set(attribute::texture_type, p, tex_type);
+}
+
+void
+update_texture_type(
+    grid_storage& grid
+) {
     for_each_xy(grid, [&](grid_index const x, grid_index const y) {
-        auto const tex = get_texture(grid, x, y);
-        grid.set(attribute::texture_type, x, y, tex);
+        update_texture_type(grid, grid_point {x, y});
     });
 }
 
-void set_texture_id(grid_storage& grid, texture_map const& map) {
+void
+update_texture_id(
+    grid_storage&      grid
+  , texture_map const& map
+  , grid_point const   p
+) {
+    auto const type = grid.get(attribute::texture_type, p);
+    auto const id   = map[type];
+    grid.set(attribute::texture_id, p, id);
+}
+
+void
+update_texture_id(
+    grid_storage&     grid
+ , texture_map const& map
+) {
     for_each_xy(grid, [&](grid_index const x, grid_index const y) {
-        auto const type = grid.get(attribute::texture_type, x, y);
-        auto const id   = map[type];
-        grid.set(attribute::texture_id, x, y, id);    
+        update_texture_id(grid, map, grid_point {x, y});
     });
 }
+
+
+void
+update_grid(
+    grid_storage&      grid
+  , texture_map const& map
+  , grid_point const   p
+) {
+    auto const x = {p.x - 1, p.x, p.x + 1};
+    auto const y = {p.y - 1, p.y, p.y + 1};
+
+    for (auto iy : y) {
+        for (auto ix : x) {
+            auto const ip = grid_point {ix, iy};
+
+            if (!grid.is_valid(ip)) {
+                break;
+            }
+
+            update_texture_type(grid, ip);
+            update_texture_id(grid, map, ip);
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 
 class entity {
 public:
@@ -377,8 +489,10 @@ public:
             return true;
         });
 
-        set_texture_type(map_);
-        set_texture_id(map_, texture_map_);
+        //set_texture_type(map_);
+        update_texture_type(map_);
+        update_texture_id(map_, texture_map_);
+        //set_texture_id(map_, texture_map_);
 
         //TODO temp
         auto const& r0 = rooms[0];
@@ -464,10 +578,11 @@ public:
         };
     }
 
-    void set_door_data(grid_point const p, door_data const door, texture_type const texture) {
+    void set_door_data(grid_point const p, door_data const door) {
         map_.set(attribute::data, p, door);
-        map_.set(attribute::texture_type, p, texture);
-        map_.set(attribute::texture_id, p, texture_map_[texture]);
+        update_grid(map_, texture_map_, p);
+        //update_texture_type(map_, p);
+        //update_texture_id(map_, texture_map_, p);
     }
 
     void do_open() {
@@ -485,7 +600,7 @@ public:
             }
 
             door.open();
-            set_door_data(where, door, texture_type::door_opened);
+            set_door_data(where, door);
         } else if (n > 1) {
             //TODO
         }
@@ -506,7 +621,7 @@ public:
             }
 
             door.close();
-            set_door_data(where, door, texture_type::door_closed);
+            set_door_data(where, door);
         } else if (n > 1) {
             //TODO
         }
@@ -610,21 +725,27 @@ public:
             static_cast<grid_index>(q.x)
           , static_cast<grid_index>(q.y)
         };
+
         if (!map_.is_valid(p)) {
             return;
         }
-
-        std::cout << "(" << p.x << ", " << p.y << ")" << std::endl;
 
         auto const tex_type      = map_.get(attribute::texture_type, p);
         auto const tex_type_str  = enum_map<texture_type>::get(tex_type);
         auto const room_id       = map_.get(attribute::room_id, p);
         auto const base_type     = map_.get(attribute::tile_type, p);
-        //auto const base_type_str = enum_map<tile_type>::get(tex_type);
+        auto const base_type_str = enum_map<tile_type>::get(base_type);
+        auto const tex_id        = map_.get(attribute::texture_id, p);
 
-        //std::cout << "tile_type    = " << base_type_str.string << std::endl;
-        std::cout << "texture_type = " << tex_type_str.string << std::endl;
-        std::cout << "room_id      = " << room_id << std::endl;
+        std::cout << "===================="                      << "\n";
+        std::cout << "| (" << p.x << ", " << p.y << ")"          << "\n";
+        std::cout << "--------------------"                      << "\n";
+        std::cout << "| tile_type    = " << base_type_str.string << "\n";
+        std::cout << "| texture_type = " << tex_type_str.string  << "\n";
+        std::cout << "| texture_id   = " << tex_id               << "\n";
+        std::cout << "| room_id      = " << room_id              << "\n";
+        std::cout << "===================="                      << "\n";
+        std::cout << std::endl;
     }
 
     point2d<int> screen_to_grid(signed const x, signed const y) const {

@@ -33,7 +33,6 @@ enum class texture_type : uint16_t {
   , enum_size //must be last
 };
 
-//TODO neccessary?
 extern template class enum_map<texture_type>;
 
 //==============================================================================
