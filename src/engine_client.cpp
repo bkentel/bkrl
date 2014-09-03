@@ -158,6 +158,9 @@ get_texture_type(
     return texture_type::invalid;
 }
 
+//------------------------------------------------------------------------------
+//! update the texture type for the tile at @p p.
+//------------------------------------------------------------------------------
 void
 update_texture_type(
     grid_storage&    grid
@@ -169,6 +172,9 @@ update_texture_type(
     grid.set(attribute::texture_type, p, tex_type);
 }
 
+//------------------------------------------------------------------------------
+//! update the texture type for every tile in @p grid.
+//------------------------------------------------------------------------------
 void
 update_texture_type(
     grid_storage& grid
@@ -178,6 +184,9 @@ update_texture_type(
     });
 }
 
+//------------------------------------------------------------------------------
+//! update the texture id for the tile at @p p using the mappings in @p map.
+//------------------------------------------------------------------------------
 void
 update_texture_id(
     grid_storage&      grid
@@ -189,6 +198,9 @@ update_texture_id(
     grid.set(attribute::texture_id, p, id);
 }
 
+//------------------------------------------------------------------------------
+//! update the texture id for every tile in @p grid using the mappings in @p map.
+//------------------------------------------------------------------------------
 void
 update_texture_id(
     grid_storage&     grid
@@ -200,6 +212,9 @@ update_texture_id(
 }
 
 
+//------------------------------------------------------------------------------
+//! update the texture type and id for the tile at @p p and each of its 8 neighbors.
+//------------------------------------------------------------------------------
 void
 update_grid(
     grid_storage&      grid
@@ -225,55 +240,78 @@ update_grid(
 
 ////////////////////////////////////////////////////////////////////////////////
 
-
-class entity {
-public:
-    entity()
-        : position {{0, 0}}
-    {
+//------------------------------------------------------------------------------
+//! decide whether the wall at @p p can be merged (removed) with a neighbor.
+//------------------------------------------------------------------------------
+bool
+can_merge_wall(
+    grid_storage const& grid
+  , grid_point          p
+) {
+    auto const type = grid.get(attribute::tile_type, p);
+    if (type != tile_type::wall) {
+        return false;
     }
 
-    bkrl::grid_point position;
-};
-
-void merge_walls(grid_storage& grid, grid_region const bounds) {
-    static auto const can_merge = [](unsigned const n) {
-        constexpr auto s0 = (1<<0)|(1<<1)|(1<<2);
-        constexpr auto s1 = (1<<0)|(1<<3)|(1<<5);
-        constexpr auto s2 = (1<<2)|(1<<4)|(1<<7);
-        constexpr auto s3 = (1<<5)|(1<<6)|(1<<7);
-        constexpr auto s4 = (1<<0)|(1<<1)|(1<<2)|(1<<3)|(1<<4)|(1<<5)|(1<<6);
-
-        return (n == s4)
-            || (((n & s0) == s0) && ((n & (1 << 6)) == 0))
-            || (((n & s1) == s1) && ((n & (1 << 4)) == 0))
-            || (((n & s2) == s2) && ((n & (1 << 3)) == 0))
-            || (((n & s3) == s3) && ((n & (1 << 1)) == 0));
-    };
-
-    bkrl::for_each_edge(bounds, [&](grid_index const x, grid_index const y) {
-        auto const walls = check_grid_block9f(grid, x, y, attribute::tile_type, [](tile_type const type) {
+    auto const n = check_grid_block9f(grid, p.x, p.y, attribute::tile_type
+      , [](tile_type const type) {
             return type == tile_type::wall || type == tile_type::door;
-        });
+        }
+    );
 
-        if (can_merge(walls)) {
-            auto const floors = check_grid_block9(grid, x, y, attribute::tile_type, tile_type::floor);
+    constexpr auto iNW = (1<<0);
+    constexpr auto iNx = (1<<1);
+    constexpr auto iNE = (1<<2);
+    constexpr auto ixW = (1<<3);
+    constexpr auto ixE = (1<<4);
+    constexpr auto iSW = (1<<5);
+    constexpr auto iSx = (1<<6);
+    constexpr auto iSE = (1<<7);
 
-            if (floors) {
-                grid.set(attribute::tile_type, x, y, bkrl::tile_type::floor);
-            } else {
-                grid.set(attribute::tile_type, x, y, bkrl::tile_type::invalid);
-            }
+    constexpr auto s0 = iNW|iNx|iNE;
+    constexpr auto s1 = iNW|ixW|iSW;
+    constexpr auto s2 = iNE|ixE|iSE;
+    constexpr auto s3 = iSW|iSx|iSE;
+    constexpr auto s4 = iNW|iNx|iNE|ixW|ixE|iSW|iSx; //TODO
+
+    if (n == s4) {
+        BK_TODO_FAIL(); //TODO what!?
+    }
+
+    return (n == s4)
+        || (((n & s0) == s0) && ((n & iSx) == 0))
+        || (((n & s1) == s1) && ((n & ixE) == 0))
+        || (((n & s2) == s2) && ((n & ixW) == 0))
+        || (((n & s3) == s3) && ((n & iNx) == 0));
+}
+
+//------------------------------------------------------------------------------
+//! for each wall tile in @p grid at the edges of the region give by @p bounds,
+//! merge the wall tile with any neighboring wall tiles if possible.
+//------------------------------------------------------------------------------
+void
+merge_walls(
+    grid_storage&     grid
+  , grid_region const bounds
+) {
+    for_each_edge(bounds, [&](grid_index const x, grid_index const y) {
+        if (can_merge_wall(grid, grid_point {x, y})) {
+            grid.set(attribute::tile_type, x, y, bkrl::tile_type::floor);
         }
     });
 }
 
-bool connect_rooms(
+//------------------------------------------------------------------------------
+//! attempt to connect @p src_room to @p dst_room with the route constrained
+//! to the region given by @p bounds.
+//------------------------------------------------------------------------------
+bool
+connect_rooms(
     random::generator& gen
-  , grid_storage& map
+  , grid_storage&      map
   , grid_region const& bounds
-  , room const& src_room
-  , room const& dst_room
+  , room        const& src_room
+  , room        const& dst_room
 ) {
     constexpr auto segment_randomness = 2;
     constexpr auto min_segment_len = 2u;
@@ -413,8 +451,17 @@ bool connect_rooms(
 }
 
 
-} //namespace bkrl
+class entity {
+public:
+    entity()
+        : position {{0, 0}}
+    {
+    }
 
+    bkrl::grid_point position;
+};
+
+} //namespace bkrl
 
 struct engine_client::impl_t {
 public:
@@ -425,6 +472,7 @@ public:
       , sheet_ {288, 288, 18, 18}
       , texture_map_ {bkrl::read_file("./data/texture_map.json")}
     {
+        ////////////////////////////////////////////////////
         app_.on_command([&](command_type const cmd) {
             on_command(cmd);
         });
@@ -440,6 +488,7 @@ public:
         app_.on_mouse_button([&](signed const x, signed const y) {
             on_mouse_button(x, y);
         });
+
         ////////////////////////////////////////////////////
         random::generator gen {100};
 
@@ -483,16 +532,14 @@ public:
             if (connected) {
                 //std::cout << "connected " << id0 << " -> " << id1 << std::endl;
             } else {
-                //std::cout << "failed    " << id0 << " -> " << id1 << std::endl;
+                std::cout << "failed    " << id0 << " -> " << id1 << std::endl;
             }
 
             return true;
         });
 
-        //set_texture_type(map_);
         update_texture_type(map_);
         update_texture_id(map_, texture_map_);
-        //set_texture_id(map_, texture_map_);
 
         //TODO temp
         auto const& r0 = rooms[0];
