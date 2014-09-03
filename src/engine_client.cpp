@@ -249,10 +249,10 @@ bool connect_rooms(
         constexpr auto i_Sx = (1<<6);
         constexpr auto i_SE = (1<<7);
 
-        auto const c0 = (n & i_Nx|i_NE|i_xE) == (i_Nx|i_xE);
-        auto const c1 = (n & i_Sx|i_SW|i_xW) == (i_Sx|i_xW);
-        auto const c2 = (n & i_Nx|i_NW|i_xW) == (i_Nx|i_xW);
-        auto const c3 = (n & i_Sx|i_SE|i_xE) == (i_Sx|i_xE);
+        auto const c0 = (n & (i_Nx|i_NE|i_xE)) == (i_Nx|i_xE);
+        auto const c1 = (n & (i_Sx|i_SW|i_xW)) == (i_Sx|i_xW);
+        auto const c2 = (n & (i_Nx|i_NW|i_xW)) == (i_Nx|i_xW);
+        auto const c3 = (n & (i_Sx|i_SE|i_xE)) == (i_Sx|i_xE);
 
         auto const c4 = (n & ~(i_SW|i_Sx|i_SE)) == (i_Nx|i_xW|i_xE);
         auto const c5 = (n & ~(i_NE|i_xE|i_SE)) == (i_Nx|i_xW|i_Sx);
@@ -632,11 +632,13 @@ public:
 
         std::cout << "(" << p.x << ", " << p.y << ")" << std::endl;
 
-        auto const tex_type = map_.get(attribute::texture_type, p);
-        auto const tex_type_str = enum_map<texture_type>::get(tex_type);
-        
-        auto const room_id = map_.get(attribute::room_id, p);
+        auto const tex_type      = map_.get(attribute::texture_type, p);
+        auto const tex_type_str  = enum_map<texture_type>::get(tex_type);
+        auto const room_id       = map_.get(attribute::room_id, p);
+        auto const base_type     = map_.get(attribute::tile_type, p);
+        //auto const base_type_str = enum_map<tile_type>::get(tex_type);
 
+        //std::cout << "tile_type    = " << base_type_str.string << std::endl;
         std::cout << "texture_type = " << tex_type_str.string << std::endl;
         std::cout << "room_id      = " << room_id << std::endl;
     }

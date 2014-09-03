@@ -18,20 +18,20 @@ struct bsp_layout_base {
     using connect_callback = std::function<bool (grid_region bounds, room_id id0, room_id id1)>;
 
     struct params_t {
-        unsigned width  = 100;
-        unsigned height = 100;
+        unsigned width  = 50;
+        unsigned height = 50;
 
-        unsigned min_region_w = 10;
-        unsigned min_region_h = 10;
+        unsigned min_region_w = 4;
+        unsigned min_region_h = 4;
         unsigned max_region_w = 20;
         unsigned max_region_h = 20;
 
         //! The percent chance that a given region will be split if it
         //! its width < max_region_w and its height < max_region_h.
-        unsigned split_chance = 50;
+        unsigned split_chance = 20;
 
         //! The percent chance that a room will be generated in a given region.
-        unsigned room_gen_chance = 100;
+        unsigned room_gen_chance = 50;
 
         //! The maximum aspect ratio for generated regions.
         float max_aspect_ratio = 16.0f / 10.0f;

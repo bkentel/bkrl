@@ -69,6 +69,11 @@ struct axis_aligned_rect {
         return left <= right && top <= bottom;
     }
 
+    T area() const {
+        BK_PRECONDITION(!!*this);
+        return width() * height();
+    }
+
     template <typename R = T>
     point2d<R> center() const {
         auto const half = R {2};
