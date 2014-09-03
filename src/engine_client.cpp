@@ -156,22 +156,6 @@ void merge_walls(grid_storage& grid, grid_region const bounds) {
     });
 }
 
-//MSB first
-template <int Bit, int... Bits>
-struct binary_number {
-    enum : unsigned {
-        value = (Bit << sizeof...(Bits)) | binary_number<Bits...>::value
-    };
-};
-
-template <> struct binary_number<0> {
-    enum : unsigned { value = 0 };
-};
-
-template <> struct binary_number<1> {
-    enum : unsigned { value = 1 };
-};
-
 bool connect_rooms(
     random::generator& gen
   , grid_storage& map
@@ -385,9 +369,9 @@ public:
         layout.connect(gen, [&](grid_region const& bounds, unsigned const id0, unsigned const id1) {
             auto const connected = connect_rooms(gen, map_, bounds, rooms[id0-1], rooms[id1-1]);
             if (connected) {
-                std::cout << "connected " << id0 << " -> " << id1 << std::endl;
+                //std::cout << "connected " << id0 << " -> " << id1 << std::endl;
             } else {
-                std::cout << "failed    " << id0 << " -> " << id1 << std::endl;
+                //std::cout << "failed    " << id0 << " -> " << id1 << std::endl;
             }
 
             return true;

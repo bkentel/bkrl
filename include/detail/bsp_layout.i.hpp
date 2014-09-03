@@ -264,8 +264,20 @@ bsp_layout_impl::can_generate_room(
 ) const {
     if (!node.is_leaf()) {
         return false;
-    } else if (node.is_reserved()) {
+    }
+    
+    if (node.is_reserved()) {
         return true;
+    }
+
+    //can happen if a reserve room is requested
+    if (node.region.width() < params_.min_region_w) {
+        return false;
+    }
+
+    //can happen if a reserve room is requested
+    if (node.region.height() < params_.min_region_h) {
+        return false;
     }
 
     auto const roll = random::uniform_range(gen, 0u, 100u);
@@ -360,13 +372,13 @@ bsp_layout_impl::choose_split_type(
     //
     // if one dimension is too big
     //
-    auto const big_x = h > p.max_region_w;
-    auto const big_y = w > p.max_region_h;
+    auto const big_x = w > p.max_region_w;
+    auto const big_y = h > p.max_region_h;
 
     if (big_x && !big_y) {
-        return split_type::split_x;
-    } else if (big_y && !big_x) {
         return split_type::split_y;
+    } else if (big_y && !big_x) {
+        return split_type::split_x;
     } else if (!big_x && !big_y) {
         //
         // reject based on params_t::split_chance

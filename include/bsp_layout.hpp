@@ -26,7 +26,7 @@ struct bsp_layout_base {
         unsigned max_region_w = 20;
         unsigned max_region_h = 20;
 
-        //! The percent chance that a given region will be split if it
+        //! The percent chance that a given region will be split if
         //! its width < max_region_w and its height < max_region_h.
         unsigned split_chance = 20;
 

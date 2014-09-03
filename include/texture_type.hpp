@@ -5,6 +5,7 @@
 //! Texture types.
 //##############################################################################
 #pragma once
+#include <memory>
 #include "types.hpp"
 #include "enum_map.hpp"
 

@@ -5,7 +5,6 @@
 //! Game commands.
 //##############################################################################
 #pragma once
-
 #include "enum_map.hpp"
 
 namespace bkrl {
@@ -14,7 +13,7 @@ namespace bkrl {
 //! Game command types.
 //==============================================================================
 enum class command_type : uint16_t {
-    none
+    invalid
   , cancel
   , accept
 

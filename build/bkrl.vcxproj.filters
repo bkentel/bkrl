@@ -33,9 +33,6 @@
     <ClCompile Include="..\lib\json11\json11.cpp">
       <Filter>lib</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\texture_type.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\sdl.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -51,14 +48,20 @@
     <ClCompile Include="..\test\main.t.cpp">
       <Filter>test</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\command_type.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\bsp_layout.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\test\bsp_layout.t.cpp">
       <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\enum_map.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\command_map.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\texture_map.cpp">
+      <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

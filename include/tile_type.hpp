@@ -5,6 +5,7 @@
 //! Tile types.
 //##############################################################################
 #pragma once
+#include "enum_map.hpp"
 
 namespace bkrl {
 
@@ -13,6 +14,7 @@ namespace bkrl {
 //==============================================================================
 enum class tile_type : uint16_t {
     invalid
+
   , empty
   , floor
   , wall
@@ -22,5 +24,7 @@ enum class tile_type : uint16_t {
 
   , enum_size //last
 };
+
+extern template class enum_map<tile_type>;
 
 } //namespace bkrl
