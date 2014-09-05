@@ -421,7 +421,8 @@ gen_corridor_seg(
     BK_PRECONDITION(can_gen_corridor(grid, bounds, start));
 
     auto const step = (dir.x ? dir.x : dir.y) > 0 ? 1 : -1;
-    
+
+
     auto  result = std::make_pair(start, corridor_result::ok);
     auto& cur    = result.first;
     auto& ok     = result.second;
@@ -438,7 +439,8 @@ gen_corridor_seg(
             p -= step; //back up
             break;
         }
-        
+
+
         gen_corridor_at(grid, cur);
 
         auto const id = grid.get(attribute::room_id, cur);
@@ -564,7 +566,8 @@ connect_rooms(
         auto const dir    = p - cur;
         auto const len    = random::uniform_range(gen, 1, 10);
         auto const result = gen_corridor_seg(map, bounds, cur, dir, len, src_id, dst_id);
-        
+
+
         if (result.second == corridor_result::failed) {
             failures++;
         } else if (result.second == corridor_result::ok_done) {
@@ -621,7 +624,7 @@ public:
 
         generate::simple_room room_gen {};
         generate::circle_room circle_gen {};
-        
+
         std::vector<room> rooms;
 
         auto const on_split = [](grid_region const) {

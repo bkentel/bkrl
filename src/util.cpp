@@ -16,7 +16,7 @@ bkrl::uint64_t bkrl::slash_hash64(char const* s, size_t const len) {
         u[i % 8] += static_cast<uint8_t>(*s + i + (*s >> shift));
         s++;
     }
-    
+
     return h; //64-bit
 }
 
@@ -30,7 +30,7 @@ std::string bkrl::read_file(std::string const& filename) {
 
     std::ifstream in {filename};
 
-    in.seekg(0, std::ios::end);   
+    in.seekg(0, std::ios::end);
     result.reserve(static_cast<size_t>(in.tellg()));
     in.seekg(0, std::ios::beg);
 

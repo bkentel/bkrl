@@ -23,10 +23,10 @@ TEST_CASE("bsp_layout obeys params", "[generate][bsp_layout]") {
         }
 
         REQUIRE(id != 0);
-        
+
         auto const w = bounds.width();
         auto const h = bounds.height();
-        
+
         REQUIRE(w >= params.min_region_w);
         REQUIRE(h >= params.min_region_h);
         REQUIRE(w <= params.max_region_w);

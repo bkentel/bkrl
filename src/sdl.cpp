@@ -115,7 +115,7 @@ static sdl_unique<SDL_PixelFormat> create_pixel_format() {
 
 //////////////////
 
-bkrl::text_renderer::text_renderer() 
+bkrl::text_renderer::text_renderer()
   : ft_lib_   {create_freetype()}
   , ft_face_  {create_fontface(ft_lib_.get())}
   , basic_latin_ {ft_face_.get(), 0x00, 0x80}
@@ -237,7 +237,7 @@ void sdl_renderer::draw_text(bkrl::string_ref string, text_rect rect) {
 
         auto src_rect = SDL_Rect {glyph_rect.left, glyph_rect.top, glyph_rect.width(), glyph_rect.height()};
         auto dst_rect = SDL_Rect {x + bmp->left, y - bmp->top, bmp->bitmap.width, bmp->bitmap.rows};
-        
+
         x += glyph->advance.x >> 16;
 
         SDL_RenderCopy(renderer, glyph_texture_.get(), &src_rect, &dst_rect);
@@ -424,7 +424,7 @@ void sdl_application::handle_keyboard_event_(SDL_KeyboardEvent const& event) {
     auto const no_mods = [&event] {
         return (event.keysym.mod & (
             KMOD_LSHIFT | KMOD_RSHIFT
-          | KMOD_LCTRL  | KMOD_RCTRL 
+          | KMOD_LCTRL  | KMOD_RCTRL
           | KMOD_LALT   | KMOD_RALT
         )) == 0;
     };

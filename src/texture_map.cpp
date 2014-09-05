@@ -62,7 +62,7 @@ struct texture_map::impl_t {
 
     void rule_file_type(json_value const& value) {
         static std::string const key_file_type {"file_type"};
-        
+
         auto const file_type = value[key_file_type];
         if (!file_type.is_string()) {
             BK_TODO_FAIL();
@@ -71,7 +71,7 @@ struct texture_map::impl_t {
 
     void rule_mappings(json_value const& value) {
         static std::string const key_mappings {"mappings"};
-        
+
         auto const mappings = value[key_mappings];
         if (!mappings.is_array()) {
             BK_TODO_FAIL();

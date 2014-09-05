@@ -15,7 +15,7 @@ public:
     struct node_t_ {
         enum : index_t {
             index_reserved = 0
-          , index_none = static_cast<unsigned>(-1) 
+          , index_none = static_cast<unsigned>(-1)
         };
 
         explicit node_t_(
@@ -133,7 +133,7 @@ bsp_layout_impl::bsp_layout_impl(
 
     nodes_.reserve(n);
     nodes_.emplace_back(grid_region {0, 0, p.width, p.height});
-        
+
     reserve_region(reserve);
     split(gen);
     gen_rooms(gen);
@@ -265,7 +265,7 @@ bsp_layout_impl::can_generate_room(
     if (!node.is_leaf()) {
         return false;
     }
-    
+
     if (node.is_reserved()) {
         return true;
     }
@@ -303,12 +303,12 @@ bsp_layout_impl::gen_rooms(
 
         return;
     }
-    
+
     // possible to gen, but rejected
     if (node.is_leaf()) {
         return;
     }
-   
+
     //
     // recursive case
     //
@@ -332,7 +332,7 @@ bsp_layout_impl::gen_rooms(
 }
 
 //--------------------------------------------------------------------------
-bsp_layout_impl::split_type 
+bsp_layout_impl::split_type
 bsp_layout_impl::choose_split_type(
     random::generator& gen
   , node_t_ const&     node
@@ -404,7 +404,7 @@ bsp_layout_impl::split(
 ) {
     BK_PRECONDITION(index < nodes_.size());
     auto& node = nodes_[index];
-    
+
     //
     // don't split if reserved or an internal node
     //
@@ -415,13 +415,13 @@ bsp_layout_impl::split(
     }
 
     auto const split_dir = choose_split_type(gen, node);
-    
+
     // no split required / possible
     if (split_dir == split_type::split_none) {
         node.child_index = node_t_::index_none;
         return false;
     }
-    
+
     //
     // chose a split point
     //

@@ -26,7 +26,7 @@ namespace {
         BK_ENUMMAP_ADD_STRING(result, tile_type, door);
         BK_ENUMMAP_ADD_STRING(result, tile_type, stair);
         BK_ENUMMAP_ADD_STRING(result, tile_type, corridor);
-   
+
         bkrl::sort(result, tile_map_t::value_type::less_hash);
 
         return result;
@@ -82,7 +82,7 @@ namespace {
         BK_ENUMMAP_ADD_STRING(result, texture_type, door_opened);
 
         BK_ENUMMAP_ADD_STRING(result, texture_type, corridor);
-   
+
         bkrl::sort(result, texture_map_t::value_type::less_hash);
 
         return result;
@@ -137,7 +137,7 @@ namespace {
 
         BK_ENUMMAP_ADD_STRING(result, command, open);
         BK_ENUMMAP_ADD_STRING(result, command, close);
-    
+
         bkrl::sort(result, command_map_t::value_type::less_hash);
 
         return result;

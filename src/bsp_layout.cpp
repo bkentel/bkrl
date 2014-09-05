@@ -5,7 +5,7 @@ using namespace bkrl;
 
 bsp_layout::~bsp_layout() = default;
 
-bsp_layout::bsp_layout(bsp_layout&& other) 
+bsp_layout::bsp_layout(bsp_layout&& other)
   : impl_ {std::move(other.impl_)}
 {
 }

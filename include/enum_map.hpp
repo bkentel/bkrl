@@ -67,7 +67,7 @@ template <typename T>
 class enum_map {
 public:
     static_assert(std::is_enum<T>::value, "");
-    
+
     using underlying_type = std::underlying_type_t<T>;
 
     static_assert(static_cast<underlying_type>(T::invalid)   == 0, "");
