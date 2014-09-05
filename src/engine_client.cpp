@@ -303,15 +303,85 @@ merge_walls(
     });
 }
 
-//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+//==============================================================================
 //
+//==============================================================================
+class room_connector {
+public:
+    //--------------------------------------------------------------------------
+    //! attempt to connect @p src_room to @p dst_room with the route constrained
+    //! to the region given by @p bounds.
+    //--------------------------------------------------------------------------
+    bool connect(
+        random::generator& gen
+      , grid_storage&      grid
+      , grid_region const& bounds
+      , room        const& src_room
+      , room        const& dst_room
+    );
+
+    //--------------------------------------------------------------------------
+    // decide whether the tile at @p can be transformed into a corridor.
+    //--------------------------------------------------------------------------
+    bool can_gen_corridor(
+        grid_storage const& grid
+      , grid_region  const  bounds
+      , grid_point   const  p
+    ) const;
+private:
+    enum class corridor_result {
+        failed
+      , ok
+      , ok_done
+    };
+
+    //--------------------------------------------------------------------------
+    // add the positions at each cardinal direction from @p p ordered accoring
+    // @p delta as candidates if the staisfy can_gen_corridor();
+    //--------------------------------------------------------------------------
+    void room_connector::add_candidates_(
+        random::generator&  gen
+      , grid_storage&       grid
+      , grid_region   const bounds
+      , grid_point    const p
+      , vector2d<int> const delta
+    );
+
+    //--------------------------------------------------------------------------
+    // transform the tile at @p p to a corridor.
+    //--------------------------------------------------------------------------
+    void generate_at_(
+        grid_storage&      grid
+      , grid_point   const p
+    ) const;
+
+    //--------------------------------------------------------------------------
+    //! generate a corridor segment of length @p len starting at @p start.
+    //--------------------------------------------------------------------------
+    std::pair<grid_point, corridor_result> generate_segment_(
+        grid_storage&       grid
+      , grid_region   const bounds
+      , grid_point    const start
+      , vector2d<int> const dir
+      , grid_size     const len
+      , room_id       const src_id
+      , room_id       const dst_id
+    ) const;
+
+    std::vector<grid_point> closed_;
+    std::vector<grid_point> open_;
+};
+
 //------------------------------------------------------------------------------
 bool
-can_gen_corridor(
+room_connector::can_gen_corridor(
     grid_storage const& grid
   , grid_region  const  bounds
   , grid_point   const  p
-) {
+) const {
     if (!bounds.contains(p)) {
         return false;
     }
@@ -370,13 +440,11 @@ can_gen_corridor(
 }
 
 //------------------------------------------------------------------------------
-//
-//------------------------------------------------------------------------------
 void
-gen_corridor_at(
+room_connector::generate_at_(
     grid_storage&      grid
   , grid_point   const p
-) {
+) const {
     auto const type = grid.get(attribute::tile_type, p);
 
     switch (type) {
@@ -398,14 +466,8 @@ gen_corridor_at(
 }
 
 //------------------------------------------------------------------------------
-//
-//------------------------------------------------------------------------------
-enum class corridor_result {
-    failed, ok, ok_done
-};
-
-std::pair<grid_point, corridor_result>
-gen_corridor_seg(
+std::pair<grid_point, room_connector::corridor_result>
+room_connector::generate_segment_(
     grid_storage&       grid
   , grid_region   const bounds
   , grid_point    const start
@@ -413,7 +475,7 @@ gen_corridor_seg(
   , grid_size     const len
   , room_id       const src_id
   , room_id       const dst_id
-) {
+) const {
     BK_PRECONDITION(len > 0);
     BK_PRECONDITION(bounds.contains(start));
     BK_PRECONDITION(dir.x || dir.y && !(dir.x && dir.y));
@@ -421,7 +483,6 @@ gen_corridor_seg(
     BK_PRECONDITION(can_gen_corridor(grid, bounds, start));
 
     auto const step = (dir.x ? dir.x : dir.y) > 0 ? 1 : -1;
-
 
     auto  result = std::make_pair(start, corridor_result::ok);
     auto& cur    = result.first;
@@ -440,8 +501,7 @@ gen_corridor_seg(
             break;
         }
 
-
-        gen_corridor_at(grid, cur);
+        generate_at_(grid, cur);
 
         auto const id = grid.get(attribute::room_id, cur);
         if (id == dst_id) {
@@ -455,11 +515,11 @@ gen_corridor_seg(
 }
 
 //------------------------------------------------------------------------------
-//
-//------------------------------------------------------------------------------
-std::array<grid_point, 4>
-choose_corridor_dirs(
+void
+room_connector::add_candidates_(
     random::generator&  gen
+  , grid_storage&       grid
+  , grid_region   const bounds
   , grid_point    const p
   , vector2d<int> const delta
 ) {
@@ -470,7 +530,7 @@ choose_corridor_dirs(
     constexpr auto iW = 2u;
     constexpr auto iE = 3u;
 
-    std::array<grid_point, 4> result {
+    std::array<grid_point, 4> dirs {
         grid_point {p.x + 0, p.y - 1} //north
       , grid_point {p.x + 0, p.y + 1} //south
       , grid_point {p.x - 1, p.y + 0} //west
@@ -485,40 +545,55 @@ choose_corridor_dirs(
 
     if (mag_x > weight*mag_y) {
         if (delta.x >= 0) {
-            std::swap(result[0], result[iE]);
+            std::swap(dirs[0], dirs[iE]);
         } else {
-            std::swap(result[0], result[iW]);
+            std::swap(dirs[0], dirs[iW]);
         }
 
         beg++;
     } else if (mag_y > weight*mag_x) {
         if (delta.y >= 0) {
-            std::swap(result[0], result[iS]);
+            std::swap(dirs[0], dirs[iS]);
         } else {
-            std::swap(result[0], result[iN]);
+            std::swap(dirs[0], dirs[iN]);
         }
 
         beg++;
     }
 
-    auto const it = result.data();
-    std::shuffle(it + beg, it + end, gen);
+    std::shuffle(dirs.data() + beg, dirs.data() + end, gen);
 
-    return result;
+    std::copy_if(
+        std::crbegin(dirs), std::crend(dirs), std::back_inserter(open_)
+      , [&](grid_point const p) {
+            auto const it = std::find_if(
+                std::cbegin(closed_), std::cend(closed_)
+              , [&](grid_point const q) {
+                    return p == q;
+                }
+            );
+
+            if (it != std::cend(closed_)) {
+                return false;
+            }
+
+            return can_gen_corridor(grid, bounds, p);
+        }
+    );
 }
 
 //------------------------------------------------------------------------------
-//! attempt to connect @p src_room to @p dst_room with the route constrained
-//! to the region given by @p bounds.
-//------------------------------------------------------------------------------
 bool
-connect_rooms(
+room_connector::connect(
     random::generator& gen
-  , grid_storage&      map
+  , grid_storage&      grid
   , grid_region const& bounds
   , room        const& src_room
   , room        const& dst_room
 ) {
+    open_.clear();
+    closed_.clear();
+
     auto const beg = src_room.center();
     auto const end = dst_room.center();
     auto       cur = beg;
@@ -529,43 +604,23 @@ connect_rooms(
     BK_PRECONDITION(bounds.contains(beg));
     BK_PRECONDITION(bounds.contains(end));
 
-    BK_PRECONDITION(map.get(attribute::tile_type, beg) == tile_type::floor);
-    BK_PRECONDITION(map.get(attribute::tile_type, end) == tile_type::floor);
+    BK_PRECONDITION(grid.get(attribute::tile_type, beg) == tile_type::floor);
+    BK_PRECONDITION(grid.get(attribute::tile_type, end) == tile_type::floor);
 
-    std::vector<grid_point> closed; closed.reserve(16);
-    std::vector<grid_point> open;   open.reserve(16);
-
-    auto const add_candidates = [&] {
-        auto const delta = end - cur;
-        auto const dirs  = choose_corridor_dirs(gen, cur, delta);
-
-        std::copy_if(std::crbegin(dirs), std::crend(dirs), std::back_inserter(open), [&](grid_point const p) {
-            auto const it = std::find_if(std::cbegin(closed), std::cend(closed), [&](grid_point const q) {
-                return p == q;
-            });
-
-            if (it != std::cend(closed)) {
-                return false;
-            }
-
-            return can_gen_corridor(map, bounds, p);
-        });
-    };
-
-    add_candidates();
+    add_candidates_(gen, grid, bounds, cur, end - cur);
 
     for (int failures = 0; failures < 5;) {
-        if (open.empty()) {
+        if (open_.empty()) {
             return false;
         }
 
-        auto const p = open.back();
-        open.pop_back();
-        closed.push_back(p);
+        auto const p = open_.back();
+        open_.pop_back();
+        closed_.push_back(p);
 
         auto const dir    = p - cur;
         auto const len    = random::uniform_range(gen, 1, 10);
-        auto const result = gen_corridor_seg(map, bounds, cur, dir, len, src_id, dst_id);
+        auto const result = generate_segment_(grid, bounds, cur, dir, len, src_id, dst_id);
 
 
         if (result.second == corridor_result::failed) {
@@ -575,11 +630,14 @@ connect_rooms(
         }
 
         cur = result.first;
-        add_candidates();
+        add_candidates_(gen, grid, bounds, cur, end - cur);
     }
 
     return false;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 class entity {
 public:
@@ -657,8 +715,10 @@ public:
             merge_walls(map_, room.bounds());
         }
 
+        room_connector connector;
+
         layout.connect(gen, [&](grid_region const& bounds, unsigned const id0, unsigned const id1) {
-            auto const connected = connect_rooms(gen, map_, bounds, rooms[id0-1], rooms[id1-1]);
+            auto const connected = connector.connect(gen, map_, bounds, rooms[id0-1], rooms[id1-1]);
             if (connected) {
                 //std::cout << "connected " << id0 << " -> " << id1 << std::endl;
             } else {
