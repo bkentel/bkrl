@@ -18,23 +18,49 @@ struct bsp_layout_base {
     using connect_callback = std::function<bool (grid_region bounds, room_id id0, room_id id1)>;
 
     struct params_t {
-        unsigned width  = 50;
-        unsigned height = 50;
+        grid_size width  = 50;
+        grid_size height = 50;
 
-        unsigned min_region_w = 4;
-        unsigned min_region_h = 4;
-        unsigned max_region_w = 20;
-        unsigned max_region_h = 20;
+        grid_size min_region_w = 4;
+        grid_size min_region_h = 4;
+        grid_size max_region_w = 20;
+        grid_size max_region_h = 20;
 
         //! The percent chance that a given region will be split if
         //! its width < max_region_w and its height < max_region_h.
-        unsigned split_chance = 20;
+        grid_size split_chance = 80;
 
         //! The percent chance that a room will be generated in a given region.
-        unsigned room_gen_chance = 200;
+        grid_size room_gen_chance = 100;
 
         //! The maximum aspect ratio for generated regions.
         float max_aspect_ratio = 16.0f / 10.0f;
+
+        bool is_valid() const {
+            #define BK_CHECK(x) if (!(x)) return false
+
+            BK_CHECK(width > 0);
+            BK_CHECK(width >= min_region_w);
+            BK_CHECK(width >= max_region_w);
+            BK_CHECK(max_region_w >= min_region_w);
+
+            BK_CHECK(height > 0);
+            BK_CHECK(height >= min_region_h);
+            BK_CHECK(height >= max_region_h);
+            BK_CHECK(max_region_h >= min_region_h);
+
+            BK_CHECK(split_chance >= 0);
+            BK_CHECK(split_chance <= 100);
+
+            BK_CHECK(room_gen_chance >= 0);
+            BK_CHECK(room_gen_chance <= 100);
+
+            BK_CHECK(max_aspect_ratio >= 1.0f);
+
+            #undef BK_CHECK
+
+            return true;
+        }
     };
 };
 

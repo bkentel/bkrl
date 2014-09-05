@@ -18,6 +18,16 @@ struct point2d {
     T x, y;
 };
 
+template <typename T>
+inline bool operator==(point2d<T> const p, point2d<T> const q) noexcept {
+    return (p.x == q.x) && (p.y == q.y);
+}
+
+template <typename T>
+inline bool operator!=(point2d<T> const p, point2d<T> const q) noexcept {
+    return !(p == q);
+}
+
 template <typename T, typename R>
 inline point2d<T> translate(point2d<T> const p, R const dx, R const dy) {
     return point2d<T> {
@@ -26,12 +36,36 @@ inline point2d<T> translate(point2d<T> const p, R const dx, R const dy) {
     };
 }
 
+//==============================================================================
+//! vector2d
+//==============================================================================
+template <typename T = signed>
+struct vector2d {
+    T x, y;
+};
+
+template <typename T>
+inline point2d<T> operator+(point2d<T> const p, vector2d<T> const v) {
+    return point2d<T> {p.x + v.x, p.y + v.y};
+}
+
 template <
     typename T
   , typename U = std::make_signed_t<T>
 >
-inline point2d<U> operator-(point2d<T> const p, point2d<T> const q) {
+inline point2d<U> operator-(point2d<T> const p, vector2d<T> const v) {
     return point2d<U> {
+        static_cast<U>(p.x) - static_cast<U>(v.x)
+      , static_cast<U>(p.y) - static_cast<U>(v.y)
+    };
+}
+
+template <
+    typename T
+  , typename U = std::make_signed_t<T>
+>
+inline vector2d<U> operator-(point2d<T> const p, point2d<T> const q) {
+    return vector2d<U> {
         static_cast<U>(p.x) - static_cast<U>(q.x)
       , static_cast<U>(p.y) - static_cast<U>(q.y)
     };

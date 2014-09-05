@@ -132,7 +132,7 @@ bsp_layout_impl::bsp_layout_impl(
     auto const  n = (p.height * p.width) / (p.min_region_w * p.min_region_h);
 
     nodes_.reserve(n);
-    nodes_.emplace_back(grid_region {0u, 0u, p.width, p.height});
+    nodes_.emplace_back(grid_region {0, 0, p.width, p.height});
         
     reserve_region(reserve);
     split(gen);
@@ -280,7 +280,7 @@ bsp_layout_impl::can_generate_room(
         return false;
     }
 
-    auto const roll = random::uniform_range(gen, 0u, 100u);
+    auto const roll = random::uniform_range(gen, 0, 100);
     return roll < params_.room_gen_chance;
 }
 
@@ -297,7 +297,7 @@ bsp_layout_impl::gen_rooms(
     // base case
     //
     if (can_generate_room(gen, node)) {
-        std::cout << "room generated at index = " << index << std::endl;
+        //std::cout << "room generated at index = " << index << std::endl;
         node.child_index = node_t_::index_reserved;
         on_room_gen_(node.region, ++next_room_id_); //increment
 
@@ -383,7 +383,7 @@ bsp_layout_impl::choose_split_type(
         //
         // reject based on params_t::split_chance
         //
-        auto const roll = random::uniform_range(gen, 0u, 100u);
+        auto const roll = random::uniform_range(gen, 0, 100);
         if (roll >= p.split_chance) {
             return split_type::split_none;
         }
@@ -392,7 +392,7 @@ bsp_layout_impl::choose_split_type(
     //
     // otherwise, split randomly 50/50
     //
-    auto const roll = random::uniform_range(gen, 0u, 100u);
+    auto const roll = random::uniform_range(gen, 0, 100);
     return roll < 50 ? split_type::split_y : split_type::split_x;
 }
 

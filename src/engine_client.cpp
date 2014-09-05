@@ -7,6 +7,8 @@
 #include "generate.hpp"
 #include "bsp_layout.hpp"
 
+#include <boost/container/static_vector.hpp>
+
 using bkrl::engine_client;
 using bkrl::command_type;
 namespace random = bkrl::random;
@@ -302,6 +304,208 @@ merge_walls(
 }
 
 //------------------------------------------------------------------------------
+//
+//------------------------------------------------------------------------------
+bool
+can_gen_corridor(
+    grid_storage const& grid
+  , grid_region  const  bounds
+  , grid_point   const  p
+) {
+    if (!bounds.contains(p)) {
+        return false;
+    }
+
+    auto const type = grid.get(attribute::tile_type, p);
+
+    switch (type) {
+    case tile_type::invalid :
+    case tile_type::empty :
+    case tile_type::floor :
+    case tile_type::door :
+    case tile_type::stair :
+    case tile_type::corridor :
+        return true;
+    case tile_type::wall :
+        break;
+    default :
+        BK_TODO_FAIL();
+    }
+
+    BK_ASSERT(type == tile_type::wall);
+
+    auto const doors = check_grid_block5(grid, p.x, p.y, attribute::tile_type, tile_type::door);
+    if (doors) {
+        return false;
+    }
+
+    auto const walls = check_grid_block9(grid, p.x, p.y, attribute::tile_type, tile_type::wall);
+
+    constexpr auto i_NW = (1<<0);
+    constexpr auto i_Nx = (1<<1);
+    constexpr auto i_NE = (1<<2);
+    constexpr auto i_xW = (1<<3);
+    constexpr auto i_xE = (1<<4);
+    constexpr auto i_SW = (1<<5);
+    constexpr auto i_Sx = (1<<6);
+    constexpr auto i_SE = (1<<7);
+
+    auto const c0 = (walls & (i_Nx|i_NE|i_xE)) == (i_Nx|i_xE);
+    auto const c1 = (walls & (i_Sx|i_SW|i_xW)) == (i_Sx|i_xW);
+    auto const c2 = (walls & (i_Nx|i_NW|i_xW)) == (i_Nx|i_xW);
+    auto const c3 = (walls & (i_Sx|i_SE|i_xE)) == (i_Sx|i_xE);
+
+    auto const c4 = (walls & ~(i_SW|i_Sx|i_SE)) == (i_Nx|i_xW|i_xE);
+    auto const c5 = (walls & ~(i_NE|i_xE|i_SE)) == (i_Nx|i_xW|i_Sx);
+    auto const c6 = (walls & ~(i_NW|i_Nx|i_NE)) == (i_xW|i_xE|i_Sx);
+    auto const c7 = (walls & ~(i_NW|i_xW|i_SW)) == (i_Nx|i_xE|i_Sx);
+
+    auto const c8 = walls == (i_Nx|i_xW|i_xE|i_Sx);
+
+    if (c0 || c1 || c2 || c3 || c4 || c5 || c6 || c7 || c8) {
+        return false;
+    }
+
+    return true;
+}
+
+//------------------------------------------------------------------------------
+//
+//------------------------------------------------------------------------------
+void
+gen_corridor_at(
+    grid_storage&      grid
+  , grid_point   const p
+) {
+    auto const type = grid.get(attribute::tile_type, p);
+
+    switch (type) {
+    case tile_type::invalid :
+    case tile_type::empty :
+        grid.set(attribute::tile_type, p, tile_type::corridor);
+        break;
+    case tile_type::floor :
+    case tile_type::door :
+    case tile_type::stair :
+    case tile_type::corridor :
+        break;
+    case tile_type::wall :
+        grid.set(attribute::tile_type, p, tile_type::door);
+        break;
+    default :
+        BK_TODO_FAIL();
+    }
+}
+
+//------------------------------------------------------------------------------
+//
+//------------------------------------------------------------------------------
+enum class corridor_result {
+    failed, ok, ok_done
+};
+
+std::pair<grid_point, corridor_result>
+gen_corridor_seg(
+    grid_storage&       grid
+  , grid_region   const bounds
+  , grid_point    const start
+  , vector2d<int> const dir
+  , grid_size     const len
+  , room_id       const src_id
+  , room_id       const dst_id
+) {
+    BK_PRECONDITION(len > 0);
+    BK_PRECONDITION(bounds.contains(start));
+    BK_PRECONDITION(dir.x || dir.y && !(dir.x && dir.y));
+    BK_PRECONDITION(src_id && dst_id && src_id != dst_id);
+    BK_PRECONDITION(can_gen_corridor(grid, bounds, start));
+
+    auto const step = (dir.x ? dir.x : dir.y) > 0 ? 1 : -1;
+    
+    auto  result = std::make_pair(start, corridor_result::ok);
+    auto& cur    = result.first;
+    auto& ok     = result.second;
+    auto& p      = dir.x ? cur.x : cur.y;
+
+    for (int i = 0; i < len; ++i) {
+        p += step;
+
+        ok = can_gen_corridor(grid, bounds, cur)
+          ? corridor_result::ok
+          : corridor_result::failed;
+
+        if (ok == corridor_result::failed) {
+            p -= step; //back up
+            break;
+        }
+        
+        gen_corridor_at(grid, cur);
+
+        auto const id = grid.get(attribute::room_id, cur);
+        if (id == dst_id) {
+            ok = corridor_result::ok_done;
+            break;
+        }
+    }
+
+    BK_ASSERT(can_gen_corridor(grid, bounds, cur));
+    return result;
+}
+
+//------------------------------------------------------------------------------
+//
+//------------------------------------------------------------------------------
+std::array<grid_point, 4>
+choose_corridor_dirs(
+    random::generator&  gen
+  , grid_point    const p
+  , vector2d<int> const delta
+) {
+    constexpr auto weight = 1.1f;
+
+    constexpr auto iN = 0u;
+    constexpr auto iS = 1u;
+    constexpr auto iW = 2u;
+    constexpr auto iE = 3u;
+
+    std::array<grid_point, 4> result {
+        grid_point {p.x + 0, p.y - 1} //north
+      , grid_point {p.x + 0, p.y + 1} //south
+      , grid_point {p.x - 1, p.y + 0} //west
+      , grid_point {p.x + 1, p.y + 0} //east
+    };
+
+    auto const mag_x = static_cast<float>(std::abs(delta.x));
+    auto const mag_y = static_cast<float>(std::abs(delta.y));
+
+    auto beg = 0u;
+    auto end = 4u;
+
+    if (mag_x > weight*mag_y) {
+        if (delta.x >= 0) {
+            std::swap(result[0], result[iE]);
+        } else {
+            std::swap(result[0], result[iW]);
+        }
+
+        beg++;
+    } else if (mag_y > weight*mag_x) {
+        if (delta.y >= 0) {
+            std::swap(result[0], result[iS]);
+        } else {
+            std::swap(result[0], result[iN]);
+        }
+
+        beg++;
+    }
+
+    auto const it = result.data();
+    std::shuffle(it + beg, it + end, gen);
+
+    return result;
+}
+
+//------------------------------------------------------------------------------
 //! attempt to connect @p src_room to @p dst_room with the route constrained
 //! to the region given by @p bounds.
 //------------------------------------------------------------------------------
@@ -313,10 +517,6 @@ connect_rooms(
   , room        const& src_room
   , room        const& dst_room
 ) {
-    constexpr auto segment_randomness = 2;
-    constexpr auto min_segment_len = 2u;
-    constexpr auto max_segment_len = 10u;
-
     auto const beg = src_room.center();
     auto const end = dst_room.center();
     auto       cur = beg;
@@ -324,132 +524,59 @@ connect_rooms(
     auto const src_id = src_room.id();
     auto const dst_id = dst_room.id();
 
-    //
-    // generate a path segment length
-    //
-    auto const gen_segment_len = [&](signed delta, signed n) {
-        while (std::abs(delta) < n) {
-            delta += random::uniform_range(
-                gen, -segment_randomness, segment_randomness
-            );
-        }
+    BK_PRECONDITION(bounds.contains(beg));
+    BK_PRECONDITION(bounds.contains(end));
 
-        auto const mag = static_cast<unsigned>(std::abs(delta));
+    BK_PRECONDITION(map.get(attribute::tile_type, beg) == tile_type::floor);
+    BK_PRECONDITION(map.get(attribute::tile_type, end) == tile_type::floor);
 
-        auto const min = std::min(max_segment_len, std::max(mag, min_segment_len));
-        auto const max = std::min(mag, max_segment_len);
+    std::vector<grid_point> closed; closed.reserve(16);
+    std::vector<grid_point> open;   open.reserve(16);
 
-        auto const roll = random::uniform_range(gen, min, max);
+    auto const add_candidates = [&] {
+        auto const delta = end - cur;
+        auto const dirs  = choose_corridor_dirs(gen, cur, delta);
 
-        auto const sign = (delta > 0) ? 1 : -1;
+        std::copy_if(std::crbegin(dirs), std::crend(dirs), std::back_inserter(open), [&](grid_point const p) {
+            auto const it = std::find_if(std::cbegin(closed), std::cend(closed), [&](grid_point const q) {
+                return p == q;
+            });
 
-        return (roll > max_segment_len)
-          ? std::make_pair(max_segment_len, sign)
-          : std::make_pair(roll, sign);
-    };
+            if (it != std::cend(closed)) {
+                return false;
+            }
 
-    //
-    // choose a direction to move
-    // p - delta between cur and dst
-    // returns pair {cur.x or cur.y, p.x or p.y}
-    //
-    auto const choose_direction = [&](point2d<int> const delta) {
-        auto const mag_x = std::abs(delta.x);
-        auto const mag_y = std::abs(delta.y);
-
-        if (mag_x > 2*mag_y) {
-            return std::pair<grid_index&, int> {cur.x, delta.x};
-        } else if (mag_y > 2*mag_x) {
-            return std::pair<grid_index&, int> {cur.y, delta.y};
-        }
-
-        auto const roll = random::uniform_range(gen, 0u, 100u);
-        return (roll < 50u)
-           ? std::pair<grid_index&, int> {cur.x, delta.x}
-           : std::pair<grid_index&, int> {cur.y, delta.y};
-    };
-
-    auto const can_tunnel = [&](grid_point const cur) {
-        auto const n = check_grid_block9f(map, cur.x, cur.y, attribute::tile_type, [](tile_type const type) {
-            return type == tile_type::wall || type == tile_type::door;
+            return can_gen_corridor(map, bounds, p);
         });
+    };
 
-        constexpr auto i_NW = (1<<0);
-        constexpr auto i_Nx = (1<<1);
-        constexpr auto i_NE = (1<<2);
-        constexpr auto i_xW = (1<<3);
-        constexpr auto i_xE = (1<<4);
-        constexpr auto i_SW = (1<<5);
-        constexpr auto i_Sx = (1<<6);
-        constexpr auto i_SE = (1<<7);
+    add_candidates();
 
-        auto const c0 = (n & (i_Nx|i_NE|i_xE)) == (i_Nx|i_xE);
-        auto const c1 = (n & (i_Sx|i_SW|i_xW)) == (i_Sx|i_xW);
-        auto const c2 = (n & (i_Nx|i_NW|i_xW)) == (i_Nx|i_xW);
-        auto const c3 = (n & (i_Sx|i_SE|i_xE)) == (i_Sx|i_xE);
-
-        auto const c4 = (n & ~(i_SW|i_Sx|i_SE)) == (i_Nx|i_xW|i_xE);
-        auto const c5 = (n & ~(i_NE|i_xE|i_SE)) == (i_Nx|i_xW|i_Sx);
-        auto const c6 = (n & ~(i_NW|i_Nx|i_NE)) == (i_xW|i_xE|i_Sx);
-        auto const c7 = (n & ~(i_NW|i_xW|i_SW)) == (i_Nx|i_xE|i_Sx);
-
-        auto const c8 = n == (i_Nx|i_xW|i_xE|i_Sx);
-
-        if (c0 || c1 || c2 || c3 || c4 || c5 || c6 || c7 || c8) {
+    for (int failures = 0; failures < 5;) {
+        if (open.empty()) {
             return false;
         }
 
-        return true;
-    };
+        auto const p = open.back();
+        open.pop_back();
+        closed.push_back(p);
 
-    for (auto fail_limit = 0; fail_limit < 10;) {
-        auto const delta = end - cur;
-        auto const dir   = choose_direction(delta);
-        auto&      out   = dir.first;
-        auto const seg   = gen_segment_len(dir.second, fail_limit + 1);
-        auto       len   = seg.first;
-        auto const sign  = seg.second;
-
-        for (auto i = 0u; i < len; ++i) {
-            BK_ASSERT(bounds.contains(cur));
-
-            auto const type = map.get(attribute::tile_type, cur);
-            if (type == tile_type::invalid) {
-                map.set(attribute::tile_type, cur, tile_type::corridor); //TODO
-            } else if (type == tile_type::wall) {
-                if (!can_tunnel(cur)) {
-                    out -= sign;
-                    fail_limit++;
-                    break;
-                }
-
-                auto const doors = check_grid_block5(map, cur.x, cur.y, attribute::tile_type, tile_type::door);
-                if (doors) {
-                    out -= sign;
-                    fail_limit++;
-                    break;
-                }
-                
-                map.set(attribute::tile_type, cur, tile_type::door); //TODO
-            }
-
-            auto const id = map.get(attribute::room_id, cur);
-            if (id == dst_id) {
-                return true;
-            }
-
-            out += sign;
-            if (!bounds.contains(cur)) {
-                out -= sign;
-                fail_limit++;
-                break;
-            }
+        auto const dir    = p - cur;
+        auto const len    = random::uniform_range(gen, 1, 10);
+        auto const result = gen_corridor_seg(map, bounds, cur, dir, len, src_id, dst_id);
+        
+        if (result.second == corridor_result::failed) {
+            failures++;
+        } else if (result.second == corridor_result::ok_done) {
+            return true;
         }
+
+        cur = result.first;
+        add_candidates();
     }
 
     return false;
 }
-
 
 class entity {
 public:
@@ -532,7 +659,7 @@ public:
             if (connected) {
                 //std::cout << "connected " << id0 << " -> " << id1 << std::endl;
             } else {
-                std::cout << "failed    " << id0 << " -> " << id1 << std::endl;
+                //std::cout << "failed    " << id0 << " -> " << id1 << std::endl;
             }
 
             return true;
@@ -619,58 +746,70 @@ public:
         std::cout << player_.position.x << " " << player_.position.y << std::endl;
     }
 
-    std::bitset<8> get_doors_next_to(grid_point const p) const {
-        return {
-            check_grid_block9(map_, p.x, p.y, attribute::tile_type, tile_type::door)
-        };
+    boost::container::static_vector<grid_point, 8>
+    get_doors_next_to(grid_point const p) const {
+        boost::container::static_vector<grid_point, 8> result;
+
+        auto const xi = {-1, 0, 1};
+        auto const yi = {-1, 0, 1};
+
+        for (auto const y : yi) {
+            for (auto const x : xi) {
+                auto const where = grid_point {p.x + x, p.y + y};
+                if (!map_.is_valid(where)) {
+                    break;
+                }
+
+                auto const type = map_.get(attribute::tile_type, where);
+                if (type == tile_type::door) {
+                    result.emplace_back(where);
+                }
+            }
+        }
+
+        return result;
     }
 
     void set_door_data(grid_point const p, door_data const door) {
         map_.set(attribute::data, p, door);
         update_grid(map_, texture_map_, p);
-        //update_texture_type(map_, p);
-        //update_texture_id(map_, texture_map_, p);
     }
 
     void do_open() {
-        auto const p     = player_.position;
-        auto const doors = get_doors_next_to(p);
-        auto const n     = doors.count();
+        auto const doors = get_doors_next_to(player_.position);
 
-        if (n == 1) {
-            //TODO change grid_check_to_point to accept bitset
-            auto const where = grid_check_to_point(p, doors.to_ulong());
+        auto const closed_count = std::count_if(std::cbegin(doors), std::cend(doors), [&](grid_point const p) {
+            return door_data {map_, p}.is_closed();
+        });
 
-            door_data door {map_, where};
-            if (door.is_open()) {
-                return;
-            }
+        if (closed_count == 1) {
+            auto const p = *std::find_if(std::cbegin(doors), std::cend(doors), [&](grid_point const p) {
+                return door_data {map_, p}.is_closed();
+            });
 
+            auto door = door_data {map_, p};
             door.open();
-            set_door_data(where, door);
-        } else if (n > 1) {
-            //TODO
+            set_door_data(p, door);
+        } else if (closed_count > 1) {
         }
     }
 
     void do_close() {
-        auto const p     = player_.position;
-        auto const doors = get_doors_next_to(p);
-        auto const n     = doors.count();
+        auto const doors = get_doors_next_to(player_.position);
 
-        if (n == 1) {
-            //TODO change grid_check_to_point to accept bitset
-            auto const where = grid_check_to_point(p, doors.to_ulong());
+        auto const open_count = std::count_if(std::cbegin(doors), std::cend(doors), [&](grid_point const p) {
+            return door_data {map_, p}.is_open();
+        });
 
-            door_data door {map_, where};
-            if (door.is_closed()) {
-                return;
-            }
+        if (open_count == 1) {
+            auto const p = *std::find_if(std::cbegin(doors), std::cend(doors), [&](grid_point const p) {
+                return door_data {map_, p}.is_open();
+            });
 
+            auto door = door_data {map_, p};
             door.close();
-            set_door_data(where, door);
-        } else if (n > 1) {
-            //TODO
+            set_door_data(p, door);
+        } else if (open_count > 1) {
         }
     }
 

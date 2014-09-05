@@ -20,14 +20,17 @@ simple_room::generate(
     random::uniform_int dist;
 
     //TODO temp
-    auto const w = bounds.width(); //dist.generate(gen, 4u, bounds.width());
-    auto const h = bounds.height(); //dist.generate(gen, 4u, bounds.height());
+    auto const w = bounds.width();
+    auto const h = bounds.height();
+
+    //auto const w = dist.generate(gen, 4, bounds.width());
+    //auto const h = dist.generate(gen, 4, bounds.height());
 
     auto const slack_w = bounds.width()  - w;
     auto const slack_h = bounds.height() - h;
 
-    auto const left   = dist.generate(gen, 0u, slack_w);
-    auto const top    = dist.generate(gen, 0u, slack_h);
+    auto const left   = dist.generate(gen, 0, slack_w);
+    auto const top    = dist.generate(gen, 0, slack_h);
     auto const right  = left + w;
     auto const bottom = top + h;
 
@@ -41,8 +44,8 @@ simple_room::generate(
     };
 
     auto const edge_count = [w, h](grid_index const x, grid_index const y) {
-        return ((x == 0) || (x == w - 1) ? 1 : 0u)
-             + ((y == 0) || (y == h - 1) ? 1 : 0u);
+        return ((x == 0) || (x == w - 1) ? 1 : 0)
+             + ((y == 0) || (y == h - 1) ? 1 : 0);
     };
 
     for (grid_index yi = 0; yi < h; ++yi) {

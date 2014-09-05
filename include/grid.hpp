@@ -140,14 +140,15 @@ public:
         }
     }
 
-    size_t width()  const { return width_; }
-    size_t height() const { return height_; }
+    grid_size width()  const noexcept { return width_; }
+    grid_size height() const noexcept { return height_; }
 
-    bool is_valid(grid_index const x, grid_index const y) const {
-        return x < width() && y < height();
+    bool is_valid(grid_index const x, grid_index const y) const noexcept {
+        return (x >= 0) && (x < width())
+            && (y >= 0) && (y < height());
     }
 
-    bool is_valid(grid_point const p) const {
+    bool is_valid(grid_point const p) const noexcept {
         return is_valid(p.x, p.y);
     }
 private:
@@ -360,7 +361,7 @@ enum : unsigned {
     g9nw, g9n, g9ne, g9w, g9e, g9sw, g9s, g9se
 };
 
-inline grid_point grid_check_to_point(unsigned const x, unsigned const y, uint8_t const n) {
+inline grid_point grid_check_to_point(grid_index const x, grid_index const y, uint8_t const n) {
     std::bitset<8> const bits {n};
 
     for (size_t i = 0; i < 4; ++i) {
