@@ -20,11 +20,11 @@ simple_room::generate(
     random::uniform_int dist;
 
     //TODO temp
-    auto const w = bounds.width();
-    auto const h = bounds.height();
+    //auto const w = bounds.width();
+    //auto const h = bounds.height();
 
-    //auto const w = dist.generate(gen, 4, bounds.width());
-    //auto const h = dist.generate(gen, 4, bounds.height());
+    auto const w = dist.generate(gen, 4, bounds.width());
+    auto const h = dist.generate(gen, 4, bounds.height());
 
     auto const slack_w = bounds.width()  - w;
     auto const slack_h = bounds.height() - h;

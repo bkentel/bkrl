@@ -203,6 +203,7 @@
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">Level3</WarningLevel>
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Level3</WarningLevel>
     </ClCompile>
+    <ClCompile Include="..\src\assert.cpp" />
     <ClCompile Include="..\src\bsp_layout.cpp" />
     <ClCompile Include="..\src\command_map.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
@@ -212,6 +213,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\src\enum_map.cpp" />
+    <ClCompile Include="..\src\font.cpp" />
     <ClCompile Include="..\src\generate.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
@@ -254,6 +256,9 @@
       </ForcedIncludeFiles>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\test\math.t.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\algorithm.hpp" />
@@ -264,6 +269,7 @@
     <ClInclude Include="..\include\engine_client.hpp" />
     <ClInclude Include="..\include\enum_map.hpp" />
     <ClInclude Include="..\include\exception.hpp" />
+    <ClInclude Include="..\include\font.hpp" />
     <ClInclude Include="..\include\generate.hpp" />
     <ClInclude Include="..\include\grid.hpp" />
     <ClInclude Include="..\include\keyboard.hpp" />

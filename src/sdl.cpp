@@ -29,31 +29,6 @@ namespace error = bkrl::error;
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
 
-static ft_unique<FT_Library> create_freetype() {
-    FT_Library library;
-	auto const result = FT_Init_FreeType(&library);
-    if (result) {
-        BK_TODO_FAIL();
-    }
-
-    return ft_unique<FT_Library> {library};
-}
-
-static ft_unique<FT_Face> create_fontface(FT_Library library) {
-    FT_Face face;
-	auto result = FT_New_Face(library, R"(C:\windows\fonts\meiryo.ttc)", 0, &face);
-    if (result) {
-        BK_TODO_FAIL();
-    }
-
-    result = FT_Set_Pixel_Sizes(face, 0, 24);
-    if (result) {
-        BK_TODO_FAIL();
-    }
-
-    return ft_unique<FT_Face> {face};
-}
-
 static sdl_unique<SDL_Renderer> create_renderer(SDL_Window* window) {
     auto const result = SDL_CreateRenderer(
         window
@@ -115,13 +90,7 @@ static sdl_unique<SDL_PixelFormat> create_pixel_format() {
 
 //////////////////
 
-bkrl::text_renderer::text_renderer()
-  : ft_lib_   {create_freetype()}
-  , ft_face_  {create_fontface(ft_lib_.get())}
-  , basic_latin_ {ft_face_.get(), 0x00, 0x80}
-  , has_kerning_  {FT_HAS_KERNING(ft_face_.get()) != 0}
-{
-}
+
 
 /////
 
@@ -135,12 +104,15 @@ sdl_renderer::sdl_renderer(SDL_Window* const window)
     , trans_x_ {0.0f}
     , trans_y_ {0.0f}
 {
+    //TODO
+    auto const size = text_renderer_.required_tex_size();
+
     auto texture = ::SDL_CreateTexture(
         renderer_.get()
       , SDL_PIXELFORMAT_RGBA8888
       , SDL_TEXTUREACCESS_STREAMING
-      , text_renderer_.required_w()
-      , text_renderer_.required_h()
+      , size.w
+      , size.h
     );
 
     if (texture == nullptr) {
@@ -154,20 +126,31 @@ sdl_renderer::sdl_renderer(SDL_Window* const window)
         BK_TODO_FAIL();
     }
 
-    for (int i = 0; i < 0x80; ++i) {
-        auto glyph = text_renderer_.get_glyph(i);
+    text_renderer_.for_each_static_codepoint([&](unsigned const codepoint) {
+        auto info = text_renderer_.get_glyph(codepoint);
+        auto glyph = info.glyph;
+
         if (glyph == nullptr) {
-            continue;
+            return;
         }
 
-        BK_ASSERT(glyph->format == FT_GLYPH_FORMAT_BITMAP);
+        BK_ASSERT_DBG(glyph->format == FT_GLYPH_FORMAT_BITMAP);
 
         auto const bmp = reinterpret_cast<FT_BitmapGlyph>(glyph);
-        auto const r   = text_renderer_.get_glyph_rect(i);
+        auto const r   = text_renderer_.get_glyph_rect(codepoint);
         auto const dst = SDL_Rect {r.left, r.top, r.width(), r.height()};
 
         write_glyph_(texture, dst, bmp->bitmap);
+    });
+}
+
+void sdl_renderer::clear() {
+    auto const result = ::SDL_RenderClear(handle());
+    if (result != 0) {
+        BK_ASSERT(false); //TODO
     }
+
+    ::SDL_RenderSetScale(handle(), 1.0f, 1.0f);
 }
 
 SDL_Texture* sdl_renderer::get_glyph_texture_(int w, int h) {
@@ -222,23 +205,31 @@ void sdl_renderer::write_glyph_(SDL_Texture* texture, SDL_Rect const& dst, FT_Bi
     }
 }
 
-void sdl_renderer::draw_text(bkrl::string_ref string, text_rect rect) {
+void sdl_renderer::draw_text(bkrl::string_ref const string, text_rect const rect) {
     auto const renderer = renderer_.get();
 
-    auto x = static_cast<int>(rect.left);
-    auto y = static_cast<int>(rect.top);
+    axis_aligned_rect<int> const bounds {
+        static_cast<int>(rect.left   + trans_x_)
+      , static_cast<int>(rect.top    + trans_y_)
+      , static_cast<int>(rect.right  + trans_x_)
+      , static_cast<int>(rect.bottom + trans_y_)
+    };
 
-    for (auto const c : string) {
-        auto const glyph      = text_renderer_.get_glyph(c);
-        auto const glyph_rect = text_renderer_.get_glyph_rect(c);
+    transitory_text_layout layout {text_renderer_, string, bounds};
 
-        BK_ASSERT(glyph->format == FT_GLYPH_FORMAT_BITMAP);
-        auto const bmp = reinterpret_cast<FT_BitmapGlyph>(glyph);
+    while (!!layout) {
+        auto const result    = layout.next(text_renderer_);
+        auto const codepoint = result.codepoint;
+        auto const pos       = result.pos;
+        auto const w         = result.width;
+        auto const h         = result.height;
 
-        auto src_rect = SDL_Rect {glyph_rect.left, glyph_rect.top, glyph_rect.width(), glyph_rect.height()};
-        auto dst_rect = SDL_Rect {x + bmp->left, y - bmp->top, bmp->bitmap.width, bmp->bitmap.rows};
+        auto const info       = text_renderer_.get_glyph(codepoint);
+        auto const glyph      = info.glyph;
+        auto const glyph_rect = text_renderer_.get_glyph_rect(codepoint);
 
-        x += glyph->advance.x >> 16;
+        auto const src_rect = SDL_Rect {glyph_rect.left, glyph_rect.top, glyph_rect.width(), glyph_rect.height()};
+        auto const dst_rect = SDL_Rect {pos.x, pos.y, w, h};
 
         SDL_RenderCopy(renderer, glyph_texture_.get(), &src_rect, &dst_rect);
     }

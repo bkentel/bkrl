@@ -22,5 +22,7 @@
       , ["door_closed", 234]
       , ["door_opened", 249]
       , ["corridor", 176]
+      , ["stair_up", 24]
+      , ["stair_down", 25]
       ]
 }

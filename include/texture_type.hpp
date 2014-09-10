@@ -30,6 +30,9 @@ enum class texture_type : uint16_t {
 
   , corridor
 
+  , stair_up
+  , stair_down
+
   , enum_size //must be last
 };
 

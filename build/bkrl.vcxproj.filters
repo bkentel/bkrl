@@ -63,6 +63,15 @@
     <ClCompile Include="..\src\texture_map.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\test\math.t.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\font.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\assert.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pch.hpp">
@@ -121,6 +130,9 @@
     </ClInclude>
     <ClInclude Include="..\include\detail\bsp_layout.i.hpp">
       <Filter>include\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\font.hpp">
+      <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

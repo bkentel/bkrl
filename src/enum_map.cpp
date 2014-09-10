@@ -83,6 +83,9 @@ namespace {
 
         BK_ENUMMAP_ADD_STRING(result, texture_type, corridor);
 
+        BK_ENUMMAP_ADD_STRING(result, texture_type, stair_up);
+        BK_ENUMMAP_ADD_STRING(result, texture_type, stair_down);
+
         bkrl::sort(result, texture_map_t::value_type::less_hash);
 
         return result;

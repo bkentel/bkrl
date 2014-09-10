@@ -1,3 +1,9 @@
+//##############################################################################
+//! @file
+//! @author Brandon Kentel
+//!
+//! Public header for bsp_layout.
+//##############################################################################
 #pragma once
 
 #include <memory>     //std::unique_ptr
@@ -31,7 +37,7 @@ struct bsp_layout_base {
         grid_size split_chance = 80;
 
         //! The percent chance that a room will be generated in a given region.
-        grid_size room_gen_chance = 100;
+        grid_size room_gen_chance = 25;
 
         //! The maximum aspect ratio for generated regions.
         float max_aspect_ratio = 16.0f / 10.0f;

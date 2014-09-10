@@ -1,4 +1,5 @@
 //##############################################################################
+//! @file
 //! @author Brandon Kentel
 //!
 //! Project wide base for all exception types.

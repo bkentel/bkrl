@@ -7,6 +7,8 @@
 #include "math.hpp"
 #include "algorithm.hpp"
 
+#include "font.hpp"
+
 namespace bkrl {
 
 class sprite_sheet {
@@ -57,41 +59,9 @@ inline sdl_error make_sdl_error(char const* api) {
 
 }// namespace bkrl::error
 
-//==============================================================================
-// deleters
-//==============================================================================
-template <typename T>
-struct ft_deleter;
 
-template <>
-struct ft_deleter<FT_Library> {
-    void operator()(FT_Library ptr) const noexcept {
-        auto const result = ::FT_Done_FreeType(ptr);
-        if (result) {
-            BK_TODO_FAIL();
-        }
-    }
-};
 
-template <>
-struct ft_deleter<FT_Face> {
-    void operator()(FT_Face ptr) const noexcept {
-        auto const result = ::FT_Done_Face(ptr);
-        if (result) {
-            BK_TODO_FAIL();
-        }
-    }
-};
 
-template <>
-struct ft_deleter<FT_Glyph> {
-    void operator()(FT_Glyph ptr) const noexcept {
-        ::FT_Done_Glyph(ptr);
-    }
-};
-
-template <typename T, typename U = std::remove_pointer_t<T>>
-using ft_unique = std::unique_ptr<U, ft_deleter<T>>;
 //////
 
 template <typename T>
@@ -157,192 +127,7 @@ struct sdl_state {
 //==============================================================================
 // sdl_renderer
 //==============================================================================
-struct glyph_data {
-    FT_Glyph glyph;
-    FT_UInt  index;
-};
 
-class text_layout {
-
-};
-
-
-using glyph_load_result = std::tuple<glyph_data, FT_Pos, FT_Pos>;
-
-inline glyph_load_result load_glyph(FT_Face const face, FT_ULong const codepoint) {
-    auto glyph  = glyph_data {};
-
-    if (codepoint & 0x80) {
-        BK_TODO_FAIL(); //unicode
-    }
-
-    glyph.index = FT_Get_Char_Index(face, codepoint);
-    if (glyph.index == 0) {
-        //TODO log the error?
-        return glyph_load_result {};
-    }
-
-    auto error = FT_Error {0};
-
-    error = FT_Load_Glyph(face, glyph.index, FT_LOAD_DEFAULT);
-    if (error) {
-        //TODO log the error?
-        return glyph_load_result {};
-    }
-
-    auto const width  = face->glyph->metrics.width  >> 6;
-    auto const height = face->glyph->metrics.height >> 6;
-
-    error = FT_Get_Glyph(face->glyph, &glyph.glyph);
-    if (error) {
-        BK_TODO_FAIL();
-    }
-
-    error = FT_Glyph_To_Bitmap(&glyph.glyph, FT_RENDER_MODE_NORMAL, 0, 1);
-    if (error) {
-        BK_TODO_FAIL();
-    }
-
-    return std::make_tuple(glyph, width, height);
-}
-
-
-template <size_t Bytes>
-class code_block_cache {
-public:
-    using index_type = unsigned_int_t<Bytes>;
-    using rect_t = bkrl::axis_aligned_rect<uint16_t>;
-
-    code_block_cache(FT_Face const face, uint32_t const first, uint32_t const last)
-      : first_ {first}
-      , last_ {last}
-    {
-        BK_ASSERT(first < last);
-        BK_ASSERT((last - first) <= std::numeric_limits<index_type>::max());
-
-        glyphs_.reserve(last - first);
-
-        constexpr auto max_width = 256;
-
-        auto x = uint16_t {0};
-        auto y = uint16_t {0};
-
-        auto row_h = uint16_t {0};
-
-        for (auto i = first; i < last; ++i) {
-            auto result = load_glyph(face, i);
-
-            auto const g = std::get<0>(result);
-            auto const w = static_cast<uint16_t>(std::get<1>(result));
-            auto const h = static_cast<uint16_t>(std::get<2>(result));
-
-            auto l = x;
-            auto r = static_cast<uint16_t>(x + w);
-            auto t = y;
-            auto b = static_cast<uint16_t>(y + h);
-
-            if (r > max_width) {
-                x = 0;
-
-                l = x;
-                r = x + w;
-
-                y += row_h;
-                row_h = 0;
-
-                t = y;
-                b = y + h;
-            }
-
-            if (h > row_h) {
-                row_h = h;
-            }
-
-            x += w;
-
-            auto const rect = rect_t {l, t, r, b};
-
-            glyphs_.emplace_back(g);
-            rects_.emplace_back(rect);
-        }
-
-        texture_w_ = max_width;
-        texture_h_ = y + row_h;
-    }
-
-    uint16_t required_w() const {
-        return texture_w_;
-    }
-
-    uint16_t required_h() const {
-        return texture_h_;
-    }
-
-    glyph_data operator[](uint32_t const codepoint) const {
-        if (codepoint < first_ || codepoint > last_) {
-            return glyph_data {};
-        }
-
-        return glyphs_[codepoint - first_];
-    }
-
-    rect_t glyph_rect(uint32_t const codepoint) const {
-        if (codepoint < first_ || codepoint > last_) {
-            return rect_t {};
-        }
-
-        return rects_[codepoint - first_];
-    }
-
-    ~code_block_cache() {
-        for (auto& glyph : glyphs_) {
-            FT_Done_Glyph(glyph.glyph);
-        }
-    }
-private:
-    uint32_t first_;
-    uint32_t last_;
-
-    uint16_t texture_w_;
-    uint16_t texture_h_;
-
-    std::vector<glyph_data> glyphs_;
-    std::vector<rect_t>     rects_;
-};
-
-class text_renderer {
-public:
-    text_renderer();
-
-
-    FT_Glyph get_glyph(FT_ULong const codepoint) {
-        if (codepoint & 0x80) {
-            BK_TODO_FAIL(); //unicode
-        }
-
-        return basic_latin_[codepoint].glyph;
-    }
-
-    axis_aligned_rect<uint16_t> get_glyph_rect(FT_ULong const codepoint) {
-        return basic_latin_.glyph_rect(codepoint);
-    }
-
-    uint16_t required_w() const {
-        return basic_latin_.required_w();
-    }
-
-    uint16_t required_h() const {
-        return basic_latin_.required_h();
-    }
-
-private:
-    ft_unique<FT_Library> ft_lib_;
-    ft_unique<FT_Face>    ft_face_;
-
-    code_block_cache<1> basic_latin_;
-
-    bool has_kerning_ = false;
-};
 
 class sdl_renderer {
 //TODO should use pimpl
@@ -352,15 +137,7 @@ public:
 
     explicit sdl_renderer(SDL_Window* window);
 
-    void clear() {
-        auto const result = ::SDL_RenderClear(handle());
-        if (result != 0) {
-            BK_ASSERT(false); //TODO
-        }
-
-        ::SDL_RenderSetScale(handle(), 1.0f, 1.0f);
-        draw_text("Hello", text_rect{20.0f, 20.0f, 100.0f, 100.0f});
-    }
+    void clear();
 
     void present() {
         ::SDL_RenderPresent(handle());

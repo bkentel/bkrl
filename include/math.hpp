@@ -11,7 +11,7 @@
 namespace bkrl {
 
 //==============================================================================
-//! point2d @TODO
+//! 2d point type
 //==============================================================================
 template <typename T>
 struct point2d {
@@ -37,7 +37,7 @@ inline point2d<T> translate(point2d<T> const p, R const dx, R const dy) {
 }
 
 //==============================================================================
-//! vector2d
+//! 2d vector type
 //==============================================================================
 template <typename T = signed>
 struct vector2d {
@@ -88,8 +88,26 @@ struct range {
         return lo <= hi;
     }
 
+    bool contains(T const n) const {
+        return Lo {}(n, lo) && Hi {}(n, hi);
+    }
+
+    bool intersects(range const& other) const {
+        return !(hi < other.lo || lo > other.hi);
+    }
+
     T lo, hi;
 };
+
+template <
+    typename T
+  , typename Lo = std::greater_equal<>
+  , typename Hi = std::less_equal<>
+  , typename R  = bkrl::range<T, Lo, Hi>
+>
+bool operator<(R const& lhs, R const& rhs) {
+    return lhs.hi < rhs.lo;
+}
 
 //==============================================================================
 //! axis_aligned_rect @TODO
@@ -117,9 +135,13 @@ struct axis_aligned_rect {
         };
     }
 
+    bool contains(T const x, T const y) const {
+        return (x >= left && x < right)
+            && (y >= top  && y < bottom);
+    }
+
     bool contains(point2d<T> const p) const {
-        return (p.x >= left && p.x < right)
-            && (p.y >= top  && p.y < bottom);
+        return contains(p.x, p.y);
     }
 
     T left, top, right, bottom;
