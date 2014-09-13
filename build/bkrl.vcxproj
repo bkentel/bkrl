@@ -223,6 +223,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\src\renderer.cpp" />
     <ClCompile Include="..\src\sdl.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -266,6 +267,7 @@
     <ClInclude Include="..\include\bsp_layout.hpp" />
     <ClInclude Include="..\include\command_type.hpp" />
     <ClInclude Include="..\include\detail\bsp_layout.i.hpp" />
+    <ClInclude Include="..\include\detail\sdl_application.i.hpp" />
     <ClInclude Include="..\include\engine_client.hpp" />
     <ClInclude Include="..\include\enum_map.hpp" />
     <ClInclude Include="..\include\exception.hpp" />
@@ -276,6 +278,7 @@
     <ClInclude Include="..\include\math.hpp" />
     <ClInclude Include="..\include\pch.hpp" />
     <ClInclude Include="..\include\random.hpp" />
+    <ClInclude Include="..\include\renderer.hpp" />
     <ClInclude Include="..\include\sdl.hpp" />
     <ClInclude Include="..\include\texture_type.hpp" />
     <ClInclude Include="..\include\tile_type.hpp" />

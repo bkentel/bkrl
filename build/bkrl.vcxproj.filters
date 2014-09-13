@@ -72,6 +72,9 @@
     <ClCompile Include="..\src\assert.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\renderer.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pch.hpp">
@@ -133,6 +136,12 @@
     </ClInclude>
     <ClInclude Include="..\include\font.hpp">
       <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\renderer.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\detail\sdl_application.i.hpp">
+      <Filter>include\detail</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
