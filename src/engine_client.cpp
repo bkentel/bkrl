@@ -674,13 +674,11 @@ public:
 struct engine_client::impl_t {
 public:
     impl_t()
-      : app_ {}
+      : app_ {"./data/key_map.json"}
       , renderer_ {app_}
       , map_ {100, 100}
       , sheet_ {"./data/texture_map.json", renderer_}
     {
-        keymap key_map {"./data/key_map.json"};
-
         ////////////////////////////////////////////////////
         app_.on_command([&](command_type const cmd) {
             on_command(cmd);

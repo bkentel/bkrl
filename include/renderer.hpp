@@ -66,7 +66,7 @@ struct application_base {
 //==============================================================================
 class application : public detail::application_base {
 public:
-    application();
+    explicit application(string_ref keymap);
     ~application();
 
     handle_t handle() const;

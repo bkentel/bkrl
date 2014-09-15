@@ -69,11 +69,13 @@ public:
     void rule_file_type(cref value);
     void rule_mappings(cref value);
     void rule_mapping_value(cref value);
+
+    command_type operator[](key_combo const& key) const;
 private:
+    std::vector<key_mapping> mappings_;
 };
 
-keymap::impl_t::impl_t(string_ref filename)
-{
+keymap::impl_t::impl_t(string_ref filename) {
     auto const data = bkrl::read_file(filename);
     
     std::string error;
@@ -84,6 +86,34 @@ keymap::impl_t::impl_t(string_ref filename)
     }
 
     rule_root(json);
+
+    std::sort(
+        std::begin(mappings_)
+      , std::end(mappings_)
+      , [](key_mapping const& lhs, key_mapping const& rhs) {
+            return lhs.keys < rhs.keys;
+        }
+    );
+}
+
+command_type
+keymap::impl_t::operator[](key_combo const& key) const {
+    auto const it = std::lower_bound(
+        std::cbegin(mappings_)
+      , std::cend(mappings_)
+      , key
+      , [](key_mapping const& lhs, key_combo const& rhs) {
+            return lhs.keys < rhs;
+        }
+    );
+
+    if (it == std::cend(mappings_)) {
+        return command_type::invalid;
+    } else if (it->keys != key) {
+        return command_type::invalid;
+    }
+
+    return it->command;
 }
 
 void keymap::impl_t::rule_root(cref value) {
@@ -131,8 +161,26 @@ void keymap::impl_t::rule_mapping_value(cref value) {
     if (key.value == scancode::invalid) {
         BK_TODO_FAIL();
     }
+    
+    key_modifier mods;
 
+    for (auto i = 2u; i < value.array_items().size(); ++i) {
+        auto const mod = expect_string(value[i]);
 
+        //TODO
+        if (mod == string_ref {"ctrl"}) {
+            mods.value.set(key_modifier::ctrl_left);
+        } else {
+            BK_TODO_FAIL();
+        }
+    }
+
+    mappings_.emplace_back(
+        key_mapping {
+            key_combo {key.value, mods}
+          , command.value
+        }
+    );
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -150,5 +198,5 @@ keymap::~keymap() = default;
 
 command_type
 keymap::operator[](key_combo const key) {
-    return command_type::invalid;
+    return (*impl_)[key];
 }

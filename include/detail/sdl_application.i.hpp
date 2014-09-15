@@ -4,6 +4,7 @@
 
 #include "renderer.hpp"
 #include "tile_sheet.hpp"
+#include "keyboard.hpp"
 
 namespace bkrl { namespace detail {
 
@@ -96,7 +97,7 @@ private:
 //==============================================================================
 class application_impl : public application_base {
 public:
-    application_impl();
+    explicit application_impl(string_ref keymap);
 
     handle_t handle() const;
 
@@ -133,6 +134,8 @@ private:
     mouse_button_sink on_mouse_button_;
     mouse_wheel_sink  on_mouse_wheel_;
 
+    keymap key_map_;
+
     bool running_;
 };
 
@@ -156,9 +159,10 @@ sdl_unique<SDL_Window> application_impl::create_window_() {
 }
 
 
-application_impl::application_impl()
+application_impl::application_impl(string_ref keymap)
   : state_   {}
   , window_  {create_window_()}
+  , key_map_ {keymap}
   , running_ {true}
 {
     on_command_      = [](command_type) {};
@@ -207,10 +211,10 @@ application_impl::handle_event(SDL_Event const& event) {
         break;
     case SDL_KEYDOWN :
     case SDL_KEYUP :
+        handle_event_kb(event.key);
         break;
     case SDL_TEXTEDITING :
     case SDL_TEXTINPUT :
-        handle_event_kb(event.key);
         break;
     case SDL_MOUSEMOTION :
         handle_event_mouse_move(event.motion);
@@ -315,7 +319,30 @@ application_impl::handle_event_window(SDL_WindowEvent const& event) {
 }
 
 void
-application_impl::handle_event_kb(SDL_KeyboardEvent const& event) {
+application_impl::handle_event_kb(SDL_KeyboardEvent const& event) {  
+    if (event.type != SDL_KEYDOWN) {
+        return;
+    }
+
+    key_modifier mods;
+
+    //TODO
+    auto const flags = event.keysym.mod;
+
+    if (flags & KMOD_LCTRL) {
+        mods.value.set(key_modifier::ctrl_left);
+    }
+    if (flags & KMOD_RCTRL) {
+        mods.value.set(key_modifier::ctrl_right);
+    }
+
+    key_combo const key {
+        static_cast<scancode>(event.keysym.scancode)
+      , mods
+    };
+
+    auto const command = key_map_[key];
+    on_command_(command);
 }
 
 void

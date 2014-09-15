@@ -62,13 +62,25 @@ private:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+inline bool operator==(key_modifier const lhs, key_modifier const rhs) noexcept {
+    return lhs.value.to_ulong() == rhs.value.to_ulong();
+}
+
+inline bool operator==(key_combo const lhs, key_combo const rhs) {
+    return (lhs.key == rhs.key) && (lhs.modifier == rhs.modifier);
+}
+
+inline bool operator!=(key_combo const lhs, key_combo const rhs) {
+    return !(lhs == rhs);
+}
+
 inline bool operator<(key_modifier const lhs, key_modifier const rhs) noexcept {
     return lhs.value.to_ulong() < rhs.value.to_ulong();
 }
 
 inline bool operator<(key_combo const lhs, key_combo const rhs) noexcept {
-    return (lhs.key      < rhs.key)
-        && (lhs.modifier < rhs.modifier);
+    return (lhs.key < rhs.key)
+        || ((lhs.key == rhs.key) && (lhs.modifier < rhs.modifier));
 }
 
 

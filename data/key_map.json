@@ -3,15 +3,31 @@
   , "mappings": [
         ["cancel", "kb_escape"]
       , ["accept", "kb_return"]
-      , ["north",    "kb_up"]
-      , ["south",    "kb_down"]
-      , ["east",     "kb_right"]
-      , ["west",     "kb_left"]
+
+      , ["here",  "kb_kp_5"]
+      , ["north", "kb_up"]
+      , ["north", "kb_kp_8"]
+      , ["south", "kb_down"]
+      , ["south", "kb_kp_2"]
+      , ["east",  "kb_right"]
+      , ["east",  "kb_kp_6"]
+      , ["west",  "kb_left"]
+      , ["west",  "kb_kp_4"]
+      
+      , ["north_west", "kb_kp_7"]
+      , ["north_east", "kb_kp_9"]
+      , ["south_west", "kb_kp_1"]
+      , ["south_east", "kb_kp_3"]
+      
       , ["zoom_in",  "kb_kp_plus"]
-      , ["zoom_out", "kb_kb_minus"]
-      , ["scroll_n", "kb_up",      "ctrl"]
-      , ["scroll_s", "kb_down",    "ctrl"]
-      , ["scroll_e", "kb_right",   "ctrl"]
-      , ["scroll_w", "kb_left",    "ctrl"]
+      , ["zoom_out", "kb_kp_minus"]
+
+      , ["scroll_n", "kb_up",    "ctrl"]
+      , ["scroll_s", "kb_down",  "ctrl"]
+      , ["scroll_e", "kb_right", "ctrl"]
+      , ["scroll_w", "kb_left",  "ctrl"]
+      
+      , ["open",  "kb_o"]
+      , ["close", "kb_c"]
     ]
 }

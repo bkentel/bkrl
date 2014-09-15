@@ -87,9 +87,22 @@ public:
     //! string (hash) -> mapping.
     //--------------------------------------------------------------------------
     static value_type get(hash_t const hash) {
-        return lower_bound_or(string_to_value_, hash, [](value_type const& v, hash_t const h) {
-            return v.hash < h;
-        });
+        auto const it = std::lower_bound(
+            std::cbegin(string_to_value_)  
+          , std::cend(string_to_value_)
+          , hash
+          , [](value_type const& lhs, hash_t const rhs) {
+                return lhs.hash < rhs;
+            }
+        );
+
+        if (it == std::cend(string_to_value_)) {
+            return value_type {};
+        } else if (it->hash != hash) {
+            return value_type {};
+        }
+
+        return *it;
     }
 
     //--------------------------------------------------------------------------

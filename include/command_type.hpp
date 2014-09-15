@@ -14,6 +14,7 @@ namespace bkrl {
 //==============================================================================
 enum class command_type : uint16_t {
     invalid
+
   , cancel
   , accept
 

@@ -5,8 +5,8 @@ using namespace bkrl;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-application::application()
-  : impl_ {std::make_unique<detail::application_impl>()}
+application::application(string_ref keymap)
+  : impl_ {std::make_unique<detail::application_impl>(keymap)}
 {
 }
 
