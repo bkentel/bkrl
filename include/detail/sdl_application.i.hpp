@@ -1,6 +1,9 @@
 #pragma once
-#include "renderer.hpp" //TODO
+
 #include <sdl/SDL.h>
+
+#include "renderer.hpp"
+#include "tile_sheet.hpp"
 
 namespace bkrl { namespace detail {
 
@@ -85,7 +88,7 @@ public:
         }
     }
 private:
-    bool do_quit_ = true; 
+    bool do_quit_ = true;
 };
 
 //==============================================================================
@@ -157,7 +160,7 @@ application_impl::application_impl()
   : state_   {}
   , window_  {create_window_()}
   , running_ {true}
-{  
+{
     on_command_      = [](command_type) {};
     on_close_        = []() {};
     on_resize_       = [](unsigned, unsigned) {};
@@ -377,6 +380,11 @@ public:
 
     ////////////////////////////////////////////////////////////////////////////
 
+    texture create_texture(string_ref filename);
+    void delete_texture(texture& tex);
+
+    ////////////////////////////////////////////////////////////////////////////
+
     void set_translation_x(scalar dx);
     void set_translation_y(scalar dy);
 
@@ -397,15 +405,16 @@ public:
     void draw_text(string_ref string, rect bounds);
 private:
     static sdl_unique<SDL_Renderer> create_renderer_(application const& app);
-    static sdl_unique<SDL_Texture> create_tile_sheet_texture_(SDL_Renderer& renderer);
 
     sdl_unique<SDL_Renderer> renderer_;
-    sdl_unique<SDL_Texture>  tile_sheet_texture_;
+
+    std::vector<sdl_unique<SDL_Texture>> textures_;
 
     vector2d<float> translation_;
     vector2d<float> scale_;
 };
 
+//------------------------------------------------------------------------------
 sdl_unique<SDL_Renderer>
 renderer_impl::create_renderer_(application const& app) {
     auto const window = reinterpret_cast<SDL_Window*>(app.handle().value);
@@ -424,34 +433,36 @@ renderer_impl::create_renderer_(application const& app) {
     return sdl_unique<SDL_Renderer> {result};
 }
 
-sdl_unique<SDL_Texture>
-renderer_impl::create_tile_sheet_texture_(SDL_Renderer& renderer) {
-    //TODO
-    auto const result_bmp = SDL_LoadBMP("./data/Myne.bmp");
-    if (result_bmp == nullptr) {
-        BK_TODO_FAIL();
-        //BOOST_THROW_EXCEPTION(error::make_sdl_error("SDL_LoadBMP"));
-    }
+//------------------------------------------------------------------------------
+//sdl_unique<SDL_Texture>
+//renderer_impl::create_tile_sheet_texture_(SDL_Renderer& renderer) {
+//    //TODO
+//    auto const result_bmp = SDL_LoadBMP("./data/Myne.bmp");
+//    if (result_bmp == nullptr) {
+//        BK_TODO_FAIL();
+//        //BOOST_THROW_EXCEPTION(error::make_sdl_error("SDL_LoadBMP"));
+//    }
+//
+//    sdl_unique<SDL_Surface> surface {result_bmp};
+//
+//    auto const result_texture = SDL_CreateTextureFromSurface(&renderer, surface.get());
+//    if (result_bmp == nullptr) {
+//        BK_TODO_FAIL();
+//        //BOOST_THROW_EXCEPTION(error::make_sdl_error("SDL_CreateTextureFromSurface"));
+//    }
+//
+//    return sdl_unique<SDL_Texture> {result_texture};
+//}
 
-    sdl_unique<SDL_Surface> surface {result_bmp};
-
-    auto const result_texture = SDL_CreateTextureFromSurface(&renderer, surface.get());
-    if (result_bmp == nullptr) {
-        BK_TODO_FAIL();
-        //BOOST_THROW_EXCEPTION(error::make_sdl_error("SDL_CreateTextureFromSurface"));
-    }
-
-    return sdl_unique<SDL_Texture> {result_texture};
-}
-
+//------------------------------------------------------------------------------
 renderer_impl::renderer_impl(application const& app)
   : renderer_           {create_renderer_(app)}
-  , tile_sheet_texture_ {create_tile_sheet_texture_(*renderer_)}
   , translation_ {{0.0f, 0.0f}}
   , scale_       {{1.0f, 1.0f}}
 {
 }
 
+//------------------------------------------------------------------------------
 renderer_impl::handle_t
 renderer_impl::handle() const {
     return handle_t {
@@ -459,6 +470,7 @@ renderer_impl::handle() const {
     };
 }
 
+//------------------------------------------------------------------------------
 void
 renderer_impl::clear() {
     auto const r = renderer_.get();
@@ -471,28 +483,89 @@ renderer_impl::clear() {
     SDL_RenderSetScale(r, 1.0f, 1.0f);
 }
 
-void renderer_impl::present() {
+//------------------------------------------------------------------------------
+void
+renderer_impl::present() {
     auto const r = renderer_.get();
 
     SDL_RenderPresent(r);
 }
 
+//------------------------------------------------------------------------------
+texture
+renderer_impl::create_texture(string_ref filename) {
+    //TODO make this work for not just bmp.
+
+    auto const data = SDL_LoadBMP(filename.data());
+    if (data == nullptr) {
+        BK_TODO_FAIL();
+        //BOOST_THROW_EXCEPTION(error::make_sdl_error("SDL_LoadBMP"));
+    }
+
+    sdl_unique<SDL_Surface> surface {data};
+
+    auto const result = SDL_CreateTextureFromSurface(renderer_.get(), surface.get());
+    if (result == nullptr) {
+        BK_TODO_FAIL();
+        //BOOST_THROW_EXCEPTION(error::make_sdl_error("SDL_CreateTextureFromSurface"));
+    }
+
+    auto const handle = texture::handle_t {
+        reinterpret_cast<intptr_t>(result)
+    };
+
+    auto const id = textures_.size();
+
+    textures_.emplace_back(
+        sdl_unique<SDL_Texture> {result}
+    );
+
+    return texture {handle, id, data->w, data->h};
+}
+
+//------------------------------------------------------------------------------
+void
+renderer_impl::delete_texture(texture& tex) {
+    auto const handle  = tex.handle();
+    auto const sdl_tex = reinterpret_cast<SDL_Texture*>(handle.value);
+
+    auto const it = std::find_if(
+        std::cbegin(textures_)
+      , std::cend(textures_)
+      , [&](sdl_unique<SDL_Texture> const& t) {
+            return t.get() == sdl_tex;
+        }
+    );
+
+    if (it == std::cend(textures_)) {
+        BK_TODO_FAIL();
+        return;
+    }
+
+    textures_.erase(it);
+}
+
+//------------------------------------------------------------------------------
 void renderer_impl::set_translation_x(scalar const dx) {
     translation_.x = dx;
 }
 
+//------------------------------------------------------------------------------
 void renderer_impl::set_translation_y(scalar const dy) {
     translation_.y = dy;
 }
 
+//------------------------------------------------------------------------------
 void renderer_impl::set_scale_x(scalar const sx) {
     scale_.x = sx;
 }
 
+//------------------------------------------------------------------------------
 void renderer_impl::set_scale_y(scalar const sy) {
     scale_.y = sy;
 }
 
+//------------------------------------------------------------------------------
 void
 renderer_impl::draw_tile(
     tile_sheet const& sheet
@@ -516,9 +589,13 @@ renderer_impl::draw_tile(
       , static_cast<int>(h * scale_.y)
     };
 
+    auto const tex = reinterpret_cast<SDL_Texture*>(
+        sheet.tile_texture.handle().value
+    );
+
     auto const result = SDL_RenderCopy(
         renderer_.get()
-      , tile_sheet_texture_.get()
+      , tex
       , &src
       , &dst
     );
@@ -528,9 +605,11 @@ renderer_impl::draw_tile(
     }
 }
 
+//------------------------------------------------------------------------------
 void renderer_impl::draw_text(string_ref string, scalar x, scalar y) {
 }
 
+//------------------------------------------------------------------------------
 void renderer_impl::draw_text(string_ref string, rect bounds) {
 }
 

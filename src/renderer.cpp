@@ -131,3 +131,15 @@ void
 renderer::draw_text(string_ref string, rect bounds) {
     impl_->draw_text(string, bounds);
 }
+
+texture
+renderer::create_texture(string_ref filename) {
+    return impl_->create_texture(filename);
+}
+
+void
+renderer::delete_texture(texture& tex) {
+    impl_->delete_texture(tex);
+}
+
+////////////////////////////////////////////////////////////////////////////////

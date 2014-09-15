@@ -3,12 +3,14 @@
 #include "engine_client.hpp"
 
 //#include "sdl.hpp"
+#include "keyboard.hpp" //temp
 #include "renderer.hpp"
 #include "grid.hpp"
 #include "command_type.hpp"
 #include "random.hpp"
 #include "generate.hpp"
 #include "bsp_layout.hpp"
+#include "tile_sheet.hpp"
 
 #include <boost/container/static_vector.hpp>
 
@@ -208,9 +210,9 @@ update_texture_type(
 //------------------------------------------------------------------------------
 void
 update_texture_id(
-    grid_storage&      grid
-  , texture_map const& map
-  , grid_point const   p
+    grid_storage&    grid
+  , tile_map  const& map
+  , grid_point const p
 ) {
     auto const type = grid.get(attribute::texture_type, p);
     auto const id   = map[type];
@@ -222,8 +224,8 @@ update_texture_id(
 //------------------------------------------------------------------------------
 void
 update_texture_id(
-    grid_storage&     grid
- , texture_map const& map
+    grid_storage&  grid
+ , tile_map const& map
 ) {
     for_each_xy(grid, [&](grid_index const x, grid_index const y) {
         update_texture_id(grid, map, grid_point {x, y});
@@ -236,9 +238,9 @@ update_texture_id(
 //------------------------------------------------------------------------------
 void
 update_grid(
-    grid_storage&      grid
-  , texture_map const& map
-  , grid_point const   p
+    grid_storage&    grid
+  , tile_map const&  map
+  , grid_point const p
 ) {
     auto const x = {p.x - 1, p.x, p.x + 1};
     auto const y = {p.y - 1, p.y, p.y + 1};
@@ -675,9 +677,10 @@ public:
       : app_ {}
       , renderer_ {app_}
       , map_ {100, 100}
-      , sheet_ {288, 288, 18, 18}
-      , texture_map_ {bkrl::read_file("./data/texture_map.json")}
+      , sheet_ {"./data/texture_map.json", renderer_}
     {
+        keymap key_map {"./data/key_map.json"};
+
         ////////////////////////////////////////////////////
         app_.on_command([&](command_type const cmd) {
             on_command(cmd);
@@ -762,7 +765,7 @@ public:
         });
 
         update_texture_type(map_);
-        update_texture_id(map_, texture_map_);
+        update_texture_id(map_, sheet_.map);
 
         //TODO temp
         auto const& r0 = rooms[0];
@@ -883,7 +886,7 @@ public:
 
     void set_door_data(grid_point const p, door_data const door) {
         map_.set(attribute::data, p, door);
-        update_grid(map_, texture_map_, p);
+        update_grid(map_, sheet_.map, p);
     }
 
     void do_open() {
@@ -994,11 +997,11 @@ public:
             ? 10.0f
             : zoom;
 
-        auto const sw = sheet_.tile_width;
-        auto const sh = sheet_.tile_height;
+        auto const w = sheet_.tile_width();
+        auto const h = sheet_.tile_height();
 
-        auto const px = -static_cast<float>(player_.position.x) * sw;
-        auto const py = -static_cast<float>(player_.position.y) * sh;
+        auto const px = -static_cast<float>(player_.position.x) * w;
+        auto const py = -static_cast<float>(player_.position.y) * h;
 
         display_x_ = px + (display_w_ / 2.0f / zoom_);
         display_y_ = py + (display_h_ / 2.0f / zoom_);
@@ -1049,8 +1052,8 @@ public:
         auto const dx = display_x_ + scroll_x_;
         auto const dy = display_y_ + scroll_y_;
 
-        auto const w = sheet_.tile_width;
-        auto const h = sheet_.tile_height;
+        auto const w = sheet_.tile_width();
+        auto const h = sheet_.tile_height();
 
         auto const ix = static_cast<int>(std::trunc((x / zoom_ - dx) / w));
         auto const iy = static_cast<int>(std::trunc((y / zoom_ - dy) / h));
@@ -1063,7 +1066,6 @@ private:
     grid_storage map_;
 
     tile_sheet sheet_;
-    texture_map  texture_map_;
 
     entity       player_;
 

@@ -1,5 +1,7 @@
 {
     "file_type": "texture_map"
+  , "file_name": "data/tiles.bmp"
+  , "tile_size": [18, 18]
   , "mappings": [
         ["invalid", 0]
       , ["floor", 250]
@@ -24,5 +26,5 @@
       , ["corridor", 176]
       , ["stair_up", 24]
       , ["stair_down", 25]
-      ]
+    ]
 }

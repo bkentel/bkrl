@@ -33,6 +33,7 @@ enum class command_type : uint16_t;
 enum class tile_type    : uint16_t;
 enum class texture_type : uint16_t;
 enum class key          : uint16_t;
+enum class scancode     : uint16_t;
 
 using texture_id = unsigned;
 

@@ -1,0 +1,17 @@
+{
+    "file_type": "keymap"
+  , "mappings": [
+        ["cancel", "kb_escape"]
+      , ["accept", "kb_return"]
+      , ["north",    "kb_up"]
+      , ["south",    "kb_down"]
+      , ["east",     "kb_right"]
+      , ["west",     "kb_left"]
+      , ["zoom_in",  "kb_kp_plus"]
+      , ["zoom_out", "kb_kb_minus"]
+      , ["scroll_n", "kb_up",      "ctrl"]
+      , ["scroll_s", "kb_down",    "ctrl"]
+      , ["scroll_e", "kb_right",   "ctrl"]
+      , ["scroll_w", "kb_left",    "ctrl"]
+    ]
+}

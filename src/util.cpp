@@ -25,10 +25,10 @@ bkrl::uint32_t bkrl::slash_hash32(char const* s, size_t const len) {
     return static_cast<uint32_t>(h + (h >> 32)); //32-bit
 }
 
-std::string bkrl::read_file(std::string const& filename) {
+std::string bkrl::read_file(string_ref const filename) {
     std::string result;
 
-    std::ifstream in {filename};
+    std::ifstream in {filename.data()};
 
     in.seekg(0, std::ios::end);
     result.reserve(static_cast<size_t>(in.tellg()));

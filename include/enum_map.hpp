@@ -114,7 +114,9 @@ public:
         //check for "sparse" enums
         for (size_t i = 0; i < value_to_string_.size(); ++i) {
             //TODO
-            BK_ASSERT(i == static_cast<size_t>(value_to_string_[i].value));
+            if (i != static_cast<size_t>(value_to_string_[i].value)) {
+                std::cout << "warning sparse enum\n";
+            }
         }
 
         return true; //TODO

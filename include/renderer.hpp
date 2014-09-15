@@ -14,6 +14,7 @@ class application;
 class renderer;
 class tile_sheet;
 class font_manager;
+class texture;
 
 enum class command_type : uint16_t;
 
@@ -68,7 +69,7 @@ public:
     application();
     ~application();
 
-    handle_t handle() const; 
+    handle_t handle() const;
 
     bool is_running() const;
     bool has_events() const;
@@ -86,6 +87,32 @@ private:
     std::unique_ptr<detail::application_impl> impl_;
 };
 
+class texture {
+public:
+    using handle_t = opaque_handle<texture>;
+
+    texture(handle_t handle, unsigned id, int width, int height)
+      : handle_ {handle}
+      , id_ {id}
+      , width_ {width}
+      , height_ {height}
+    {
+    }
+
+    handle_t handle() const { return handle_; }
+
+    unsigned id() const { return id_; }
+
+    int width() const { return width_; }
+    int height() const { return height_; }
+private:
+    handle_t handle_;
+    unsigned id_;
+
+    int width_;
+    int height_;
+};
+
 namespace detail {
 //==============================================================================
 //! common types for renderer
@@ -97,43 +124,6 @@ struct renderer_base {
 };
 
 } //namesapce detail
-
-//TODO
-class tile_sheet {
-public:
-    using rect_t = axis_aligned_rect<int>;
-
-    tile_sheet(int width, int height, int tile_width, int tile_height)
-      : width {width}
-      , height {height}
-      , tile_width {tile_width}
-      , tile_height{tile_height}
-      , tile_x {width / tile_width}
-      , tile_y {height / tile_height}
-    {
-    }
-
-    rect_t at(int x, int y) const {
-        BK_ASSERT_SAFE(x >= 0 && x < tile_x);
-        BK_ASSERT_SAFE(y >= 0 && y < tile_y);
-
-        auto const l = x * tile_width;
-        auto const t = y * tile_height;
-        auto const r = l + tile_width;
-        auto const b = t + tile_height;
-
-        return rect_t {l, t, r, b};
-    }
-     
-    int width; //texture w
-    int height; //texture h
-
-    int tile_width;  //dimensions
-    int tile_height; //dimensions
-
-    int tile_x; //tiles per row
-    int tile_y; //rows
-};
 
 //==============================================================================
 //! renderer
@@ -148,6 +138,11 @@ public:
 
     void clear();
     void present();
+
+    ////////////////////////////////////////////////////////////////////////////
+
+    texture create_texture(string_ref filename);
+    void delete_texture(texture& tex);
 
     ////////////////////////////////////////////////////////////////////////////
 

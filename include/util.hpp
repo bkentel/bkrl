@@ -31,7 +31,11 @@ inline uint32_t slash_hash32(string_ref const ref) {
     return slash_hash32(ref.data(), ref.length());
 }
 
-std::string read_file(std::string const& filename);
+std::string read_file(string_ref filename);
+
+inline std::string read_file(std::string const& filename) {
+    return read_file(string_ref{filename});
+}
 
 template <typename T, size_t N>
 inline size_t array_len(T const (&)[N]) {
