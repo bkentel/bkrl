@@ -9,26 +9,66 @@
 #include "types.hpp"
 #include "scancode.hpp"
 #include "command_type.hpp"
+#include "enum_map.hpp"
 
 namespace bkrl {
+
+enum class key_modifier_type : uint16_t {
+    invalid
+
+  , ctrl_left
+  , ctrl_right
+  , alt_left
+  , alt_right
+  , shift_left
+  , shift_right
+
+  , ctrl
+  , alt
+  , shift
+
+  , enum_size
+};
 
 //==============================================================================
 //! key_modifier
 //==============================================================================
 struct key_modifier {
-    enum : unsigned {
-        ctrl_left
-      , ctrl_right
-      , alt_left
-      , alt_right
-      , shift_left
-      , shift_right
+    void set(key_modifier_type const mod) {
+        auto const m = static_cast<unsigned>(mod);
 
-      , enum_size
-    };
+        switch (mod) {
+        case key_modifier_type::ctrl :
+            set(key_modifier_type::ctrl_left);
+            set(key_modifier_type::ctrl_right);
+            break;
+        case key_modifier_type::alt :
+            set(key_modifier_type::alt_left);
+            set(key_modifier_type::alt_right);
+            break;
+        case key_modifier_type::shift :
+            set(key_modifier_type::shift_left);
+            set(key_modifier_type::shift_right);
+            break;
+        default :
+            value.set(m);
+        }
+    }
 
-    std::bitset<enum_size> value;
+    bool test(key_modifier const& other) const {
+        auto const a = value.to_ulong();
+        auto const b = other.value.to_ulong();
+
+        return (!a && !b)
+            || (a & b) && ((a & b) == a);
+    }
+
+    std::bitset<
+        static_cast<unsigned>(key_modifier_type::enum_size) - 1
+    > value;
 };
+
+extern template class enum_map<key_modifier_type>;
 
 //==============================================================================
 //! key_combo

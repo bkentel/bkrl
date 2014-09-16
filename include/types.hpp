@@ -29,11 +29,12 @@ using string_ref = ::boost::string_ref;
 using codepoint_t = uint32_t;
 
 //forward declarations
-enum class command_type : uint16_t;
-enum class tile_type    : uint16_t;
-enum class texture_type : uint16_t;
-enum class key          : uint16_t;
-enum class scancode     : uint16_t;
+enum class command_type      : uint16_t;
+enum class tile_type         : uint16_t;
+enum class texture_type      : uint16_t;
+enum class key               : uint16_t;
+enum class scancode          : uint16_t;
+enum class key_modifier_type : uint16_t;
 
 using texture_id = unsigned;
 

@@ -98,22 +98,28 @@ keymap::impl_t::impl_t(string_ref filename) {
 
 command_type
 keymap::impl_t::operator[](key_combo const& key) const {
-    auto const it = std::lower_bound(
+    auto const lower = std::lower_bound(
         std::cbegin(mappings_)
       , std::cend(mappings_)
       , key
       , [](key_mapping const& lhs, key_combo const& rhs) {
-            return lhs.keys < rhs;
+            //match the key only; not mods
+            return lhs.keys.key < rhs.key;
         }
     );
 
-    if (it == std::cend(mappings_)) {
-        return command_type::invalid;
-    } else if (it->keys != key) {
-        return command_type::invalid;
+    //for each matching key; not mods
+    for (auto it = lower; it != std::cend(mappings_); ++it) {
+        if (it->keys.key != key.key) {
+            break;
+        }
+
+        if (it->keys.modifier.test(key.modifier)) {
+            return it->command;
+        }
     }
 
-    return it->command;
+    return command_type::invalid;
 }
 
 void keymap::impl_t::rule_root(cref value) {
@@ -167,12 +173,12 @@ void keymap::impl_t::rule_mapping_value(cref value) {
     for (auto i = 2u; i < value.array_items().size(); ++i) {
         auto const mod = expect_string(value[i]);
 
-        //TODO
-        if (mod == string_ref {"ctrl"}) {
-            mods.value.set(key_modifier::ctrl_left);
-        } else {
+        auto const kmod = enum_map<key_modifier_type>::get(mod).value;
+        if (kmod == key_modifier_type::invalid) {
             BK_TODO_FAIL();
         }
+
+        mods.set(kmod);
     }
 
     mappings_.emplace_back(

@@ -5,6 +5,48 @@
 #include "texture_type.hpp"
 #include "tile_type.hpp"
 #include "scancode.hpp"
+#include "keyboard.hpp"
+
+////////////////////////////////////////////////////////////////////////////////
+// enum_map<key_modifier_type>
+////////////////////////////////////////////////////////////////////////////////
+template class bkrl::enum_map<bkrl::key_modifier_type>;
+
+namespace {
+    using modifier_map_t    = bkrl::enum_map<bkrl::key_modifier_type>;
+    using modifier_vector_t = std::vector<modifier_map_t::value_type>;
+
+    modifier_vector_t modifier_init_string_to_value() {
+        using modifier_type = bkrl::key_modifier_type;
+
+        modifier_vector_t result;
+
+        BK_ENUMMAP_ADD_STRING(result, modifier_type, invalid);
+        BK_ENUMMAP_ADD_STRING(result, modifier_type, ctrl_left);
+        BK_ENUMMAP_ADD_STRING(result, modifier_type, ctrl_right);
+        BK_ENUMMAP_ADD_STRING(result, modifier_type, alt_left);
+        BK_ENUMMAP_ADD_STRING(result, modifier_type, alt_right);
+        BK_ENUMMAP_ADD_STRING(result, modifier_type, shift_left);
+        BK_ENUMMAP_ADD_STRING(result, modifier_type, shift_right);
+        BK_ENUMMAP_ADD_STRING(result, modifier_type, ctrl);
+        BK_ENUMMAP_ADD_STRING(result, modifier_type, alt);
+        BK_ENUMMAP_ADD_STRING(result, modifier_type, shift);
+
+        bkrl::sort(result, modifier_map_t::value_type::less_hash);
+
+        return result;
+    }
+
+    //take a copy of string_to_value
+    modifier_vector_t modifier_init_value_to_string(modifier_vector_t string_to_value) {
+        bkrl::sort(string_to_value, modifier_map_t::value_type::less_enum);
+        return string_to_value;
+    }
+}
+
+modifier_vector_t const modifier_map_t::string_to_value_ = modifier_init_string_to_value();
+modifier_vector_t const modifier_map_t::value_to_string_ = modifier_init_value_to_string(modifier_map_t::string_to_value_);
+bool              const modifier_map_t::checked_         = modifier_map_t::check();
 
 ////////////////////////////////////////////////////////////////////////////////
 // enum_map<scancode>

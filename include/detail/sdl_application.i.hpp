@@ -330,10 +330,28 @@ application_impl::handle_event_kb(SDL_KeyboardEvent const& event) {
     auto const flags = event.keysym.mod;
 
     if (flags & KMOD_LCTRL) {
-        mods.value.set(key_modifier::ctrl_left);
+        mods.set(key_modifier_type::ctrl_left);
+        //mods.set(key_modifier_type::ctrl);
     }
     if (flags & KMOD_RCTRL) {
-        mods.value.set(key_modifier::ctrl_right);
+        mods.set(key_modifier_type::ctrl_right);
+        //mods.set(key_modifier_type::ctrl);
+    }
+    if (flags & KMOD_LALT) {
+        mods.set(key_modifier_type::alt_left);
+        //mods.set(key_modifier_type::alt);
+    }
+    if (flags & KMOD_RALT) {
+        mods.set(key_modifier_type::alt_right);
+        //mods.set(key_modifier_type::alt);
+    }
+    if (flags & KMOD_LSHIFT) {
+        mods.set(key_modifier_type::shift_left);
+        //mods.set(key_modifier_type::shift);
+    }
+    if (flags & KMOD_RSHIFT) {
+        mods.set(key_modifier_type::shift_right);
+        //mods.set(key_modifier_type::shift);
     }
 
     key_combo const key {
