@@ -1,5 +1,6 @@
 #include "util.hpp"
 #include "assert.hpp"
+#include "algorithm.hpp"
 
 #include "command_type.hpp"
 #include "texture_type.hpp"

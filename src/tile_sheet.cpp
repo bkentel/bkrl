@@ -2,6 +2,7 @@
 #include "texture_type.hpp"
 #include "util.hpp"
 #include "assert.hpp"
+#include "algorithm.hpp"
 
 #include "json11/json11.hpp"
 

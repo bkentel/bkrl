@@ -42,28 +42,6 @@ enum class command_type : uint16_t {
   , enum_size //!< last
 };
 
-//TODO neccessary?
 extern template class enum_map<command_type>;
-
-//==============================================================================
-//! command_map
-//! map texture_type -> texture_id
-//==============================================================================
-//class command_map {
-//public:
-//    //--------------------------------------------------------------------------
-//    //! @param source The json describing the mappings.
-//    //--------------------------------------------------------------------------
-//    explicit texture_map(utf8string const& source);
-//
-//    //needed for pimpl
-//    ~texture_map();
-//
-//    texture_id operator[](texture_type type) const;
-//private:
-//    struct impl_t;
-//    std::unique_ptr<impl_t> impl_;
-//};
-
 
 } //namespace bkrl

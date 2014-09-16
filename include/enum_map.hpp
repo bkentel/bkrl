@@ -8,7 +8,6 @@
 
 #include <vector>
 #include "types.hpp"
-#include "algorithm.hpp"
 #include "util.hpp"
 #include "assert.hpp"
 
@@ -46,9 +45,9 @@ struct enum_string {
     }
 
     bool operator==(enum_string const& rhs) const {
-        auto const result = value == rhs.value;
+        auto const result = (value == rhs.value);
 
-        BK_ASSERT(!result || hash == rhs.hash);
+        BK_ASSERT_DBG(!result || hash == rhs.hash);
 
         return result;
     }

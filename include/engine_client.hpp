@@ -9,9 +9,6 @@
 
 namespace bkrl {
 
-//using renderer    = class sdl_renderer;
-//using application = class sdl_application;
-
 class renderer;
 
 //==============================================================================
