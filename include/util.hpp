@@ -53,15 +53,20 @@ inline T value_of(tagged_type<T, Tag> const tagged) noexcept {
 ////////////////////////////////////////////////////////////////////////////////
 template <typename T>
 struct opaque_handle {
+    opaque_handle(std::nullptr_t)
+      : value {0}
+    {
+    }
+
     template <typename U, typename D>
     opaque_handle(std::unique_ptr<U, D> const& uptr) noexcept
-        : opaque_handle {uptr.get()}
+      : opaque_handle {uptr.get()}
     {
     }
 
     template <typename U, typename D>
     opaque_handle(std::unique_ptr<U, D>& uptr) noexcept
-        : opaque_handle {uptr.get()}
+      : opaque_handle {uptr.get()}
     {
     }
 

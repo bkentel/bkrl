@@ -4,8 +4,11 @@
 using namespace bkrl;
 
 ////////////////////////////////////////////////////////////////////////////////
-
-font_libary::font_libary() {
+// font_libary
+////////////////////////////////////////////////////////////////////////////////
+font_libary::font_libary()
+  : impl_ {std::make_unique<detail::font_library_impl>()}
+{
 }
 
 font_libary::~font_libary() = default;
@@ -15,6 +18,44 @@ font_libary::handle() const {
     return impl_->handle();
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// font_cache
+////////////////////////////////////////////////////////////////////////////////
+
+font_cache::font_cache(
+    renderer& r
+  , font_libary& lib
+  , string_ref filename
+  , unsigned size
+)
+  : impl_ {std::make_unique<detail::font_cache_impl>(r, lib, filename, size)}
+{
+}
+
+font_cache::~font_cache() = default;
+
+void font_cache::cache(unicode::codepoint cp) {
+}
+
+void font_cache::cache(unicode::codepoint first, unicode::codepoint last) {
+}
+
+void font_cache::cache(std::initializer_list<unicode::block_value> blocks) {
+}
+
+void font_cache::evict(unicode::codepoint cp) {
+}
+
+void font_cache::evict(unicode::codepoint first, unicode::codepoint last) {
+}
+
+glyph_info font_cache::operator[](unicode::codepoint cp) {
+    return {};
+}
+
+glyph_info font_cache::operator[](glyph_index i) {
+    return {};
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 

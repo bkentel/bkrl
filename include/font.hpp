@@ -15,6 +15,9 @@
 
 namespace bkrl {
 
+class renderer;
+class texture;
+
 class font_libary;
 class font_cache;
 class transitory_text_layout;
@@ -46,9 +49,17 @@ struct block_value {
     {
     }
 
+    bool contains(codepoint const cp) const {
+        return cp >= first && cp <= last;
+    }
+
     codepoint first;
     codepoint last;
 };
+
+inline bool operator<(codepoint const lhs, block_value const rhs) {
+    return lhs < rhs.first;
+}
 
 using basic_latin = block<0x00,     0x7F>;
 using cjk_symbols = block<0x3000, 0x303F>;
@@ -65,8 +76,13 @@ using text_rect   = axis_aligned_rect<int>;
 //==============================================================================
 //==============================================================================
 struct glyph_info {
-    unicode::codepoint codepoint;
-    glyph_index        index;
+    texture* tex;
+    int      src_x;
+    int      src_y;
+    int      width;
+    int      height;
+    int      left;
+    int      top;
 };
 
 //==============================================================================
@@ -91,12 +107,12 @@ class font_cache {
 public:
     BK_NOCOPY(font_cache);
 
-    explicit font_cache(font_libary& lib, string_ref filename, unsigned size);
+    explicit font_cache(renderer& r, font_libary& lib, string_ref filename, unsigned size);
     ~font_cache();
 
     void cache(unicode::codepoint cp);
     void cache(unicode::codepoint first, unicode::codepoint last);
-    void chache(std::initializer_list<unicode::block_value> blocks);
+    void cache(std::initializer_list<unicode::block_value> blocks);
 
     void evict(unicode::codepoint cp);
     void evict(unicode::codepoint first, unicode::codepoint last);

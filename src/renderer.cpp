@@ -137,6 +137,11 @@ renderer::create_texture(string_ref filename) {
     return impl_->create_texture(filename);
 }
 
+texture
+renderer::create_texture(uint8_t* buffer, int width, int height) {
+    return impl_->create_texture(buffer, width, height);
+}
+
 void
 renderer::delete_texture(texture& tex) {
     impl_->delete_texture(tex);

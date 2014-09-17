@@ -2,7 +2,9 @@
 
 #include "engine_client.hpp"
 
-//#include "sdl.hpp"
+#include "font.hpp"
+
+
 #include "keyboard.hpp" //temp
 #include "renderer.hpp"
 #include "grid.hpp"
@@ -679,6 +681,9 @@ public:
       , map_ {100, 100}
       , sheet_ {"./data/texture_map.json", renderer_}
     {
+        font_libary font_lib {};
+        font_cache cache {renderer_, font_lib, "", 20};
+
         ////////////////////////////////////////////////////
         app_.on_command([&](command_type const cmd) {
             on_command(cmd);

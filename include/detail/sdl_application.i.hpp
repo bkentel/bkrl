@@ -424,6 +424,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////
 
     texture create_texture(string_ref filename);
+    texture create_texture(uint8_t* buffer, int width, int height);
     void delete_texture(texture& tex);
 
     ////////////////////////////////////////////////////////////////////////////
@@ -447,6 +448,8 @@ public:
     void draw_text(string_ref string, scalar x, scalar y);
     void draw_text(string_ref string, rect bounds);
 private:
+    texture create_texture_(SDL_Surface* surface);
+
     static sdl_unique<SDL_Renderer> create_renderer_(application const& app);
 
     sdl_unique<SDL_Renderer> renderer_;
@@ -534,32 +537,62 @@ renderer_impl::present() {
 
 //------------------------------------------------------------------------------
 texture
-renderer_impl::create_texture(string_ref filename) {
-    //TODO make this work for not just bmp.
+renderer_impl::create_texture_(SDL_Surface* surface) {
+    BK_ASSERT_DBG(surface);
 
-    auto const data = SDL_LoadBMP(filename.data());
-    if (data == nullptr) {
-        BK_TODO_FAIL();
-        //BOOST_THROW_EXCEPTION(error::make_sdl_error("SDL_LoadBMP"));
-    }
-
-    sdl_unique<SDL_Surface> surface {data};
-
-    auto const result = SDL_CreateTextureFromSurface(renderer_.get(), surface.get());
+    auto const result = SDL_CreateTextureFromSurface(renderer_.get(), surface);
     if (result == nullptr) {
         BK_TODO_FAIL();
         //BOOST_THROW_EXCEPTION(error::make_sdl_error("SDL_CreateTextureFromSurface"));
     }
 
     auto const handle = texture::handle_t {result};
-
-    auto const id = textures_.size();
+    auto const id     = textures_.size();
 
     textures_.emplace_back(
         sdl_unique<SDL_Texture> {result}
     );
 
-    return texture {handle, id, data->w, data->h};
+    return texture {handle, id, surface->w, surface->h};
+}
+
+texture
+renderer_impl::create_texture(string_ref filename) {
+    //TODO make this work for not just bmp.
+
+    auto const result = SDL_LoadBMP(filename.data());
+    if (result == nullptr) {
+        BK_TODO_FAIL();
+        //BOOST_THROW_EXCEPTION(error::make_sdl_error("SDL_LoadBMP"));
+    }
+
+    sdl_unique<SDL_Surface> surface {result};
+
+    return create_texture_(surface.get());
+}
+
+//------------------------------------------------------------------------------
+texture
+renderer_impl::create_texture(uint8_t* buffer, int width, int height) {
+    auto const result = SDL_CreateRGBSurfaceFrom(
+        buffer
+      , width
+      , height
+      , 32
+      , width * 4
+      , 0xFF << 16
+      , 0xFF <<  8
+      , 0xFF <<  0
+      , 0xFF << 24
+    );
+
+    if (!result) {
+        BK_TODO_FAIL();
+    }
+
+    sdl_unique<SDL_Surface> surface {result};
+
+    return create_texture_(surface.get());
 }
 
 //------------------------------------------------------------------------------

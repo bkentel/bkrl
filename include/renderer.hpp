@@ -9,6 +9,9 @@
 
 namespace bkrl {
 
+class font_cache;
+class transitory_text_layout;
+
 class application;
 class renderer;
 class tile_sheet;
@@ -101,6 +104,11 @@ public:
     using handle_t = opaque_handle<texture>;
     using rect = detail::renderer_base::rect;
 
+    texture()
+      : texture {handle_t {nullptr}, 0, 0, 0}
+    {
+    }
+
     texture(handle_t handle, unsigned id, int width, int height)
       : handle_ {handle}
       , id_ {id}
@@ -115,8 +123,6 @@ public:
 
     int width() const { return width_; }
     int height() const { return height_; }
-
-    void update(rect region, void const* pixel_data, int pitch);
 private:
     handle_t handle_;
     unsigned id_;
@@ -142,6 +148,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////
 
     texture create_texture(string_ref filename);
+    texture create_texture(uint8_t* buffer, int width, int height);
     void delete_texture(texture& tex);
 
     ////////////////////////////////////////////////////////////////////////////
@@ -177,6 +184,8 @@ public:
       , scalar   x
       , scalar   y
     );
+
+    void draw_text(transitory_text_layout& layout);
 
     void draw_text(string_ref string, scalar x, scalar y);
     void draw_text(string_ref string, rect bounds);
