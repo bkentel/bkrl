@@ -199,9 +199,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\lib\json11\json11.cpp">
-      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Level3</WarningLevel>
-      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">Level3</WarningLevel>
-      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Level3</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">TurnOffAllWarnings</WarningLevel>
     </ClCompile>
     <ClCompile Include="..\src\assert.cpp" />
     <ClCompile Include="..\src\bsp_layout.cpp" />
@@ -265,6 +265,7 @@
     <ClInclude Include="..\include\bsp_layout.hpp" />
     <ClInclude Include="..\include\command_type.hpp" />
     <ClInclude Include="..\include\detail\bsp_layout.i.hpp" />
+    <ClInclude Include="..\include\detail\freetype_text.i.hpp" />
     <ClInclude Include="..\include\detail\sdl_application.i.hpp" />
     <ClInclude Include="..\include\engine_client.hpp" />
     <ClInclude Include="..\include\enum_map.hpp" />

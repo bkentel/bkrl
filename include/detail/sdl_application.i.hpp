@@ -176,9 +176,7 @@ application_impl::application_impl(string_ref keymap)
 
 application::handle_t
 application_impl::handle() const {
-    return handle_t {
-        reinterpret_cast<std::intptr_t>(window_.get())
-    };
+    return window_;
 }
 
 bool
@@ -510,9 +508,7 @@ renderer_impl::renderer_impl(application const& app)
 //------------------------------------------------------------------------------
 renderer_impl::handle_t
 renderer_impl::handle() const {
-    return handle_t {
-        reinterpret_cast<std::intptr_t>(renderer_.get())
-    };
+    return renderer_;
 }
 
 //------------------------------------------------------------------------------
@@ -555,9 +551,7 @@ renderer_impl::create_texture(string_ref filename) {
         //BOOST_THROW_EXCEPTION(error::make_sdl_error("SDL_CreateTextureFromSurface"));
     }
 
-    auto const handle = texture::handle_t {
-        reinterpret_cast<intptr_t>(result)
-    };
+    auto const handle = texture::handle_t {result};
 
     auto const id = textures_.size();
 
@@ -651,11 +645,20 @@ renderer_impl::draw_tile(
 }
 
 //------------------------------------------------------------------------------
-void renderer_impl::draw_text(string_ref string, scalar x, scalar y) {
+void
+renderer_impl::draw_text(
+    string_ref //string
+  , scalar     //x
+  , scalar     //y
+) {
 }
 
 //------------------------------------------------------------------------------
-void renderer_impl::draw_text(string_ref string, rect bounds) {
+void
+renderer_impl::draw_text(
+    string_ref //string
+  , rect       //bounds
+) {
 }
 
 }} //namespace bkrl::detail

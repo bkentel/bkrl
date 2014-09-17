@@ -149,5 +149,8 @@
     <ClInclude Include="..\include\scancode.hpp">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\detail\freetype_text.i.hpp">
+      <Filter>include\detail</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

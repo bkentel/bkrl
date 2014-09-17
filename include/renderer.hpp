@@ -1,14 +1,13 @@
 #pragma once
 
 #include <memory>
+#include <functional>
+
 #include "types.hpp"
 #include "math.hpp"
+#include "util.hpp"
 
 namespace bkrl {
-
-namespace detail { class renderer_impl; }
-namespace detail { class application_impl; }
-namespace detail { class font_manager_impl; }
 
 class application;
 class renderer;
@@ -16,12 +15,9 @@ class tile_sheet;
 class font_manager;
 class texture;
 
-enum class command_type : uint16_t;
-
-template <typename T>
-struct opaque_handle {
-    std::intptr_t value;
-};
+namespace detail { class renderer_impl; }
+namespace detail { class application_impl; }
+namespace detail { class font_manager_impl; }
 
 namespace detail {
 //==============================================================================
@@ -87,9 +83,23 @@ private:
     std::unique_ptr<detail::application_impl> impl_;
 };
 
+namespace detail {
+//==============================================================================
+//! common types for renderer
+//==============================================================================
+struct renderer_base {
+    using handle_t = opaque_handle<renderer>;
+    using scalar = float;
+    using rect   = axis_aligned_rect<scalar>;
+};
+
+} //namesapce detail
+
+//==============================================================================
 class texture {
 public:
     using handle_t = opaque_handle<texture>;
+    using rect = detail::renderer_base::rect;
 
     texture(handle_t handle, unsigned id, int width, int height)
       : handle_ {handle}
@@ -105,6 +115,8 @@ public:
 
     int width() const { return width_; }
     int height() const { return height_; }
+
+    void update(rect region, void const* pixel_data, int pitch);
 private:
     handle_t handle_;
     unsigned id_;
@@ -112,18 +124,6 @@ private:
     int width_;
     int height_;
 };
-
-namespace detail {
-//==============================================================================
-//! common types for renderer
-//==============================================================================
-struct renderer_base {
-    using handle_t = opaque_handle<renderer>;
-    using scalar = float;
-    using rect   = axis_aligned_rect<scalar>;
-};
-
-} //namesapce detail
 
 //==============================================================================
 //! renderer
@@ -168,6 +168,8 @@ public:
     
     ////////////////////////////////////////////////////////////////////////////
 
+
+    ////////////////////////////////////////////////////////////////////////////
     void draw_tile(
         tile_sheet const& sheet
       , unsigned ix
