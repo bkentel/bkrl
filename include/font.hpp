@@ -19,11 +19,11 @@ class renderer;
 class texture;
 
 class font_libary;
-class font_cache;
+class font_face;
 class transitory_text_layout;
 class static_text_layout;
 
-namespace detail { class font_cache_impl; }
+namespace detail { class font_face_impl; }
 namespace detail { class font_library_impl; }
 
 namespace unicode {
@@ -47,10 +47,20 @@ struct block_value {
     block_value(block<First, Last>)
         : first {First}, last {Last}
     {
+        BK_ASSERT_DBG(Last >= First);
     }
 
-    bool contains(codepoint const cp) const {
+    bool contains(codepoint const cp) const noexcept {
         return cp >= first && cp <= last;
+    }
+
+    int size() const noexcept {
+        return value_of(last) - value_of(first) + 1;
+    }
+
+    int offset(codepoint const cp) const {
+        BK_ASSERT_DBG(contains(cp));
+        return value_of(cp) - value_of(first);
     }
 
     codepoint first;
@@ -75,23 +85,21 @@ using text_rect   = axis_aligned_rect<int>;
 
 //==============================================================================
 //==============================================================================
-struct glyph_info {
-    texture* tex;
-    int      src_x;
-    int      src_y;
-    int      width;
-    int      height;
-    int      left;
-    int      top;
+struct glyph_metrics {
+    int width;
+    int height;
+    int left;
+    int top;
+    int advance;
 };
 
 //==============================================================================
 //==============================================================================
 class font_libary {
 public:
-    using handle_t = opaque_handle<font_libary>;
-
     BK_NOCOPY(font_libary);
+
+    using handle_t = opaque_handle<font_libary>;
 
     font_libary();
     ~font_libary();
@@ -100,35 +108,36 @@ public:
 private:
     std::unique_ptr<detail::font_library_impl> impl_;
 };
-
 //==============================================================================
 //==============================================================================
-class font_cache {
+class font_face {
 public:
-    BK_NOCOPY(font_cache);
+    BK_NOCOPY(font_face);
 
-    explicit font_cache(renderer& r, font_libary& lib, string_ref filename, unsigned size);
-    ~font_cache();
+    font_face(
+        renderer&    r
+      , font_libary& lib
+      , string_ref   filename
+      , unsigned     size
+    );
 
-    void cache(unicode::codepoint cp);
-    void cache(unicode::codepoint first, unicode::codepoint last);
-    void cache(std::initializer_list<unicode::block_value> blocks);
+    ~font_face();
 
-    void evict(unicode::codepoint cp);
-    void evict(unicode::codepoint first, unicode::codepoint last);
+    glyph_metrics metrics(unicode::codepoint lhs, unicode::codepoint rhs);
+    glyph_metrics metrics(glyph_index lhs, glyph_index rhs);
 
-    glyph_info operator[](unicode::codepoint cp);
-    glyph_info operator[](glyph_index i);
+    //TODO temp... debug only
+    void render(renderer& r);
 private:
-    std::unique_ptr<detail::font_cache_impl> impl_;
+    std::unique_ptr<detail::font_face_impl> impl_;
 };
 
 //==============================================================================
 //==============================================================================
 class transitory_text_layout {
 public:
-    transitory_text_layout(font_cache& font, string_ref string);
-    transitory_text_layout(font_cache& font, string_ref string, text_rect bounds);
+    transitory_text_layout(font_face& face, string_ref string);
+    transitory_text_layout(font_face& face, string_ref string, text_rect bounds);
 
 
 private:
@@ -141,10 +150,6 @@ private:
 //==============================================================================
 //==============================================================================
 class static_text_layout {
-public:
-    explicit static_text_layout(string_ref string);
-    static_text_layout(string_ref string, text_rect bounds);
-private:
 };
 
 ////////////////////////////////////////////////////////////////////////////////

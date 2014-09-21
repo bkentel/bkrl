@@ -112,6 +112,11 @@ renderer::set_scale_y(scalar const sy) {
 }
 
 void
+renderer::draw_texture(texture& tex) {
+    impl_->draw_texture(tex);
+}
+
+void
 renderer::draw_tile(
     tile_sheet const& sheet
   , unsigned const ix

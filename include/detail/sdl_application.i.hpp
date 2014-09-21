@@ -437,6 +437,18 @@ public:
     
     ////////////////////////////////////////////////////////////////////////////
 
+    void draw_texture(texture& tex) {
+        auto const sdl_tex = tex.handle().as<SDL_Texture*>();
+        
+        SDL_SetTextureBlendMode(sdl_tex, SDL_BLENDMODE_BLEND);
+        SDL_SetTextureColorMod(sdl_tex, 0xFF, 0, 0);
+        
+        SDL_Rect r {};
+        SDL_QueryTexture(sdl_tex, nullptr, nullptr, &r.w, &r.h);
+
+        SDL_RenderCopy(renderer_.get(), sdl_tex, nullptr, &r);
+    }
+
     void draw_tile(
         tile_sheet const& sheet
       , unsigned ix

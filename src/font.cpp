@@ -19,42 +19,36 @@ font_libary::handle() const {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// font_cache
+// font_face
 ////////////////////////////////////////////////////////////////////////////////
 
-font_cache::font_cache(
-    renderer& r
+font_face::font_face(
+    renderer&    r
   , font_libary& lib
-  , string_ref filename
-  , unsigned size
+  , string_ref   filename
+  , unsigned     size
 )
-  : impl_ {std::make_unique<detail::font_cache_impl>(r, lib, filename, size)}
+  : impl_ {std::make_unique<detail::font_face_impl>(r, lib, filename, size)}
 {
 }
 
-font_cache::~font_cache() = default;
+font_face::~font_face() = default;
 
-void font_cache::cache(unicode::codepoint cp) {
+glyph_metrics
+font_face::metrics(
+    unicode::codepoint lhs
+  , unicode::codepoint rhs
+) {
+    return impl_->metrics(lhs, rhs);
 }
 
-void font_cache::cache(unicode::codepoint first, unicode::codepoint last) {
+glyph_metrics
+font_face::metrics(glyph_index lhs, glyph_index rhs) {
+    return impl_->metrics(lhs, rhs);
 }
 
-void font_cache::cache(std::initializer_list<unicode::block_value> blocks) {
-}
-
-void font_cache::evict(unicode::codepoint cp) {
-}
-
-void font_cache::evict(unicode::codepoint first, unicode::codepoint last) {
-}
-
-glyph_info font_cache::operator[](unicode::codepoint cp) {
-    return {};
-}
-
-glyph_info font_cache::operator[](glyph_index i) {
-    return {};
+void font_face::render(renderer& r) {
+    impl_->render(r);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

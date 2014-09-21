@@ -678,12 +678,11 @@ public:
     impl_t()
       : app_ {"./data/key_map.json"}
       , renderer_ {app_}
+      , font_lib_ {}
+      , font_face_ {renderer_, font_lib_, "", 20}
       , map_ {100, 100}
       , sheet_ {"./data/texture_map.json", renderer_}
     {
-        font_libary font_lib {};
-        font_cache cache {renderer_, font_lib, "", 20};
-
         ////////////////////////////////////////////////////
         app_.on_command([&](command_type const cmd) {
             on_command(cmd);
@@ -802,6 +801,8 @@ public:
         }
 
         r.draw_tile(sheet_, 1, 0, player_.position.x, player_.position.y);
+
+        font_face_.render(r);
 
         //auto const name_rect = renderer::text_rect {
         //    static_cast<float>(player_.position.x * 18)
@@ -1066,6 +1067,10 @@ public:
 private:
     application  app_;
     renderer     renderer_;
+    
+    font_libary font_lib_;
+    font_face   font_face_;
+
     grid_storage map_;
 
     tile_sheet sheet_;
