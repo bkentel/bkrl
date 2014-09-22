@@ -124,6 +124,10 @@ public:
         }
     }
 
+    int line_gap() const {
+        return face_->size->metrics.height >> 6;
+    }
+
     glyph_index index_of(unicode::codepoint const cp) {
         return glyph_index {
             FT_Get_Char_Index(*this, value_of(cp))
@@ -191,6 +195,9 @@ public:
         if (error) {
             BK_TODO_FAIL();
         }
+
+        kerning.x >>= 6;
+        kerning.y >>= 6;
 
         return kerning;
     }
@@ -417,130 +424,44 @@ public:
         return pos_[i];
     }
 
+    bitmap_glyph const* get_glyph(unicode::codepoint const cp) const {
+        auto const i = block_.offset(cp);
+        auto const& g = glyphs_[i];
+        
+        return (!!g) ? &g : nullptr;
+    }
+
+    glyph_metrics metrics(unicode::codepoint const cp) const {
+        auto const g = get_glyph(cp);
+        if (!g) {
+            return {};
+        }
+
+        return glyph_metrics {
+            g->width()
+          , g->height()
+          , g->left()
+          , g->top()
+          , g->advance().x >> 16
+          , g->advance().y >> 16
+        };
+    }
+
     int required_area() const noexcept {
         return required_area_;
     }
+
+    bool contains(unicode::codepoint const cp) const noexcept {
+        return block_.contains(cp);
+    }
+
+
 private:
     unicode::block_value      block_;
     int                       required_area_;
     std::vector<bitmap_glyph> glyphs_;
     std::vector<FT_Vector>    pos_;
 };
-
-////////////////////////////////////////////////////////////////////////////////
-//class font_code_block_cache {
-//public:
-//    using rect = axis_aligned_rect<int>;
-//
-//    int load_glyphs(FT_Face const face, unicode::block_value const block) {
-//        BK_ASSERT_DBG(glyphs_.empty());
-//
-//        auto const first = bkrl::value_of(block.first);
-//        auto const last  = bkrl::value_of(block.last);
-//        auto const size  = last - first + 1;
-//
-//        glyphs_.reserve(size);
-//
-//        int max_h = 0;
-//        int max_w = 0;
-//
-//        for (auto cp = first; cp <= last; ++cp) {
-//            glyphs_.emplace_back(
-//                load_bitmap_glyph(face, unicode::codepoint {cp})
-//            );
-//
-//            auto const glyph = glyphs_.back().get();
-//            if (!glyph) {
-//                continue;
-//            }
-//
-//            auto const h = glyph->bitmap.rows;
-//            auto const w = glyph->bitmap.width;
-//
-//            max_h = std::max(h, max_h);
-//            max_w = std::max(w, max_w);
-//        }
-//
-//        auto const total_area = max_h * max_w * size;
-//
-//        return total_area;
-//    }
-//
-//    font_code_block_cache(
-//        FT_Face const face
-//      , unicode::block_value const block
-//    )
-//      : block_ {block}
-//    {
-//        total_area_ = load_glyphs(face, block);
-//    }
-//
-//    struct render_result {
-//        int x;
-//        int y;
-//        int h;
-//    };
-//
-//    render_result render(
-//        uint8_t* const buffer
-//      , int      const buffer_w
-//      , int      const buffer_h
-//      , int      const xoff  = 0
-//      , int      const yoff  = 0
-//      , int      const row_h = 0
-//    ) {
-//        positions_.reserve(glyphs_.size());
-//
-//        auto cur_row_h = row_h;
-//        auto x         = xoff;
-//        auto y         = yoff;
-//
-//        for (auto const& glyph : glyphs_) {
-//            if (!glyph) {
-//                positions_.emplace_back(FT_Vector {});
-//                continue;
-//            }
-//
-//            auto const w = glyph->bitmap.width;
-//            auto const h = glyph->bitmap.rows;
-//
-//            if (x + w > buffer_w) {
-//                x = 0;
-//                y += cur_row_h;
-//                cur_row_h = h;
-//            }
-//
-//            auto const dst = buffer + (xoff * 4) + (yoff * buffer_w * 4);
-//            render_glyph(glyph.get(), dst, buffer_w * 4);
-//
-//            positions_.emplace_back(FT_Vector {x, y});
-//
-//            cur_row_h = std::max(h, cur_row_h);
-//            x += w;
-//        }
-//
-//        return render_result {x, y, cur_row_h};
-//    }
-//
-//    int required_area() const {
-//        return total_area_;
-//    }
-//
-//    unicode::block_value block() const {
-//        return block_;
-//    }
-//
-//    unicode::block_value block_;
-//    std::vector<ft_unique<FT_BitmapGlyph>> glyphs_;
-//    std::vector<FT_Vector> positions_;
-//    int total_area_;
-//};
-//
-//bool operator<(font_code_block_cache const& lhs, font_code_block_cache const& rhs) {
-//    //TODO
-//    return lhs.block_.first < rhs.block_.first;
-//}
-//
 
 } //namespace font
 
@@ -580,21 +501,22 @@ public:
     font_face_impl(renderer& r, font_libary& lib, string_ref filename, unsigned size);
 
     glyph_metrics metrics(unicode::codepoint lhs, unicode::codepoint rhs);
-    glyph_metrics metrics(glyph_index lhs, glyph_index rhs);
+    glyph_metrics metrics(unicode::codepoint cp);
+
+    font_face::texture_info get_texture(unicode::codepoint cp);
 
     void render(renderer& r) {
         r.draw_texture(block_texture_);
     }
+
+    int line_gap() const {
+        return face_.line_gap();
+    }
 private:
-    font::face face_;
-
+    font::face                     face_;
     std::vector<font::block_cache> blocks_;
-
-    texture block_texture_;
-
-    unsigned face_size_;
-
-    bool has_kerning_;
+    texture                        block_texture_;
+    unsigned                       face_size_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -641,308 +563,69 @@ font_face_impl::font_face_impl(
 }
 
 glyph_metrics
-font_face_impl::metrics(
-    unicode::codepoint const lhs
-  , unicode::codepoint const rhs
-) {
-    //auto const index_l = FT_Get_Char_Index(face_.get(), value_of(lhs));
-    //auto const index_r = FT_Get_Char_Index(face_.get(), value_of(rhs));
+font_face_impl::metrics(unicode::codepoint const cp) {
+    auto const it = std::find_if(
+        std::cbegin(blocks_)
+      , std::cend(blocks_)
+      , [&](font::block_cache const& block) {
+            return block.contains(cp);
+        }
+    );
 
-    //return metrics(
-    //    glyph_index {index_l}
-    //  , glyph_index {index_r}
-    //);
+    if (it != std::cend(blocks_)) {
+        return it->metrics(cp);
+    }
 
-    return glyph_metrics {};
+    BK_TODO_FAIL();
+}
+
+font_face::texture_info font_face_impl::get_texture(unicode::codepoint const cp) {
+    auto const it = std::find_if(
+        std::cbegin(blocks_)
+      , std::cend(blocks_)
+      , [&](font::block_cache const& block) {
+            return block.contains(cp);
+        }
+    );
+
+    if (it != std::cend(blocks_)) {
+        auto const g = it->get_glyph(cp);
+        auto const p = it->get_position(cp);
+
+        if (!g) {
+            return {};
+        }
+
+        return font_face::texture_info {
+            &block_texture_
+          , renderer::rect {
+                static_cast<float>(p.x)
+              , static_cast<float>(p.y)
+              , static_cast<float>(p.x + g->width())
+              , static_cast<float>(p.y + g->height())
+            }
+        };
+    }
+
+    BK_TODO_FAIL();
 }
 
 glyph_metrics
 font_face_impl::metrics(
-    glyph_index const lhs
-  , glyph_index const rhs
+    unicode::codepoint const lhs
+  , unicode::codepoint const rhs
 ) {
-    return glyph_metrics {};
-}
+    auto const index_l = face_.index_of(lhs);
+    auto const index_r = face_.index_of(rhs);
 
-////==============================================================================
-//// deleters
-////==============================================================================
-//template <typename T>
-//struct ft_deleter;
-//
-//template <>
-//struct ft_deleter<FT_Library> {
-//    void operator()(FT_Library const ptr) const noexcept {
-//        auto const result = ::FT_Done_FreeType(ptr);
-//        if (result) {
-//            BK_TODO_FAIL();
-//        }
-//    }
-//};
-//
-//template <>
-//struct ft_deleter<FT_Face> {
-//    void operator()(FT_Face const ptr) const noexcept {
-//        auto const result = ::FT_Done_Face(ptr);
-//        if (result) {
-//            BK_TODO_FAIL();
-//        }
-//    }
-//};
-//
-//template <>
-//struct ft_deleter<FT_Glyph> {
-//    void operator()(FT_Glyph const ptr) const noexcept {
-//        ::FT_Done_Glyph(ptr);
-//    }
-//};
-//
-//template <typename T, typename U = std::remove_pointer_t<T>>
-//using ft_unique = std::unique_ptr<U, ft_deleter<T>>;
-//
-//struct glyph_load_result {
-//    ft_unique<FT_Glyph> glyph;
-//    FT_Glyph_Metrics    metrics;
-//    FT_UInt             index;
-//};
-//
-//glyph_load_result load_glyph(FT_Face face, FT_ULong codepoint);
-//
-//class code_block_cache {
-//public:
-//    using glyph_data = glyph_load_result;
-//    using rect_t = bkrl::axis_aligned_rect<int>;
-//
-//    BK_NOCOPY(code_block_cache);
-//    BK_DEFAULT_MOVE(code_block_cache);
-//
-//    code_block_cache(FT_Face const face, FT_ULong const first, FT_ULong const last);
-//
-//    glyph_data const& operator[](FT_ULong const codepoint) const {
-//        BK_PRECONDITION(range_.contains(codepoint));
-//        return glyphs_[codepoint - range_.lo];
-//    }
-//
-//    rect_t glyph_rect(FT_ULong const codepoint) const {
-//        BK_PRECONDITION(range_.contains(codepoint));
-//        return rects_[codepoint - range_.lo];
-//    }
-//
-//    bool contains(FT_ULong const codepoint) const {
-//        return range_.contains(codepoint);
-//    }
-//
-//    struct update_result {
-//        int final_x;
-//        int final_y;
-//        int final_h;
-//    };
-//
-//    update_result update_rects(int size_x, int size_y, update_result last = update_result {});
-//
-//    bkrl::range<FT_ULong> range() const {
-//        return range_;
-//    }
-//private:
-//    bkrl::range<FT_ULong> range_;
-//
-//    std::vector<glyph_data> glyphs_;
-//    std::vector<rect_t>     rects_;
-//};
-//
-//
-//
-//
-//class text_renderer {
-//public:
-//    text_renderer();
-//
-//    code_block_cache* get_block(FT_ULong const codepoint) {
-//        auto const it = std::find_if(
-//            std::begin(static_)
-//          , std::end(static_)
-//          , [&](code_block_cache const& block) {
-//                return block.contains(codepoint);
-//            }
-//        );
-//
-//        return it != std::cend(static_) ? &(*it) : nullptr;
-//    }
-//
-//    struct glyph_info {
-//        FT_Glyph glyph;
-//        FT_UInt  index;
-//    };
-//
-//    glyph_info get_glyph(FT_ULong const codepoint) {
-//        auto const block = get_block(codepoint);
-//        if (block == nullptr) {
-//            BK_TODO_FAIL();
-//        }
-//
-//        auto const& result = (*block)[codepoint];
-//
-//        return glyph_info {result.glyph.get(), result.index};
-//    }
-//
-//    axis_aligned_rect<int> get_glyph_rect(FT_ULong const codepoint) {
-//        auto const block = get_block(codepoint);
-//        if (block == nullptr) {
-//            BK_TODO_FAIL();
-//        }
-//
-//        return block->glyph_rect(codepoint);
-//    }
-//
-//    struct required_size {
-//        unsigned w, h;
-//    };
-//
-//    required_size required_tex_size() const {
-//        //TODO
-//        return required_size {256, 512};
-//    }
-//
-//    template <typename F>
-//    void for_each_static_codepoint(F&& function) const {
-//        for (auto&& block : static_) {
-//            auto const range = block.range();
-//            for (auto i = range.lo; i <= range.hi; ++i) {
-//                function(i);
-//            }
-//        }
-//    }
-//
-//    struct text_layout {
-//        using point_t = point2d<int>;
-//
-//        std::vector<point_t> pos;
-//        std::vector<FT_UInt> codepoint;
-//    };
-//
-//    using rect_t = axis_aligned_rect<int>;
-//    text_layout layout(char const* str, rect_t bounds);
-//
-//    bool has_kerning() const {
-//        return has_kerning_;
-//    }
-//
-//    FT_Vector get_kerning(FT_UInt lhs, FT_UInt rhs) const {
-//        FT_Vector kerning {};
-//
-//        if (has_kerning_ && lhs && rhs) {
-//            auto const error = FT_Get_Kerning(ft_face_.get(), lhs, rhs, FT_KERNING_DEFAULT, &kerning);
-//            if (error) {
-//                BK_TODO_FAIL();
-//            }
-//
-//            kerning.x >>= 6;
-//            kerning.y >>= 6;
-//        }
-//
-//        return kerning;
-//    }
-//
-//    FT_Pos ascent() const {
-//        return ft_face_->size->metrics.ascender >> 6;
-//    }
-//
-//    FT_Pos line_height() const {
-//        return (ft_face_->size->metrics.ascender - ft_face_->size->metrics.descender) >> 6;
-//    }
-//private:
-//    ft_unique<FT_Library> ft_lib_;
-//    ft_unique<FT_Face>    ft_face_;
-//
-//    std::vector<code_block_cache> static_;
-//
-//    bool has_kerning_ = false;
-//};
-//
-////==============================================================================
-////==============================================================================
-//
-//class transitory_text_layout {
-//public:
-//    using rect_t = axis_aligned_rect<int>;
-//    using pos_t = point2d<int>;
-//
-//    transitory_text_layout(text_renderer& text, string_ref string, rect_t bounds)
-//      : beg_ {string.data()}
-//      , end_ {beg_ + string.size()}
-//      , cur_ {beg_}
-//      , bounds_ {bounds}
-//      , prev_index_ {}
-//      , line_height_ {text.line_height()}
-//      , pen_ {{bounds.left, bounds.top}}
-//    {
-//        pen_.y += text.ascent();
-//    }
-//
-//    explicit operator bool() const {
-//        return cur_ != end_;
-//    }
-//
-//    struct result_t {
-//        pos_t    pos;
-//        uint32_t codepoint;
-//        int      width;
-//        int      height;
-//    };
-//
-//    result_t next(text_renderer& text) {
-//        BK_ASSERT_DBG(!!*this);
-//
-//        auto const codepoint = utf8::next(cur_, end_);
-//
-//        auto const info    = text.get_glyph(codepoint);
-//        auto const kerning = text.get_kerning(prev_index_, info.index);
-//
-//        auto const kx = kerning.x;
-//        auto const ky = kerning.y;
-//
-//        auto const advance_x = info.glyph->advance.x >> 16;
-//        auto const advance_y = info.glyph->advance.y >> 16;
-//
-//        if (pen_.x + advance_x + kx > bounds_.right) {
-//            pen_.x =  bounds_.left;
-//            pen_.y += line_height_;
-//        }
-//
-//        BK_ASSERT_DBG(info.glyph->format == FT_GLYPH_FORMAT_BITMAP);
-//
-//        auto const bmp  = reinterpret_cast<FT_BitmapGlyph>(info.glyph);
-//        auto const left = bmp->left;
-//        auto const top  = bmp->top;
-//
-//        auto const pos = pos_t {pen_.x + left, pen_.y - top};
-//
-//        pen_.x += advance_x + kx;
-//        pen_.y += advance_y + ky;
-//
-//        prev_index_ = info.index;
-//        
-//        return result_t {
-//            pos
-//          , codepoint
-//          , bmp->bitmap.width
-//          , bmp->bitmap.rows
-//        };
-//    }
-//private:
-//    char const* beg_;
-//    char const* end_;
-//    char const* cur_;
-//
-//    rect_t    bounds_;
-//
-//    FT_UInt   prev_index_;
-//    FT_Pos    line_height_;
-//    FT_Vector pen_;
-//};
-//
-//class static_text_layout {
-//};
+    auto const kerning        = face_.get_kerning(index_l, index_r);
+    auto       result_metrics = metrics(rhs);
+
+    result_metrics.left += kerning.x;
+    result_metrics.top  += kerning.y;
+
+    return result_metrics;
+}
 
 
 }} //namespace bkrl::detail

@@ -112,8 +112,13 @@ renderer::set_scale_y(scalar const sy) {
 }
 
 void
-renderer::draw_texture(texture& tex) {
+renderer::draw_texture(texture const& tex) {
     impl_->draw_texture(tex);
+}
+
+void
+renderer::draw_texture(texture const& tex, rect const src, rect const dst) {
+    impl_->draw_texture(tex, src, dst);
 }
 
 void
@@ -125,16 +130,6 @@ renderer::draw_tile(
   , scalar   const y
 ) {
     impl_->draw_tile(sheet, ix, iy, x, y);
-}
-
-void
-renderer::draw_text(string_ref string, scalar x, scalar y) {
-    impl_->draw_text(string, x, y);
-}
-
-void
-renderer::draw_text(string_ref string, rect bounds) {
-    impl_->draw_text(string, bounds);
 }
 
 texture

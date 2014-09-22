@@ -33,9 +33,6 @@
     <ClCompile Include="..\lib\json11\json11.cpp">
       <Filter>lib</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\sdl.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\util.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -75,6 +72,9 @@
     <ClCompile Include="..\src\keyboard.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pch.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pch.hpp">
@@ -96,9 +96,6 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\util.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\sdl.hpp">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\math.hpp">

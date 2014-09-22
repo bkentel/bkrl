@@ -437,7 +437,7 @@ public:
     
     ////////////////////////////////////////////////////////////////////////////
 
-    void draw_texture(texture& tex) {
+    void draw_texture(texture const& tex) {
         auto const sdl_tex = tex.handle().as<SDL_Texture*>();
         
         SDL_SetTextureBlendMode(sdl_tex, SDL_BLENDMODE_BLEND);
@@ -449,6 +449,17 @@ public:
         SDL_RenderCopy(renderer_.get(), sdl_tex, nullptr, &r);
     }
 
+    void draw_texture(texture const& tex, rect src, rect dst) {
+        auto const sdl_tex  = tex.handle().as<SDL_Texture*>();
+        auto const src_rect = make_sdl_rect(src);
+        auto const dst_rect = make_sdl_rect(dst);
+
+        auto const result = SDL_RenderCopy(renderer_.get(), sdl_tex, &src_rect, &dst_rect);
+        if (result) {
+            BK_TODO_FAIL();
+        }
+    }
+
     void draw_tile(
         tile_sheet const& sheet
       , unsigned ix
@@ -457,8 +468,6 @@ public:
       , scalar   y
     );
 
-    void draw_text(string_ref string, scalar x, scalar y);
-    void draw_text(string_ref string, rect bounds);
 private:
     texture create_texture_(SDL_Surface* surface);
 
@@ -585,17 +594,21 @@ renderer_impl::create_texture(string_ref filename) {
 
 //------------------------------------------------------------------------------
 texture
-renderer_impl::create_texture(uint8_t* buffer, int width, int height) {
+renderer_impl::create_texture(
+    uint8_t* const buffer
+  , int      const width
+  , int      const height
+) {
     auto const result = SDL_CreateRGBSurfaceFrom(
         buffer
       , width
       , height
       , 32
       , width * 4
-      , 0xFF << 16
-      , 0xFF <<  8
-      , 0xFF <<  0
-      , 0xFF << 24
+      , 0xFFu << 16
+      , 0xFFu <<  8
+      , 0xFFu <<  0
+      , 0xFFu << 24
     );
 
     if (!result) {
@@ -690,20 +703,6 @@ renderer_impl::draw_tile(
 }
 
 //------------------------------------------------------------------------------
-void
-renderer_impl::draw_text(
-    string_ref //string
-  , scalar     //x
-  , scalar     //y
-) {
-}
 
-//------------------------------------------------------------------------------
-void
-renderer_impl::draw_text(
-    string_ref //string
-  , rect       //bounds
-) {
-}
 
 }} //namespace bkrl::detail

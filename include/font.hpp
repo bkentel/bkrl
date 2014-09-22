@@ -12,11 +12,9 @@
 #include "assert.hpp"
 #include "math.hpp"
 #include "util.hpp"
+#include "renderer.hpp"
 
 namespace bkrl {
-
-class renderer;
-class texture;
 
 class font_libary;
 class font_face;
@@ -90,7 +88,8 @@ struct glyph_metrics {
     int height;
     int left;
     int top;
-    int advance;
+    int advance_x;
+    int advance_y;
 };
 
 //==============================================================================
@@ -123,8 +122,17 @@ public:
 
     ~font_face();
 
+    glyph_metrics metrics(unicode::codepoint cp);
     glyph_metrics metrics(unicode::codepoint lhs, unicode::codepoint rhs);
-    glyph_metrics metrics(glyph_index lhs, glyph_index rhs);
+    
+    struct texture_info {
+        texture*       t;
+        renderer::rect r;
+    };
+    
+    texture_info get_texture(unicode::codepoint cp);
+
+    int line_gap() const;
 
     //TODO temp... debug only
     void render(renderer& r);
@@ -136,15 +144,15 @@ private:
 //==============================================================================
 class transitory_text_layout {
 public:
-    transitory_text_layout(font_face& face, string_ref string);
-    transitory_text_layout(font_face& face, string_ref string, text_rect bounds);
+    transitory_text_layout(font_face& face, string_ref string, int w = 0, int h = 0);
 
-
+    void render(renderer& r, font_face& face, int x, int y);
 private:
-    text_rect bounds_;
+    int w_;
+    int h_;
 
-    std::vector<unicode::codepoint> codepoints_;
-    std::vector<point2d<int>>       positions_;
+    std::vector<uint32_t>     codepoints_;
+    std::vector<point2d<int>> positions_;
 };
 
 //==============================================================================

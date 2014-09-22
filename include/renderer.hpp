@@ -15,7 +15,6 @@ class transitory_text_layout;
 class application;
 class renderer;
 class tile_sheet;
-class font_manager;
 class texture;
 
 namespace detail { class renderer_impl; }
@@ -175,7 +174,9 @@ public:
     
     ////////////////////////////////////////////////////////////////////////////
 
-    void draw_texture(texture& tex);
+    void draw_texture(texture const& tex);
+
+    void draw_texture(texture const& tex, rect src, rect dst);
     ////////////////////////////////////////////////////////////////////////////
     void draw_tile(
         tile_sheet const& sheet
@@ -184,11 +185,6 @@ public:
       , scalar   x
       , scalar   y
     );
-
-    void draw_text(transitory_text_layout& layout);
-
-    void draw_text(string_ref string, scalar x, scalar y);
-    void draw_text(string_ref string, rect bounds);
 private:
     std::unique_ptr<detail::renderer_impl> impl_;
 };

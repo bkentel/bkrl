@@ -109,8 +109,6 @@ get_texture_type<tile_type::stair>(
   , grid_point   const  p
 ) {
     return texture_type::stair_down;
-
-    BK_TODO_FAIL();
 }
 
 //------------------------------------------------------------------------------
@@ -802,19 +800,8 @@ public:
 
         r.draw_tile(sheet_, 1, 0, player_.position.x, player_.position.y);
 
-        font_face_.render(r);
-
-        //auto const name_rect = renderer::text_rect {
-        //    static_cast<float>(player_.position.x * 18)
-        //  , static_cast<float>(player_.position.y * 18 - 24)
-        //  , static_cast<float>(player_.position.x * 18 + 200)
-        //  , static_cast<float>(player_.position.y * 18)
-        //};
-
-        //r.draw_text(
-        //    R"(みさこ)"
-        //  , name_rect
-        //);
+        transitory_text_layout layout {font_face_, R"(Hello World! and みさこ)", 100, 500};
+        layout.render(r, font_face_, 1, 1);
 
         r.present();
     }
