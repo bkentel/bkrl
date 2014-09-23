@@ -1,3 +1,9 @@
+//##############################################################################
+//! @file
+//! @author Brandon Kentel
+//!
+//! Application and rendering.
+//##############################################################################
 #pragma once
 
 #include <memory>
@@ -174,7 +180,7 @@ public:
     
     ////////////////////////////////////////////////////////////////////////////
 
-    void draw_texture(texture const& tex);
+    void draw_texture(texture const& tex, scalar x, scalar y);
 
     void draw_texture(texture const& tex, rect src, rect dst);
     ////////////////////////////////////////////////////////////////////////////

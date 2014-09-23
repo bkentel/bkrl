@@ -437,28 +437,19 @@ public:
     
     ////////////////////////////////////////////////////////////////////////////
 
-    void draw_texture(texture const& tex) {
+    void draw_texture(texture const& tex, scalar x, scalar y) {
         auto const sdl_tex = tex.handle().as<SDL_Texture*>();
         
         SDL_SetTextureBlendMode(sdl_tex, SDL_BLENDMODE_BLEND);
         SDL_SetTextureColorMod(sdl_tex, 0xFF, 0, 0);
         
-        SDL_Rect r {};
+        SDL_Rect r {static_cast<int>(x), static_cast<int>(y), 0, 0};
         SDL_QueryTexture(sdl_tex, nullptr, nullptr, &r.w, &r.h);
 
         SDL_RenderCopy(renderer_.get(), sdl_tex, nullptr, &r);
     }
 
-    void draw_texture(texture const& tex, rect src, rect dst) {
-        auto const sdl_tex  = tex.handle().as<SDL_Texture*>();
-        auto const src_rect = make_sdl_rect(src);
-        auto const dst_rect = make_sdl_rect(dst);
-
-        auto const result = SDL_RenderCopy(renderer_.get(), sdl_tex, &src_rect, &dst_rect);
-        if (result) {
-            BK_TODO_FAIL();
-        }
-    }
+    void draw_texture(texture const& tex, rect src, rect dst);
 
     void draw_tile(
         tile_sheet const& sheet
@@ -671,38 +662,53 @@ renderer_impl::draw_tile(
   , scalar   const x
   , scalar   const y
 ) {
-    auto const src = make_sdl_rect(sheet.at(ix, iy));
+    //auto const src = make_sdl_rect(sheet.at(ix, iy));
 
-    auto const w = src.w;
-    auto const h = src.h;
+    //auto const w = src.w;
+    //auto const h = src.h;
 
-    auto const dst_x = static_cast<int>(scale_.x * (x*w + translation_.x));
-    auto const dst_y = static_cast<int>(scale_.y * (y*h + translation_.y));
+    //auto const dst_x = static_cast<int>(scale_.x * (x*w + translation_.x));
+    //auto const dst_y = static_cast<int>(scale_.y * (y*h + translation_.y));
 
-    auto const dst = SDL_Rect {
-        dst_x
-      , dst_y
-      , static_cast<int>(w * scale_.x)
-      , static_cast<int>(h * scale_.y)
-    };
+    //auto const dst = SDL_Rect {
+    //    dst_x
+    //  , dst_y
+    //  , static_cast<int>(w * scale_.x)
+    //  , static_cast<int>(h * scale_.y)
+    //};
 
-    auto const tex = reinterpret_cast<SDL_Texture*>(
-        sheet.tile_texture.handle().value
-    );
+    //auto const tex = reinterpret_cast<SDL_Texture*>(
+    //    sheet.tile_texture.handle().value
+    //);
 
-    auto const result = SDL_RenderCopy(
-        renderer_.get()
-      , tex
-      , &src
-      , &dst
-    );
+    //auto const result = SDL_RenderCopy(
+    //    renderer_.get()
+    //  , tex
+    //  , &src
+    //  , &dst
+    //);
 
-    if (result != 0) {
-        BK_TODO_FAIL(); //TODO
-    }
+    //if (result != 0) {
+    //    BK_TODO_FAIL(); //TODO
+    //}
 }
 
 //------------------------------------------------------------------------------
+void
+renderer_impl::draw_texture(texture const& tex, rect const src, rect const dst) {
+    auto const sdl_tex  = tex.handle().as<SDL_Texture*>();
+    auto const src_rect = make_sdl_rect(src);
 
+    auto dst_rect = make_sdl_rect(dst);
+    dst_rect.x = static_cast<int>(scale_.x * (dst_rect.x + translation_.x));
+    dst_rect.y = static_cast<int>(scale_.y * (dst_rect.y + translation_.y));
+    dst_rect.w = static_cast<int>(scale_.x * dst_rect.w);
+    dst_rect.h = static_cast<int>(scale_.y * dst_rect.h);
+
+    auto const result = SDL_RenderCopy(renderer_.get(), sdl_tex, &src_rect, &dst_rect);
+    if (result) {
+        BK_TODO_FAIL();
+    }
+}
 
 }} //namespace bkrl::detail

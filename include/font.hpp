@@ -12,9 +12,11 @@
 #include "assert.hpp"
 #include "math.hpp"
 #include "util.hpp"
-#include "renderer.hpp"
 
 namespace bkrl {
+
+class renderer;
+class texture;
 
 class font_libary;
 class font_face;
@@ -24,11 +26,12 @@ class static_text_layout;
 namespace detail { class font_face_impl; }
 namespace detail { class font_library_impl; }
 
+////////////////////////////////////////////////////////////////////////////////
 namespace unicode {
 
-using codepoint = tagged_type<uint32_t, struct tag_codepoint>;
+using codepoint = tagged_type<codepoint_t, struct tag_codepoint>;
 
-template <uint32_t First, uint32_t Last>
+template <codepoint_t First, codepoint_t Last>
 struct block {
     static_assert(First < Last, "");
 
@@ -41,7 +44,7 @@ struct block {
 };
 
 struct block_value {
-    template <uint32_t First, uint32_t Last>
+    template <codepoint_t First, codepoint_t Last>
     block_value(block<First, Last>)
         : first {First}, last {Last}
     {
@@ -76,12 +79,14 @@ using katakana    = block<0x30A0, 0x30FF>;
 
 using basic_japanese = block<cjk_symbols::first, katakana::last>;
 
-} //unicode
+} //namespace unicode
+////////////////////////////////////////////////////////////////////////////////
 
 using glyph_index = tagged_type<uint32_t, struct tag_glyph_index>;
 using text_rect   = axis_aligned_rect<int>;
 
 //==============================================================================
+//! glyph_metrics
 //==============================================================================
 struct glyph_metrics {
     int width;
@@ -93,6 +98,7 @@ struct glyph_metrics {
 };
 
 //==============================================================================
+//! font_libary
 //==============================================================================
 class font_libary {
 public:
@@ -107,14 +113,16 @@ public:
 private:
     std::unique_ptr<detail::font_library_impl> impl_;
 };
+
 //==============================================================================
+//! font_face
 //==============================================================================
 class font_face {
 public:
     BK_NOCOPY(font_face);
 
     font_face(
-        renderer&    r
+        renderer&    render
       , font_libary& lib
       , string_ref   filename
       , unsigned     size
@@ -126,21 +134,19 @@ public:
     glyph_metrics metrics(unicode::codepoint lhs, unicode::codepoint rhs);
     
     struct texture_info {
-        texture*       t;
-        renderer::rect r;
+        texture* t;
+        rect     r;
     };
     
     texture_info get_texture(unicode::codepoint cp);
 
     int line_gap() const;
-
-    //TODO temp... debug only
-    void render(renderer& r);
 private:
     std::unique_ptr<detail::font_face_impl> impl_;
 };
 
 //==============================================================================
+//! transitory_text_layout
 //==============================================================================
 class transitory_text_layout {
 public:
@@ -151,11 +157,12 @@ private:
     int w_;
     int h_;
 
-    std::vector<uint32_t>     codepoints_;
-    std::vector<point2d<int>> positions_;
+    std::vector<codepoint_t> codepoints_;
+    std::vector<ipoint2>     positions_;
 };
 
 //==============================================================================
+//! static_text_layout
 //==============================================================================
 class static_text_layout {
 };

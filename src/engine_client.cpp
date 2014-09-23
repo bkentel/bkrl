@@ -765,7 +765,7 @@ public:
         });
 
         update_texture_type(map_);
-        update_texture_id(map_, sheet_.map);
+        update_texture_id(map_, sheet_.map());
 
         //TODO temp
         auto const& r0 = rooms[0];
@@ -791,14 +791,16 @@ public:
         for (bkrl::grid_index y = 0; y < h; ++y) {
             for (bkrl::grid_index x = 0; x < w; ++x) {
                 auto const texture = map_.get(attribute::texture_id, x, y);
-                auto const tx = texture % sheet_.tile_x; //TODO
-                auto const ty = texture / sheet_.tile_x;
+                auto const tx = texture % sheet_.tiles_x(); //TODO
+                auto const ty = texture / sheet_.tiles_x();
 
-                r.draw_tile(sheet_, tx, ty, x, y);
+                sheet_.render(r, tx, ty, x, y);
+                //r.draw_tile(sheet_, tx, ty, x, y);
             }
         }
 
-        r.draw_tile(sheet_, 1, 0, player_.position.x, player_.position.y);
+        sheet_.render(r, 1, 0, player_.position.x, player_.position.y);
+        //r.draw_tile(sheet_, 1, 0, player_.position.x, player_.position.y);
 
         transitory_text_layout layout {font_face_, R"(Hello World! and みさこ)", 100, 500};
         layout.render(r, font_face_, 1, 1);
@@ -877,7 +879,7 @@ public:
 
     void set_door_data(grid_point const p, door_data const door) {
         map_.set(attribute::data, p, door);
-        update_grid(map_, sheet_.map, p);
+        update_grid(map_, sheet_.map(), p);
     }
 
     void do_open() {

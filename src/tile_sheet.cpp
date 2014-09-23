@@ -207,10 +207,10 @@ tile_map::impl_t::rule_mapping_pair(cref value) {
 // bkrl::tile_sheet implementation
 ////////////////////////////////////////////////////////////////////////////////
 tile_sheet::tile_sheet(string_ref filename, renderer& render)
-  : map {filename}
-  , tile_texture {render.create_texture(map.filename())}
-  , tile_x {tile_texture.width() / tile_width()}
-  , tile_y {tile_texture.height() / tile_height()}
+  : tile_map_ {filename}
+  , tile_texture_ {render.create_texture(tile_map_.filename())}
+  , tile_x_ {tile_texture_.width() / tile_width()}
+  , tile_y_ {tile_texture_.height() / tile_height()}
 {
 }
 

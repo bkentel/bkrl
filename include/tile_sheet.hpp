@@ -1,3 +1,9 @@
+//##############################################################################
+//! @file
+//! @author Brandon Kentel
+//!
+//! Tile sheet and tile texture mappings.
+//##############################################################################
 #pragma once
 
 #include "types.hpp"
@@ -5,12 +11,17 @@
 
 namespace bkrl {
 
+class renderer;
+class texture;
+
 //==============================================================================
 //! tile_map
 //! map texture_type -> texture_id
 //==============================================================================
 class tile_map {
 public:
+    BK_NOCOPY(tile_map);
+
     //--------------------------------------------------------------------------
     //! @param source The json describing the mappings.
     //--------------------------------------------------------------------------
@@ -22,6 +33,7 @@ public:
 
     int tile_w() const noexcept;
     int tile_h() const noexcept;
+
     string_ref filename() const;
 private:
     class impl_t;
@@ -29,50 +41,75 @@ private:
 };
 
 //==============================================================================
-//
+// tile_sheet
 //==============================================================================
 class tile_sheet {
 public:
-    using rect_t = axis_aligned_rect<int>;
-
     tile_sheet(string_ref filename, renderer& render);
 
-    rect_t at(int const i) const noexcept {
-        auto const d = std::div(i, tile_x);
+    rect get_rect(int const i) const {
+        auto const d = std::div(i, tiles_x());
         auto const x = d.rem;
         auto const y = d.quot;
         
-        return at(x, y);
+        return get_rect(x, y);
     }
 
-    rect_t at(int const x, int const y) const noexcept {
-        BK_ASSERT_SAFE(x >= 0 && x < tile_x);
-        BK_ASSERT_SAFE(y >= 0 && y < tile_y);
+    rect get_rect(int const x, int const y) const {
+        BK_ASSERT_SAFE(x >= 0 && x < tiles_x());
+        BK_ASSERT_SAFE(y >= 0 && y < tiles_y());
 
         auto const w = tile_width();
         auto const h = tile_height();
 
-        auto const l = x * w;
-        auto const t = y * h;
-        auto const r = l + w;
-        auto const b = t + h;
+        auto const l = static_cast<float>(x * w);
+        auto const t = static_cast<float>(y * h);
+        auto const r = static_cast<float>(l + w);
+        auto const b = static_cast<float>(t + h);
 
-        return rect_t {l, t, r, b};
+        return {l, t, r, b};
     }
      
-    tile_map map;
-    texture  tile_texture;
-    
     int tile_width() const noexcept {
-        return map.tile_w();
+        return tile_map_.tile_w();
     }
 
     int tile_height() const noexcept {
-        return map.tile_h();
+        return tile_map_.tile_h();
     }
 
-    int tile_x; //tiles per row
-    int tile_y; //rows
+    int tiles_x() const noexcept {
+        return tile_x_;
+    }
+
+    int tiles_y() const noexcept {
+        return tile_y_;
+    }
+
+    void render(renderer& render, int tile_x, int tile_y, float x, float y) {
+        auto const w = tile_width();
+        auto const h = tile_height();
+
+        auto const src_r = get_rect(tile_x, tile_y);
+        auto const dst_r = rect {
+            x * w
+          , y * h
+          , x * w + w
+          , y * h + h
+        };
+
+        render.draw_texture(tile_texture_, src_r, dst_r);
+    }
+
+    tile_map const& map() const {
+        return tile_map_;
+    }
+private:
+    tile_map tile_map_;
+    texture  tile_texture_;
+
+    int tile_x_; //tiles per row
+    int tile_y_; //rows
 };
 
 } //namespace bkrl

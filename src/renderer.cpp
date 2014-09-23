@@ -112,8 +112,8 @@ renderer::set_scale_y(scalar const sy) {
 }
 
 void
-renderer::draw_texture(texture const& tex) {
-    impl_->draw_texture(tex);
+renderer::draw_texture(texture const& tex, scalar x, scalar y) {
+    impl_->draw_texture(tex, x, y);
 }
 
 void

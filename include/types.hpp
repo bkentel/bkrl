@@ -13,6 +13,11 @@
 
 namespace bkrl {
 
+using std::int8_t;
+using std::int16_t;
+using std::int32_t;
+using std::int64_t;
+
 using std::uint64_t;
 using std::uint32_t;
 using std::uint16_t;
@@ -25,8 +30,15 @@ using utf8string = std::string;
 //! UTF-8
 using string_ref = ::boost::string_ref;
 
-//! UTF-32
 using codepoint_t = uint32_t;
+
+using irect   = axis_aligned_rect<int>;
+using ipoint2 = point2d<int>;
+using ivec2   = vector2d<int>;
+
+using rect   = axis_aligned_rect<float>;
+using point2 = point2d<float>;
+using vec2   = vector2d<float>;
 
 //forward declarations
 enum class command_type      : uint16_t;
