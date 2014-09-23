@@ -33,9 +33,6 @@
     <ClCompile Include="..\lib\json11\json11.cpp">
       <Filter>lib</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\sdl.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\util.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -57,12 +54,6 @@
     <ClCompile Include="..\src\enum_map.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\command_map.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\texture_map.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\test\math.t.cpp">
       <Filter>test</Filter>
     </ClCompile>
@@ -70,6 +61,18 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\assert.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\renderer.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\tile_sheet.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\keyboard.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pch.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
@@ -93,9 +96,6 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\util.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\sdl.hpp">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\math.hpp">
@@ -133,6 +133,21 @@
     </ClInclude>
     <ClInclude Include="..\include\font.hpp">
       <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\renderer.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\detail\sdl_application.i.hpp">
+      <Filter>include\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\tile_sheet.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\scancode.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\detail\freetype_text.i.hpp">
+      <Filter>include\detail</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

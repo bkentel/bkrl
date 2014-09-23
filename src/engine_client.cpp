@@ -2,12 +2,17 @@
 
 #include "engine_client.hpp"
 
-#include "sdl.hpp"
+#include "font.hpp"
+
+
+#include "keyboard.hpp" //temp
+#include "renderer.hpp"
 #include "grid.hpp"
 #include "command_type.hpp"
 #include "random.hpp"
 #include "generate.hpp"
 #include "bsp_layout.hpp"
+#include "tile_sheet.hpp"
 
 #include <boost/container/static_vector.hpp>
 
@@ -104,8 +109,6 @@ get_texture_type<tile_type::stair>(
   , grid_point   const  p
 ) {
     return texture_type::stair_down;
-
-    BK_TODO_FAIL();
 }
 
 //------------------------------------------------------------------------------
@@ -207,9 +210,9 @@ update_texture_type(
 //------------------------------------------------------------------------------
 void
 update_texture_id(
-    grid_storage&      grid
-  , texture_map const& map
-  , grid_point const   p
+    grid_storage&    grid
+  , tile_map  const& map
+  , grid_point const p
 ) {
     auto const type = grid.get(attribute::texture_type, p);
     auto const id   = map[type];
@@ -221,8 +224,8 @@ update_texture_id(
 //------------------------------------------------------------------------------
 void
 update_texture_id(
-    grid_storage&     grid
- , texture_map const& map
+    grid_storage&  grid
+ , tile_map const& map
 ) {
     for_each_xy(grid, [&](grid_index const x, grid_index const y) {
         update_texture_id(grid, map, grid_point {x, y});
@@ -235,9 +238,9 @@ update_texture_id(
 //------------------------------------------------------------------------------
 void
 update_grid(
-    grid_storage&      grid
-  , texture_map const& map
-  , grid_point const   p
+    grid_storage&    grid
+  , tile_map const&  map
+  , grid_point const p
 ) {
     auto const x = {p.x - 1, p.x, p.x + 1};
     auto const y = {p.y - 1, p.y, p.y + 1};
@@ -671,11 +674,12 @@ public:
 struct engine_client::impl_t {
 public:
     impl_t()
-      : app_ {}
-      , renderer_ {app_.handle()}
+      : app_ {"./data/key_map.json"}
+      , renderer_ {app_}
+      , font_lib_ {}
+      , font_face_ {renderer_, font_lib_, "", 20}
       , map_ {100, 100}
-      , sheet_ {288, 288, 18, 18}
-      , texture_map_ {bkrl::read_file("./data/texture_map.json")}
+      , sheet_ {"./data/texture_map.json", renderer_}
     {
         ////////////////////////////////////////////////////
         app_.on_command([&](command_type const cmd) {
@@ -686,13 +690,22 @@ public:
             on_resize(w, h);
         });
 
-        app_.on_mouse_move([&](signed const dx, signed const dy, std::bitset<8> const buttons) {
-            on_mouse_move(dx, dy, buttons);
+        app_.on_mouse_move([&](application::mouse_move_info const& info) {
+            on_mouse_move(info);
         });
 
-        app_.on_mouse_button([&](signed const x, signed const y) {
-            on_mouse_button(x, y);
+        app_.on_mouse_button([&](application::mouse_button_info const& info) {
+            on_mouse_button(info);
         });
+
+        app_.on_mouse_wheel([&](application::mouse_wheel_info const& info) {
+            if (info.dy < 0) {
+                on_command(command_type::zoom_out);
+            } else if (info.dy > 0) {
+                on_command(command_type::zoom_in);
+            }
+        });
+
 
         ////////////////////////////////////////////////////
         random::generator gen {100};
@@ -752,7 +765,7 @@ public:
         });
 
         update_texture_type(map_);
-        update_texture_id(map_, texture_map_);
+        update_texture_id(map_, sheet_.map());
 
         //TODO temp
         auto const& r0 = rooms[0];
@@ -760,8 +773,8 @@ public:
 
         set_zoom(zoom_);
 
-        while (app_) {
-            app_.pump_events();
+        while (app_.is_running()) {
+            app_.do_all_events();
             render(renderer_);
         }
     }
@@ -778,23 +791,19 @@ public:
         for (bkrl::grid_index y = 0; y < h; ++y) {
             for (bkrl::grid_index x = 0; x < w; ++x) {
                 auto const texture = map_.get(attribute::texture_id, x, y);
-                r.draw_tile(sheet_, texture, x, y);
+                auto const tx = texture % sheet_.tiles_x(); //TODO
+                auto const ty = texture / sheet_.tiles_x();
+
+                sheet_.render(r, tx, ty, x, y);
+                //r.draw_tile(sheet_, tx, ty, x, y);
             }
         }
 
-        r.draw_tile(sheet_, 1, player_.position.x, player_.position.y);
+        sheet_.render(r, 1, 0, player_.position.x, player_.position.y);
+        //r.draw_tile(sheet_, 1, 0, player_.position.x, player_.position.y);
 
-        auto const name_rect = renderer::text_rect {
-            static_cast<float>(player_.position.x * 18)
-          , static_cast<float>(player_.position.y * 18 - 24)
-          , static_cast<float>(player_.position.x * 18 + 200)
-          , static_cast<float>(player_.position.y * 18)
-        };
-
-        r.draw_text(
-            R"(みさこ)"
-          , name_rect
-        );
+        transitory_text_layout layout {font_face_, R"(Hello World! and みさこ)", 100, 500};
+        layout.render(r, font_face_, 1, 1);
 
         r.present();
     }
@@ -870,7 +879,7 @@ public:
 
     void set_door_data(grid_point const p, door_data const door) {
         map_.set(attribute::data, p, door);
-        update_grid(map_, texture_map_, p);
+        update_grid(map_, sheet_.map(), p);
     }
 
     void do_open() {
@@ -981,26 +990,26 @@ public:
             ? 10.0f
             : zoom;
 
-        auto const sw = sheet_.sprite_width;
-        auto const sh = sheet_.sprite_height;
+        auto const w = sheet_.tile_width();
+        auto const h = sheet_.tile_height();
 
-        auto const px = -static_cast<float>(player_.position.x) * sw;
-        auto const py = -static_cast<float>(player_.position.y) * sh;
+        auto const px = -static_cast<float>(player_.position.x) * w;
+        auto const py = -static_cast<float>(player_.position.y) * h;
 
         display_x_ = px + (display_w_ / 2.0f / zoom_);
         display_y_ = py + (display_h_ / 2.0f / zoom_);
     }
 
-    void on_mouse_move(signed const dx, signed const dy, std::bitset<8> const buttons) {
-        if (buttons[2]) {
-            scroll(dx, dy);
-        } else if (buttons.any()) {
-            //std::cout << "button";
+    void on_mouse_move(application::mouse_move_info const& info) {
+        auto const right = (info.state & (1<<2)) != 0;
+
+        if (right) {
+            scroll(info.dx, info.dy);
         }
     }
 
-    void on_mouse_button(signed const x, signed const y) {
-        auto const q = screen_to_grid(x, y);
+    void on_mouse_button(application::mouse_button_info const& info) {
+        auto const q = screen_to_grid(info.x, info.y);
         if (q.x < 0 || q.y < 0) {
             return;
         }
@@ -1036,8 +1045,8 @@ public:
         auto const dx = display_x_ + scroll_x_;
         auto const dy = display_y_ + scroll_y_;
 
-        auto const w = sheet_.sprite_width;
-        auto const h = sheet_.sprite_height;
+        auto const w = sheet_.tile_width();
+        auto const h = sheet_.tile_height();
 
         auto const ix = static_cast<int>(std::trunc((x / zoom_ - dx) / w));
         auto const iy = static_cast<int>(std::trunc((y / zoom_ - dy) / h));
@@ -1047,10 +1056,13 @@ public:
 private:
     application  app_;
     renderer     renderer_;
+    
+    font_libary font_lib_;
+    font_face   font_face_;
+
     grid_storage map_;
 
-    sprite_sheet sheet_;
-    texture_map  texture_map_;
+    tile_sheet sheet_;
 
     entity       player_;
 

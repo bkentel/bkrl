@@ -64,6 +64,8 @@ inline decltype(auto) lower_bound_or(
   , Predicate&& predicate
   , Fallback&&  fallback = Fallback {}
 ) {
+    BK_TODO_FAIL();
+
     auto const it = bkrl::lower_bound(container, value, predicate);
     return (it == std::end(container))
       ? fallback

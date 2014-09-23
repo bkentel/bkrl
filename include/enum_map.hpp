@@ -8,7 +8,6 @@
 
 #include <vector>
 #include "types.hpp"
-#include "algorithm.hpp"
 #include "util.hpp"
 #include "assert.hpp"
 
@@ -46,9 +45,9 @@ struct enum_string {
     }
 
     bool operator==(enum_string const& rhs) const {
-        auto const result = value == rhs.value;
+        auto const result = (value == rhs.value);
 
-        BK_ASSERT(!result || hash == rhs.hash);
+        BK_ASSERT_DBG(!result || hash == rhs.hash);
 
         return result;
     }
@@ -87,9 +86,22 @@ public:
     //! string (hash) -> mapping.
     //--------------------------------------------------------------------------
     static value_type get(hash_t const hash) {
-        return lower_bound_or(string_to_value_, hash, [](value_type const& v, hash_t const h) {
-            return v.hash < h;
-        });
+        auto const it = std::lower_bound(
+            std::cbegin(string_to_value_)  
+          , std::cend(string_to_value_)
+          , hash
+          , [](value_type const& lhs, hash_t const rhs) {
+                return lhs.hash < rhs;
+            }
+        );
+
+        if (it == std::cend(string_to_value_)) {
+            return value_type {};
+        } else if (it->hash != hash) {
+            return value_type {};
+        }
+
+        return *it;
     }
 
     //--------------------------------------------------------------------------
@@ -114,7 +126,9 @@ public:
         //check for "sparse" enums
         for (size_t i = 0; i < value_to_string_.size(); ++i) {
             //TODO
-            BK_ASSERT(i == static_cast<size_t>(value_to_string_[i].value));
+            if (i != static_cast<size_t>(value_to_string_[i].value)) {
+                std::cout << "warning sparse enum\n";
+            }
         }
 
         return true; //TODO

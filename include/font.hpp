@@ -6,300 +6,169 @@
 //##############################################################################
 #pragma once
 
-#include <vector>
-
-#include <utf8.h>
+#include <memory>
 
 #include "types.hpp"
 #include "assert.hpp"
 #include "math.hpp"
-
-#include "algorithm.hpp"
-
-#include <ft2build.h>
-#include FT_FREETYPE_H
-#include FT_GLYPH_H
+#include "util.hpp"
 
 namespace bkrl {
 
+class renderer;
+class texture;
+
+class font_libary;
+class font_face;
+class transitory_text_layout;
+class static_text_layout;
+
+namespace detail { class font_face_impl; }
+namespace detail { class font_library_impl; }
+
+////////////////////////////////////////////////////////////////////////////////
+namespace unicode {
+
+using codepoint = tagged_type<codepoint_t, struct tag_codepoint>;
+
+template <codepoint_t First, codepoint_t Last>
+struct block {
+    static_assert(First < Last, "");
+
+    enum : uint32_t {
+        first = First
+      , last  = Last
+      , size  = Last - First + 1 //inclusive of end points
+    };
+
+};
+
+struct block_value {
+    template <codepoint_t First, codepoint_t Last>
+    block_value(block<First, Last>)
+        : first {First}, last {Last}
+    {
+        BK_ASSERT_DBG(Last >= First);
+    }
+
+    bool contains(codepoint const cp) const noexcept {
+        return cp >= first && cp <= last;
+    }
+
+    int size() const noexcept {
+        return value_of(last) - value_of(first) + 1;
+    }
+
+    int offset(codepoint const cp) const {
+        BK_ASSERT_DBG(contains(cp));
+        return value_of(cp) - value_of(first);
+    }
+
+    codepoint first;
+    codepoint last;
+};
+
+inline bool operator<(codepoint const lhs, block_value const rhs) {
+    return lhs < rhs.first;
+}
+
+using basic_latin = block<0x00,     0x7F>;
+using cjk_symbols = block<0x3000, 0x303F>;
+using hiragana    = block<0x3040, 0x309F>;
+using katakana    = block<0x30A0, 0x30FF>;
+
+using basic_japanese = block<cjk_symbols::first, katakana::last>;
+
+} //namespace unicode
+////////////////////////////////////////////////////////////////////////////////
+
+using glyph_index = tagged_type<uint32_t, struct tag_glyph_index>;
+using text_rect   = axis_aligned_rect<int>;
+
 //==============================================================================
-// deleters
+//! glyph_metrics
 //==============================================================================
-template <typename T>
-struct ft_deleter;
-
-template <>
-struct ft_deleter<FT_Library> {
-    void operator()(FT_Library const ptr) const noexcept {
-        auto const result = ::FT_Done_FreeType(ptr);
-        if (result) {
-            BK_TODO_FAIL();
-        }
-    }
+struct glyph_metrics {
+    int width;
+    int height;
+    int left;
+    int top;
+    int advance_x;
+    int advance_y;
 };
 
-template <>
-struct ft_deleter<FT_Face> {
-    void operator()(FT_Face const ptr) const noexcept {
-        auto const result = ::FT_Done_Face(ptr);
-        if (result) {
-            BK_TODO_FAIL();
-        }
-    }
-};
-
-template <>
-struct ft_deleter<FT_Glyph> {
-    void operator()(FT_Glyph const ptr) const noexcept {
-        ::FT_Done_Glyph(ptr);
-    }
-};
-
-template <typename T, typename U = std::remove_pointer_t<T>>
-using ft_unique = std::unique_ptr<U, ft_deleter<T>>;
-
-struct glyph_load_result {
-    ft_unique<FT_Glyph> glyph;
-    FT_Glyph_Metrics    metrics;
-    FT_UInt             index;
-};
-
-glyph_load_result load_glyph(FT_Face face, FT_ULong codepoint);
-
-class code_block_cache {
+//==============================================================================
+//! font_libary
+//==============================================================================
+class font_libary {
 public:
-    using glyph_data = glyph_load_result;
-    using rect_t = bkrl::axis_aligned_rect<int>;
+    BK_NOCOPY(font_libary);
 
-    BK_NOCOPY(code_block_cache);
-    BK_DEFAULT_MOVE(code_block_cache);
+    using handle_t = opaque_handle<font_libary>;
 
-    code_block_cache(FT_Face const face, FT_ULong const first, FT_ULong const last);
+    font_libary();
+    ~font_libary();
 
-    glyph_data const& operator[](FT_ULong const codepoint) const {
-        BK_PRECONDITION(range_.contains(codepoint));
-        return glyphs_[codepoint - range_.lo];
-    }
-
-    rect_t glyph_rect(FT_ULong const codepoint) const {
-        BK_PRECONDITION(range_.contains(codepoint));
-        return rects_[codepoint - range_.lo];
-    }
-
-    bool contains(FT_ULong const codepoint) const {
-        return range_.contains(codepoint);
-    }
-
-    struct update_result {
-        int final_x;
-        int final_y;
-        int final_h;
-    };
-
-    update_result update_rects(int size_x, int size_y, update_result last = update_result {});
-
-    bkrl::range<FT_ULong> range() const {
-        return range_;
-    }
+    handle_t handle() const;
 private:
-    bkrl::range<FT_ULong> range_;
-
-    std::vector<glyph_data> glyphs_;
-    std::vector<rect_t>     rects_;
+    std::unique_ptr<detail::font_library_impl> impl_;
 };
 
-
-
-
-class text_renderer {
+//==============================================================================
+//! font_face
+//==============================================================================
+class font_face {
 public:
-    text_renderer();
+    BK_NOCOPY(font_face);
 
-    code_block_cache* get_block(FT_ULong const codepoint) {
-        auto const it = std::find_if(
-            std::begin(static_)
-          , std::end(static_)
-          , [&](code_block_cache const& block) {
-                return block.contains(codepoint);
-            }
-        );
+    font_face(
+        renderer&    render
+      , font_libary& lib
+      , string_ref   filename
+      , unsigned     size
+    );
 
-        return it != std::cend(static_) ? &(*it) : nullptr;
-    }
+    ~font_face();
 
-    struct glyph_info {
-        FT_Glyph glyph;
-        FT_UInt  index;
+    glyph_metrics metrics(unicode::codepoint cp);
+    glyph_metrics metrics(unicode::codepoint lhs, unicode::codepoint rhs);
+    
+    struct texture_info {
+        texture* t;
+        rect     r;
     };
+    
+    texture_info get_texture(unicode::codepoint cp);
 
-    glyph_info get_glyph(FT_ULong const codepoint) {
-        auto const block = get_block(codepoint);
-        if (block == nullptr) {
-            BK_TODO_FAIL();
-        }
-
-        auto const& result = (*block)[codepoint];
-
-        return glyph_info {result.glyph.get(), result.index};
-    }
-
-    axis_aligned_rect<int> get_glyph_rect(FT_ULong const codepoint) {
-        auto const block = get_block(codepoint);
-        if (block == nullptr) {
-            BK_TODO_FAIL();
-        }
-
-        return block->glyph_rect(codepoint);
-    }
-
-    struct required_size {
-        unsigned w, h;
-    };
-
-    required_size required_tex_size() const {
-        //TODO
-        return required_size {256, 512};
-    }
-
-    template <typename F>
-    void for_each_static_codepoint(F&& function) const {
-        for (auto&& block : static_) {
-            auto const range = block.range();
-            for (auto i = range.lo; i <= range.hi; ++i) {
-                function(i);
-            }
-        }
-    }
-
-    struct text_layout {
-        using point_t = point2d<int>;
-
-        std::vector<point_t> pos;
-        std::vector<FT_UInt> codepoint;
-    };
-
-    using rect_t = axis_aligned_rect<int>;
-    text_layout layout(char const* str, rect_t bounds);
-
-    bool has_kerning() const {
-        return has_kerning_;
-    }
-
-    FT_Vector get_kerning(FT_UInt lhs, FT_UInt rhs) const {
-        FT_Vector kerning {};
-
-        if (has_kerning_ && lhs && rhs) {
-            auto const error = FT_Get_Kerning(ft_face_.get(), lhs, rhs, FT_KERNING_DEFAULT, &kerning);
-            if (error) {
-                BK_TODO_FAIL();
-            }
-
-            kerning.x >>= 6;
-            kerning.y >>= 6;
-        }
-
-        return kerning;
-    }
-
-    FT_Pos ascent() const {
-        return ft_face_->size->metrics.ascender >> 6;
-    }
-
-    FT_Pos line_height() const {
-        return (ft_face_->size->metrics.ascender - ft_face_->size->metrics.descender) >> 6;
-    }
+    int line_gap() const;
 private:
-    ft_unique<FT_Library> ft_lib_;
-    ft_unique<FT_Face>    ft_face_;
-
-    std::vector<code_block_cache> static_;
-
-    bool has_kerning_ = false;
+    std::unique_ptr<detail::font_face_impl> impl_;
 };
 
 //==============================================================================
+//! transitory_text_layout
 //==============================================================================
-
 class transitory_text_layout {
 public:
-    using rect_t = axis_aligned_rect<int>;
-    using pos_t = point2d<int>;
+    transitory_text_layout(font_face& face, string_ref string, int w = 0, int h = 0);
 
-    transitory_text_layout(text_renderer& text, string_ref string, rect_t bounds)
-      : beg_ {string.data()}
-      , end_ {beg_ + string.size()}
-      , cur_ {beg_}
-      , bounds_ {bounds}
-      , prev_index_ {}
-      , line_height_ {text.line_height()}
-      , pen_ {{bounds.left, bounds.top}}
-    {
-        pen_.y += text.ascent();
-    }
-
-    explicit operator bool() const {
-        return cur_ != end_;
-    }
-
-    struct result_t {
-        pos_t    pos;
-        uint32_t codepoint;
-        int      width;
-        int      height;
-    };
-
-    result_t next(text_renderer& text) {
-        BK_ASSERT_DBG(!!*this);
-
-        auto const codepoint = utf8::next(cur_, end_);
-
-        auto const info    = text.get_glyph(codepoint);
-        auto const kerning = text.get_kerning(prev_index_, info.index);
-
-        auto const kx = kerning.x;
-        auto const ky = kerning.y;
-
-        auto const advance_x = info.glyph->advance.x >> 16;
-        auto const advance_y = info.glyph->advance.y >> 16;
-
-        if (pen_.x + advance_x + kx > bounds_.right) {
-            pen_.x =  bounds_.left;
-            pen_.y += line_height_;
-        }
-
-        BK_ASSERT_DBG(info.glyph->format == FT_GLYPH_FORMAT_BITMAP);
-
-        auto const bmp  = reinterpret_cast<FT_BitmapGlyph>(info.glyph);
-        auto const left = bmp->left;
-        auto const top  = bmp->top;
-
-        auto const pos = pos_t {pen_.x + left, pen_.y - top};
-
-        pen_.x += advance_x + kx;
-        pen_.y += advance_y + ky;
-
-        prev_index_ = info.index;
-        
-        return result_t {
-            pos
-          , codepoint
-          , bmp->bitmap.width
-          , bmp->bitmap.rows
-        };
-    }
+    void render(renderer& r, font_face& face, int x, int y);
 private:
-    char const* beg_;
-    char const* end_;
-    char const* cur_;
+    int w_;
+    int h_;
 
-    rect_t    bounds_;
-
-    FT_UInt   prev_index_;
-    FT_Pos    line_height_;
-    FT_Vector pen_;
+    std::vector<codepoint_t> codepoints_;
+    std::vector<ipoint2>     positions_;
 };
 
+//==============================================================================
+//! static_text_layout
+//==============================================================================
 class static_text_layout {
 };
+
+////////////////////////////////////////////////////////////////////////////////
+
+
 
 } //namespace bkrl

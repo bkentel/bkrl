@@ -199,15 +199,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\lib\json11\json11.cpp">
-      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Level3</WarningLevel>
-      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">Level3</WarningLevel>
-      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Level3</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">TurnOffAllWarnings</WarningLevel>
     </ClCompile>
     <ClCompile Include="..\src\assert.cpp" />
     <ClCompile Include="..\src\bsp_layout.cpp" />
-    <ClCompile Include="..\src\command_map.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="..\src\engine_client.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
@@ -218,18 +215,19 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\src\keyboard.cpp" />
     <ClCompile Include="..\src\main.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">true</ExcludedFromBuild>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\src\sdl.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">Create</PrecompiledHeader>
+    <ClCompile Include="..\src\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">pch.hpp</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="..\src\texture_map.cpp">
+    <ClCompile Include="..\src\renderer.cpp" />
+    <ClCompile Include="..\src\tile_sheet.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
     </ClCompile>
@@ -266,6 +264,8 @@
     <ClInclude Include="..\include\bsp_layout.hpp" />
     <ClInclude Include="..\include\command_type.hpp" />
     <ClInclude Include="..\include\detail\bsp_layout.i.hpp" />
+    <ClInclude Include="..\include\detail\freetype_text.i.hpp" />
+    <ClInclude Include="..\include\detail\sdl_application.i.hpp" />
     <ClInclude Include="..\include\engine_client.hpp" />
     <ClInclude Include="..\include\enum_map.hpp" />
     <ClInclude Include="..\include\exception.hpp" />
@@ -276,8 +276,10 @@
     <ClInclude Include="..\include\math.hpp" />
     <ClInclude Include="..\include\pch.hpp" />
     <ClInclude Include="..\include\random.hpp" />
-    <ClInclude Include="..\include\sdl.hpp" />
+    <ClInclude Include="..\include\renderer.hpp" />
+    <ClInclude Include="..\include\scancode.hpp" />
     <ClInclude Include="..\include\texture_type.hpp" />
+    <ClInclude Include="..\include\tile_sheet.hpp" />
     <ClInclude Include="..\include\tile_type.hpp" />
     <ClInclude Include="..\include\types.hpp" />
     <ClInclude Include="..\include\util.hpp" />

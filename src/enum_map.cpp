@@ -1,9 +1,325 @@
 #include "util.hpp"
 #include "assert.hpp"
+#include "algorithm.hpp"
 
 #include "command_type.hpp"
 #include "texture_type.hpp"
 #include "tile_type.hpp"
+#include "scancode.hpp"
+#include "keyboard.hpp"
+
+////////////////////////////////////////////////////////////////////////////////
+// enum_map<key_modifier_type>
+////////////////////////////////////////////////////////////////////////////////
+template class bkrl::enum_map<bkrl::key_modifier_type>;
+
+namespace {
+    using modifier_map_t    = bkrl::enum_map<bkrl::key_modifier_type>;
+    using modifier_vector_t = std::vector<modifier_map_t::value_type>;
+
+    modifier_vector_t modifier_init_string_to_value() {
+        using modifier_type = bkrl::key_modifier_type;
+
+        modifier_vector_t result;
+
+        BK_ENUMMAP_ADD_STRING(result, modifier_type, invalid);
+        BK_ENUMMAP_ADD_STRING(result, modifier_type, ctrl_left);
+        BK_ENUMMAP_ADD_STRING(result, modifier_type, ctrl_right);
+        BK_ENUMMAP_ADD_STRING(result, modifier_type, alt_left);
+        BK_ENUMMAP_ADD_STRING(result, modifier_type, alt_right);
+        BK_ENUMMAP_ADD_STRING(result, modifier_type, shift_left);
+        BK_ENUMMAP_ADD_STRING(result, modifier_type, shift_right);
+        BK_ENUMMAP_ADD_STRING(result, modifier_type, ctrl);
+        BK_ENUMMAP_ADD_STRING(result, modifier_type, alt);
+        BK_ENUMMAP_ADD_STRING(result, modifier_type, shift);
+
+        bkrl::sort(result, modifier_map_t::value_type::less_hash);
+
+        return result;
+    }
+
+    //take a copy of string_to_value
+    modifier_vector_t modifier_init_value_to_string(modifier_vector_t string_to_value) {
+        bkrl::sort(string_to_value, modifier_map_t::value_type::less_enum);
+        return string_to_value;
+    }
+}
+
+modifier_vector_t const modifier_map_t::string_to_value_ = modifier_init_string_to_value();
+modifier_vector_t const modifier_map_t::value_to_string_ = modifier_init_value_to_string(modifier_map_t::string_to_value_);
+bool              const modifier_map_t::checked_         = modifier_map_t::check();
+
+////////////////////////////////////////////////////////////////////////////////
+// enum_map<scancode>
+////////////////////////////////////////////////////////////////////////////////
+template class bkrl::enum_map<bkrl::scancode>;
+
+namespace {
+    using scancode_map_t    = bkrl::enum_map<bkrl::scancode>;
+    using scancode_vector_t = std::vector<scancode_map_t::value_type>;
+
+    scancode_vector_t scancode_init_string_to_value() {
+        using scancode = bkrl::scancode;
+
+        scancode_vector_t result;
+
+        BK_ENUMMAP_ADD_STRING(result, scancode, invalid);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_a);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_b);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_c);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_d);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_e);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_g);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_h);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_i);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_j);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_k);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_l);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_m);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_n);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_o);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_p);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_q);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_r);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_s);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_t);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_u);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_v);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_w);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_x);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_y);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_z);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_1);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_2);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_3);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_4);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_5);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_6);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_7);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_8);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_9);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_0);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_return);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_escape);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_backspace);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_tab);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_space);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_minus);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_equals);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_leftbracket);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_rightbracket);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_backslash);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_nonushash);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_semicolon);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_apostrophe);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_grave);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_comma);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_period);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_slash);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_capslock);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f1);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f2);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f3);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f4);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f5);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f6);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f7);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f8);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f9);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f10);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f11);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f12);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_printscreen);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_scrolllock);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_pause);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_insert);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_home);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_pageup);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_delete);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_end);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_pagedown);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_right);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_left);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_down);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_up);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_numlockclear);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_divide);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_multiply);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_minus);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_plus);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_enter);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_1);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_2);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_3);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_4);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_5);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_6);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_7);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_8);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_9);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_0);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_period);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_nonusbackslash);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_application);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_power);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_equals);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f13);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f14);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f15);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f16);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f17);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f18);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f19);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f20);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f21);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f22);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f23);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_f24);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_execute);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_help);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_menu);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_select);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_stop);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_again);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_undo);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_cut);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_copy);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_paste);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_find);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_mute);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_volumeup);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_volumedown);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_comma);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_equalsas400);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_international1);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_international2);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_international3);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_international4);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_international5);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_international6);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_international7);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_international8);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_international9);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_lang1);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_lang2);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_lang3);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_lang4);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_lang5);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_lang6);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_lang7);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_lang8);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_lang9);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_alterase);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_sysreq);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_cancel);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_clear);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_prior);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_return2);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_separator);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_out);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_oper);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_clearagain);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_crsel);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_exsel);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_00);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_000);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_thousandsseparator);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_decimalseparator);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_currencyunit);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_currencysubunit);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_leftparen);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_rightparen);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_leftbrace);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_rightbrace);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_tab);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_backspace);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_a);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_b);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_c);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_d);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_e);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_f);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_xor);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_power);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_percent);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_less);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_greater);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_ampersand);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_dblampersand);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_verticalbar);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_dblverticalbar);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_colon);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_hash);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_space);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_at);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_exclam);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_memstore);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_memrecall);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_memclear);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_memadd);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_memsubtract);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_memmultiply);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_memdivide);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_plusminus);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_clear);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_clearentry);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_binary);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_octal);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_decimal);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kp_hexadecimal);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_lctrl);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_lshift);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_lalt);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_lgui);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_rctrl);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_rshift);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_ralt);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_rgui);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_mode);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_audionext);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_audioprev);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_audiostop);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_audioplay);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_audiomute);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_mediaselect);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_www);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_mail);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_calculator);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_computer);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_ac_search);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_ac_home);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_ac_back);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_ac_forward);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_ac_stop);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_ac_refresh);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_ac_bookmarks);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_brightnessdown);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_brightnessup);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_displayswitch);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kbdillumtoggle);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kbdillumdown);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_kbdillumup);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_eject);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_sleep);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_app1);
+        BK_ENUMMAP_ADD_STRING(result, scancode, kb_app2);
+
+        bkrl::sort(result, scancode_map_t::value_type::less_hash);
+
+        return result;
+    }
+
+    //take a copy of string_to_value
+    scancode_vector_t scancode_init_value_to_string(scancode_vector_t string_to_value) {
+        bkrl::sort(string_to_value, scancode_map_t::value_type::less_enum);
+        return string_to_value;
+    }
+}
+
+scancode_vector_t const scancode_map_t::string_to_value_ = scancode_init_string_to_value();
+scancode_vector_t const scancode_map_t::value_to_string_ = scancode_init_value_to_string(scancode_map_t::string_to_value_);
+bool              const scancode_map_t::checked_         = scancode_map_t::check();
 
 ////////////////////////////////////////////////////////////////////////////////
 // enum_map<tile_type>

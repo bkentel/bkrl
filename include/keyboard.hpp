@@ -6,79 +6,123 @@
 //##############################################################################
 #pragma once
 
+#include "types.hpp"
+#include "scancode.hpp"
+#include "command_type.hpp"
+#include "enum_map.hpp"
+
 namespace bkrl {
 
-enum class key : uint16_t {
-    key_return = '\r'
-  , key_escape = '\033'
-  , key_backspace = '\b'
-  , key_tab = '\t'
-  , key_space = ' '
-  , key_exclaim = '!'
-  , key_quotedbl = '"'
-  , key_hash = '#'
-  , key_percent = '%'
-  , key_dollar = '$'
-  , key_ampersand = '&'
-  , key_quote = '\''
-  , key_leftparen = '('
-  , key_rightparen = ')'
-  , key_asterisk = '*'
-  , key_plus = '+'
-  , key_comma = ','
-  , key_minus = '-'
-  , key_period = '.'
-  , key_slash = '/'
-  , key_0 = '0'
-  , key_1 = '1'
-  , key_2 = '2'
-  , key_3 = '3'
-  , key_4 = '4'
-  , key_5 = '5'
-  , key_6 = '6'
-  , key_7 = '7'
-  , key_8 = '8'
-  , key_9 = '9'
-  , key_colon = ':'
-  , key_semicolon = ';'
-  , key_less = '<'
-  , key_equals = '='
-  , key_greater = '>'
-  , key_question = '?'
-  , key_at = '@'
-  , key_leftbracket = '['
-  , key_backslash = '\\'
-  , key_rightbracket = ']'
-  , key_caret = '^'
-  , key_underscore = '_'
-  , key_backquote = '`'
-  , key_a = 'a'
-  , key_b = 'b'
-  , key_c = 'c'
-  , key_d = 'd'
-  , key_e = 'e'
-  , key_f = 'f'
-  , key_g = 'g'
-  , key_h = 'h'
-  , key_i = 'i'
-  , key_j = 'j'
-  , key_k = 'k'
-  , key_l = 'l'
-  , key_m = 'm'
-  , key_n = 'n'
-  , key_o = 'o'
-  , key_p = 'p'
-  , key_q = 'q'
-  , key_r = 'r'
-  , key_s = 's'
-  , key_t = 't'
-  , key_u = 'u'
-  , key_v = 'v'
-  , key_w = 'w'
-  , key_x = 'x'
-  , key_y = 'y'
-  , key_z = 'z'
+enum class key_modifier_type : uint16_t {
+    invalid
+
+  , ctrl_left
+  , ctrl_right
+  , alt_left
+  , alt_right
+  , shift_left
+  , shift_right
+
+  , ctrl
+  , alt
+  , shift
+
+  , enum_size
 };
+
+//==============================================================================
+//! key_modifier
+//==============================================================================
+struct key_modifier {
+    void set(key_modifier_type const mod) {
+        auto const m = static_cast<unsigned>(mod);
+
+        switch (mod) {
+        case key_modifier_type::ctrl :
+            set(key_modifier_type::ctrl_left);
+            set(key_modifier_type::ctrl_right);
+            break;
+        case key_modifier_type::alt :
+            set(key_modifier_type::alt_left);
+            set(key_modifier_type::alt_right);
+            break;
+        case key_modifier_type::shift :
+            set(key_modifier_type::shift_left);
+            set(key_modifier_type::shift_right);
+            break;
+        default :
+            value.set(m);
+        }
+    }
+
+    bool test(key_modifier const& other) const {
+        auto const a = value.to_ulong();
+        auto const b = other.value.to_ulong();
+
+        return (!a && !b)
+            || (a & b) && ((a & b) == a);
+    }
+
+    std::bitset<
+        static_cast<unsigned>(key_modifier_type::enum_size) - 1
+    > value;
+};
+
+extern template class enum_map<key_modifier_type>;
+
+//==============================================================================
+//! key_combo
+//==============================================================================
+struct key_combo {
+    scancode     key;
+    key_modifier modifier;
+};
+
+//==============================================================================
+//! key_mapping
+//==============================================================================
+struct key_mapping {
+    key_combo     keys;
+    command_type  command;
+};
+
+//==============================================================================
+//! keymap
+//==============================================================================
+class keymap {
+public:
+    keymap();
+    explicit keymap(string_ref filename);
+    ~keymap();
+
+    command_type operator[](key_combo const key);
+private:
+    class impl_t;
+    std::unique_ptr<impl_t> impl_;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+inline bool operator==(key_modifier const lhs, key_modifier const rhs) noexcept {
+    return lhs.value.to_ulong() == rhs.value.to_ulong();
+}
+
+inline bool operator==(key_combo const lhs, key_combo const rhs) {
+    return (lhs.key == rhs.key) && (lhs.modifier == rhs.modifier);
+}
+
+inline bool operator!=(key_combo const lhs, key_combo const rhs) {
+    return !(lhs == rhs);
+}
+
+inline bool operator<(key_modifier const lhs, key_modifier const rhs) noexcept {
+    return lhs.value.to_ulong() < rhs.value.to_ulong();
+}
+
+inline bool operator<(key_combo const lhs, key_combo const rhs) noexcept {
+    return (lhs.key < rhs.key)
+        || ((lhs.key == rhs.key) && (lhs.modifier < rhs.modifier));
+}
+
 
 
 } //namespace bkrl

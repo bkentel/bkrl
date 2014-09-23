@@ -110,7 +110,7 @@ private:
     room_callback        on_room_gen_;
     split_callback       on_split_;
     params_t             params_;
-    unsigned             next_room_id_ = 0;
+    room_id              next_room_id_ = 0;
     std::vector<index_t> connected_nodes_;
     connect_callback     on_connect_;
 };
