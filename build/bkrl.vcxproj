@@ -215,6 +215,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\src\item.cpp" />
     <ClCompile Include="..\src\keyboard.cpp" />
     <ClCompile Include="..\src\main.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">true</ExcludedFromBuild>
@@ -272,9 +273,12 @@
     <ClInclude Include="..\include\font.hpp" />
     <ClInclude Include="..\include\generate.hpp" />
     <ClInclude Include="..\include\grid.hpp" />
+    <ClInclude Include="..\include\item.hpp" />
+    <ClInclude Include="..\include\json.hpp" />
     <ClInclude Include="..\include\keyboard.hpp" />
     <ClInclude Include="..\include\math.hpp" />
     <ClInclude Include="..\include\pch.hpp" />
+    <ClInclude Include="..\include\player.hpp" />
     <ClInclude Include="..\include\random.hpp" />
     <ClInclude Include="..\include\renderer.hpp" />
     <ClInclude Include="..\include\scancode.hpp" />

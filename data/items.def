@@ -1,0 +1,13 @@
+{
+    "file_type": "ITEM"
+  , "definitions": [
+        {
+            "id": "WEAPON_SWORD_SHORT"
+          , "material": ["any", "EDGE"]
+          , "type": "WEAPON_SLASH_PIERCE"
+          , "value": 100
+          , "weight": 100
+          , "damage": [2, 6]
+        }
+    ]
+}

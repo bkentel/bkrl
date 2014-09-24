@@ -1,0 +1,17 @@
+{
+    "file_type": "LOCALE"
+  , "string_type": "MATERIAL"
+  , "language": "en"
+  , "definitions": [
+        {
+            "id": "IRON"
+          , "name": "Iron"
+          , "text": "A ferrous metal; nothing special."
+        }
+      , {
+            "id": "OAK"
+          , "name": "Oak"
+          , "text": "A hard, durable wood."
+        }
+    ]
+}

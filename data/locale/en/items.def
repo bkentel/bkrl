@@ -1,0 +1,12 @@
+{
+    "file_type": "LOCALE"
+  , "string_type": "ITEM"
+  , "language": "en"
+  , "definitions": [
+        {
+            "id": "WEAPON_SWORD_SHORT"
+          , "name": "short sword"
+          , "text": "A short sword suitable for, well, slashing."
+        }
+    ]
+}

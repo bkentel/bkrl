@@ -98,8 +98,8 @@ inline std::underlying_type_t<Enum> enum_value(Enum const e) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-uint64_t slash_hash64(char const* s, size_t len = 0);
-uint32_t slash_hash32(char const* s, size_t len = 0);
+uint64_t slash_hash64(char const* s, size_t len);
+uint32_t slash_hash32(char const* s, size_t len);
 
 inline uint64_t slash_hash64(string_ref const ref) {
     return slash_hash64(ref.data(), ref.length());

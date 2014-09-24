@@ -1,0 +1,19 @@
+{
+    "file_type": "MATERIAL"
+  , "definitions": [
+        {
+            "id": "IRON"
+          , "color": "DARK_GREY"
+          , "weight_mod": 1.7
+          , "value_mod": 0.7
+          , "tags": ["EDGE", "METALLIC", "CORRODIBLE", "CONDUCTIVE"]
+        }
+      , {
+            "id": "OAK"
+          , "color": "TAN"
+          , "weight_mod": 0.7
+          , "value_mod": 0.6
+          , "tags": ["FLAMMABLE"]
+        }
+    ]
+}

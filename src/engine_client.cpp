@@ -1,5 +1,7 @@
 ﻿#pragma execution_character_set("utf-8")
 
+#include "item.hpp"
+
 #include "engine_client.hpp"
 
 #include "font.hpp"
@@ -13,6 +15,7 @@
 #include "generate.hpp"
 #include "bsp_layout.hpp"
 #include "tile_sheet.hpp"
+#include "player.hpp"
 
 #include <boost/container/static_vector.hpp>
 
@@ -659,29 +662,11 @@ room_connector::connect(
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-class entity {
-public:
-    entity()
-        : position {{0, 0}}
-    {
-    }
-
-    bkrl::grid_point position;
-};
-
 } //namespace bkrl
 
 struct engine_client::impl_t {
 public:
-    impl_t()
-      : app_ {"./data/key_map.json"}
-      , renderer_ {app_}
-      , font_lib_ {}
-      , font_face_ {renderer_, font_lib_, "", 20}
-      , map_ {100, 100}
-      , sheet_ {"./data/texture_map.json", renderer_}
-    {
-        ////////////////////////////////////////////////////
+    void init_sinks() {
         app_.on_command([&](command_type const cmd) {
             on_command(cmd);
         });
@@ -705,10 +690,9 @@ public:
                 on_command(command_type::zoom_in);
             }
         });
-
-
-        ////////////////////////////////////////////////////
-        random::generator gen {100};
+    }
+    void init_map() {
+        auto& gen = random_substantive_;
 
         generate::simple_room room_gen {};
         generate::circle_room circle_gen {};
@@ -769,7 +753,26 @@ public:
 
         //TODO temp
         auto const& r0 = rooms[0];
-        player_.position = r0.center();
+        player_.move_to(r0.center());
+    }
+
+    impl_t()
+      : random_substantive_ {random::true_random()}
+      , random_trivial_     {random::true_random()}
+      , app_ {"./data/key_map.json"}
+      , renderer_ {app_}
+      , font_lib_ {}
+      , font_face_ {renderer_, font_lib_, "", 20}
+      , map_ {100, 100}
+      , sheet_ {"./data/texture_map.json", renderer_}
+      , materials_ {string_ref {"./data/materials.def"}}
+      , materials_strings_ {string_ref {"./data/locale/en/materials.def"}}
+    {
+        ////////////////////////////////////////////////////
+        init_sinks();
+        init_map();
+
+        ////////////////////////////////////////////////////
 
         set_zoom(zoom_);
 
@@ -799,7 +802,8 @@ public:
             }
         }
 
-        sheet_.render(r, 1, 0, player_.position.x, player_.position.y);
+        auto const player_pos = player_.position();
+        sheet_.render(r, 1, 0, player_pos.x, player_pos.y);
         //r.draw_tile(sheet_, 1, 0, player_.position.x, player_.position.y);
 
         transitory_text_layout layout {font_face_, R"(Hello World! and みさこ)", 100, 500};
@@ -821,7 +825,7 @@ public:
             BK_TODO_FAIL();
         }
 
-        auto const to = translate(e.position, dx, dy);
+        auto const to = translate(e.position(), dx, dy);
 
         if (!map_.is_valid(to)) {
             return false;
@@ -845,12 +849,9 @@ public:
             return;
         }
 
-        player_.position.x += dx;
-        player_.position.y += dy;
+        player_.move_by(dx, dy);
 
         set_zoom(zoom_);
-
-        std::cout << player_.position.x << " " << player_.position.y << std::endl;
     }
 
     boost::container::static_vector<grid_point, 8>
@@ -883,7 +884,7 @@ public:
     }
 
     void do_open() {
-        auto const doors = get_doors_next_to(player_.position);
+        auto const doors = get_doors_next_to(player_.position());
 
         auto const closed_count = std::count_if(std::cbegin(doors), std::cend(doors), [&](grid_point const p) {
             return door_data {map_, p}.is_closed();
@@ -902,7 +903,7 @@ public:
     }
 
     void do_close() {
-        auto const doors = get_doors_next_to(player_.position);
+        auto const doors = get_doors_next_to(player_.position());
 
         auto const open_count = std::count_if(std::cbegin(doors), std::cend(doors), [&](grid_point const p) {
             return door_data {map_, p}.is_open();
@@ -920,6 +921,38 @@ public:
         }
     }
 
+    //TODO rename this to something more meaningful
+    void set_zoom(float const zoom) {
+        zoom_ = (zoom < 0.1f)
+          ? 0.1f
+          : (zoom > 10.0f)
+            ? 10.0f
+            : zoom;
+
+        auto const w = sheet_.tile_width();
+        auto const h = sheet_.tile_height();
+
+        auto const px = -static_cast<float>(player_.position().x) * w;
+        auto const py = -static_cast<float>(player_.position().y) * h;
+
+        display_x_ = px + (display_w_ / 2.0f / zoom_);
+        display_y_ = py + (display_h_ / 2.0f / zoom_);
+    }
+
+    point2d<int> screen_to_grid(signed const x, signed const y) const {
+        auto const dx = display_x_ + scroll_x_;
+        auto const dy = display_y_ + scroll_y_;
+
+        auto const w = sheet_.tile_width();
+        auto const h = sheet_.tile_height();
+
+        auto const ix = static_cast<int>(std::trunc((x / zoom_ - dx) / w));
+        auto const iy = static_cast<int>(std::trunc((y / zoom_ - dy) / h));
+
+        return point2d<int> {ix, iy};
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
     void on_command(command_type const cmd) {
         switch (cmd) {
         case command_type::open :
@@ -982,24 +1015,6 @@ public:
         set_zoom(zoom_);
     }
 
-    //TODO rename this to something more meaningful
-    void set_zoom(float const zoom) {
-        zoom_ = (zoom < 0.1f)
-          ? 0.1f
-          : (zoom > 10.0f)
-            ? 10.0f
-            : zoom;
-
-        auto const w = sheet_.tile_width();
-        auto const h = sheet_.tile_height();
-
-        auto const px = -static_cast<float>(player_.position.x) * w;
-        auto const py = -static_cast<float>(player_.position.y) * h;
-
-        display_x_ = px + (display_w_ / 2.0f / zoom_);
-        display_y_ = py + (display_h_ / 2.0f / zoom_);
-    }
-
     void on_mouse_move(application::mouse_move_info const& info) {
         auto const right = (info.state & (1<<2)) != 0;
 
@@ -1040,22 +1055,12 @@ public:
         std::cout << "===================="                      << "\n";
         std::cout << std::endl;
     }
-
-    point2d<int> screen_to_grid(signed const x, signed const y) const {
-        auto const dx = display_x_ + scroll_x_;
-        auto const dy = display_y_ + scroll_y_;
-
-        auto const w = sheet_.tile_width();
-        auto const h = sheet_.tile_height();
-
-        auto const ix = static_cast<int>(std::trunc((x / zoom_ - dx) / w));
-        auto const iy = static_cast<int>(std::trunc((y / zoom_ - dy) / h));
-
-        return point2d<int> {ix, iy};
-    }
 private:
-    application  app_;
-    renderer     renderer_;
+    random::generator random_substantive_;
+    random::generator random_trivial_;
+
+    application app_;
+    renderer    renderer_;
     
     font_libary font_lib_;
     font_face   font_face_;
@@ -1064,7 +1069,10 @@ private:
 
     tile_sheet sheet_;
 
-    entity       player_;
+    player       player_;
+
+    definition<item_material_def>       materials_;
+    localized_string<item_material_def> materials_strings_;
 
     float display_w_ = 0.0f;
     float display_h_ = 0.0f;

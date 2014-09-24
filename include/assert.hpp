@@ -19,6 +19,10 @@ name& operator=(name&&) = delete
 name(name&&) = default;  \
 name& operator=(name&&) = default
 
+#define BK_DEFAULT_COPY(name) \
+name(name const&) = default;  \
+name& operator=(name const&) = default
+
 #undef BK_ASSERT_OPT_IS_ACTIVE
 #undef BK_ASSERT_DBG_IS_ACTIVE
 #undef BK_ASSERT_SAFE_IS_ACTIVE

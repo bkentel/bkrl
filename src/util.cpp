@@ -30,6 +30,10 @@ std::string bkrl::read_file(string_ref const filename) {
 
     std::ifstream in {filename.data()};
 
+    if (!in.good()) {
+        BK_TODO_FAIL();
+    }
+
     in.seekg(0, std::ios::end);
     result.reserve(static_cast<size_t>(in.tellg()));
     in.seekg(0, std::ios::beg);

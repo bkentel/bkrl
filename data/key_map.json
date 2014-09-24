@@ -27,7 +27,7 @@
       , ["scroll_e", "kb_right", "ctrl"]
       , ["scroll_w", "kb_left",  "ctrl"]
       
-      , ["open",  "kb_o", "ctrl_left"]
+      , ["open",  "kb_o"]
       , ["close", "kb_c"]
     ]
 }
