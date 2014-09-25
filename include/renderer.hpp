@@ -78,6 +78,9 @@ public:
     bool is_running() const;
     bool has_events() const;
 
+    int client_width() const;
+    int client_height() const;
+
     void do_one_event();
     void do_all_events();
 

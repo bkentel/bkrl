@@ -60,7 +60,7 @@ struct key_modifier {
         auto const b = other.value.to_ulong();
 
         return (!a && !b)
-            || (a & b) && ((a & b) == a);
+            || (a & b) && ((a & b) == b);
     }
 
     std::bitset<

@@ -11,6 +11,15 @@
 namespace bkrl {
 
 ////////////////////////////////////////////////////////////////////////////////
+template <typename T>
+inline T clamp(T const n, T const lo, T const hi) noexcept {
+    return (n < lo)
+      ? lo
+      : (n > hi)
+        ? hi
+        : n;
+}
+
 inline int next_nearest_power_of_2(int value) noexcept {
     int result = 1;
 

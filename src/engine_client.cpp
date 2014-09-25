@@ -773,8 +773,10 @@ public:
         init_map();
 
         ////////////////////////////////////////////////////
-
-        set_zoom(zoom_);
+        display_w_ = app_.client_width();
+        display_h_ = app_.client_height();
+        
+        center_on_grid(player_.position());
 
         while (app_.is_running()) {
             app_.do_all_events();
@@ -812,14 +814,6 @@ public:
         r.present();
     }
 
-    void scroll(signed const dx, signed const dy) {
-        auto const delta_x = dx * (1.0f / zoom_);
-        auto const delta_y = dy * (1.0f / zoom_);
-
-        scroll_x_ += delta_x;
-        scroll_y_ += delta_y;
-    }
-
     bool can_move_to(entity const& e, signed const dx, signed const dy) {
         if (std::abs(dx) > 1 || std::abs(dy) > 1) {
             BK_TODO_FAIL();
@@ -836,6 +830,7 @@ public:
         switch (type) {
         case tile_type::floor :
         case tile_type::corridor :
+        case tile_type::stair :
             return true;
         case tile_type::door :
             return door_data {map_, to}.is_open();
@@ -850,28 +845,32 @@ public:
         }
 
         player_.move_by(dx, dy);
+        
+        auto const w = sheet_.tile_width()  * zoom_;
+        auto const h = sheet_.tile_height() * zoom_;
 
-        set_zoom(zoom_);
+        scroll_by(-dx * w, -dy * h);
     }
 
     boost::container::static_vector<grid_point, 8>
     get_doors_next_to(grid_point const p) const {
+        std::array<int, 8> const xi {-1,  0,  1, -1, 1, -1, 0, 1};
+        std::array<int, 8> const yi {-1, -1, -1,  0, 0,  1, 1, 1};
+
         boost::container::static_vector<grid_point, 8> result;
 
-        auto const xi = {-1, 0, 1};
-        auto const yi = {-1, 0, 1};
+        for (size_t i = 0; i < 8; ++i) {
+            auto const x = xi[i];
+            auto const y = yi[i];
 
-        for (auto const y : yi) {
-            for (auto const x : xi) {
-                auto const where = grid_point {p.x + x, p.y + y};
-                if (!map_.is_valid(where)) {
-                    break;
-                }
+            auto const q = grid_point {p.x + x, p.y + y};
+            if (!map_.is_valid(q)) {
+                continue;
+            }
 
-                auto const type = map_.get(attribute::tile_type, where);
-                if (type == tile_type::door) {
-                    result.emplace_back(where);
-                }
+            auto const type = map_.get(attribute::tile_type, q);
+            if (type == tile_type::door) {
+                result.emplace_back(q);
             }
         }
 
@@ -921,35 +920,84 @@ public:
         }
     }
 
-    //TODO rename this to something more meaningful
-    void set_zoom(float const zoom) {
-        zoom_ = (zoom < 0.1f)
-          ? 0.1f
-          : (zoom > 10.0f)
-            ? 10.0f
-            : zoom;
-
-        auto const w = sheet_.tile_width();
-        auto const h = sheet_.tile_height();
-
-        auto const px = -static_cast<float>(player_.position().x) * w;
-        auto const py = -static_cast<float>(player_.position().y) * h;
-
-        display_x_ = px + (display_w_ / 2.0f / zoom_);
-        display_y_ = py + (display_h_ / 2.0f / zoom_);
+    ////////////////////////////////////////////////////////////////////////////
+    void zoom_by(float const delta) {
+        zoom_to(zoom_ + delta);
     }
 
-    point2d<int> screen_to_grid(signed const x, signed const y) const {
-        auto const dx = display_x_ + scroll_x_;
-        auto const dy = display_y_ + scroll_y_;
+    void zoom_to(float const z) {
+        auto constexpr min =  0.1f;
+        auto constexpr max = 10.0f;
 
-        auto const w = sheet_.tile_width();
-        auto const h = sheet_.tile_height();
+        auto const p = screen_to_grid(
+            display_w_ / 2.0f
+          , display_h_ / 2.0f
+        );
 
-        auto const ix = static_cast<int>(std::trunc((x / zoom_ - dx) / w));
-        auto const iy = static_cast<int>(std::trunc((y / zoom_ - dy) / h));
+        auto const prev_z = zoom_;
+        zoom_ = clamp(z, min, max);
 
-        return point2d<int> {ix, iy};
+        scroll_x_ = 0.0f;
+        scroll_y_ = 0.0f;
+
+        center_on_grid(p);
+    }
+
+    void scroll_by(float const dx, float const dy) {
+        auto const z = zoom_;
+        BK_ASSERT_DBG(z > 0.0f);
+
+        auto const x = dx / zoom_;
+        auto const y = dy / zoom_;
+
+        scroll_to(scroll_x_ + x, scroll_y_ + y);
+    }
+
+    void scroll_to(float const x, float const y) {
+        scroll_x_ = x;
+        scroll_y_ = y;
+    }
+
+    ipoint2 screen_to_grid(float const x, float const y) const {
+        auto const px = display_x_ + scroll_x_;
+        auto const py = display_y_ + scroll_y_;
+
+        auto const tw = static_cast<float>(sheet_.tile_width());
+        auto const th = static_cast<float>(sheet_.tile_height());
+
+        auto const ix = static_cast<int>(std::trunc((x / zoom_ - px) / tw));
+        auto const iy = static_cast<int>(std::trunc((y / zoom_ - py) / th));
+
+        return {ix, iy};
+    }
+    
+    point2 grid_to_screen(int const x, int const y) const {
+        auto const tw = sheet_.tile_width();
+        auto const th = sheet_.tile_height();
+        auto const z  = zoom_;
+
+        return {
+            (x + 0.5f) * tw * z - scroll_x_
+          , (y + 0.5f) * th * z - scroll_y_
+        };
+    }
+
+    void center_on_grid(int const x, int const y) {
+        auto const z  = zoom_;
+        auto const dw = display_w_;
+        auto const dh = display_h_;
+
+        auto const p = grid_to_screen(x, y);
+
+        auto const dx = dw / 2.0f - p.x;
+        auto const dy = dh / 2.0f - p.y;
+
+        display_x_ = dx / z;
+        display_y_ = dy / z;
+    }
+
+    void center_on_grid(ipoint2 const p) {
+        center_on_grid(p.x, p.y);
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -962,16 +1010,16 @@ public:
             do_close();
             break;
         case command_type::scroll_n :
-            scroll(0, 4);
+            scroll_by(0.0f, 4.0f);
             break;
         case command_type::scroll_s :
-            scroll(0, -4);
+            scroll_by(0.0f, -4.0f);
             break;
         case command_type::scroll_e :
-            scroll(-4, 0);
+            scroll_by(-4.0f, 0.0f);
             break;
         case command_type::scroll_w :
-            scroll(4, 0);
+            scroll_by(4.0f, 0.0f);
             break;
         case command_type::north :
             move_player(0, -1);
@@ -998,10 +1046,10 @@ public:
             move_player(1, 1);
             break;
         case command_type::zoom_in :
-            set_zoom(zoom_ * 1.1f);
+            zoom_to(zoom_ * 1.1f);
             break;
         case command_type::zoom_out :
-            set_zoom(zoom_ * 0.9f);
+            zoom_to(zoom_ * 0.9f);
             break;
         default:
             break;
@@ -1011,15 +1059,13 @@ public:
     void on_resize(unsigned const w, unsigned const h) {
         display_w_ = static_cast<float>(w);
         display_h_ = static_cast<float>(h);
-
-        set_zoom(zoom_);
     }
 
     void on_mouse_move(application::mouse_move_info const& info) {
         auto const right = (info.state & (1<<2)) != 0;
 
         if (right) {
-            scroll(info.dx, info.dy);
+            scroll_by(info.dx, info.dy);
         }
     }
 

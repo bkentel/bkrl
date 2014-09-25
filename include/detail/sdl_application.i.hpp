@@ -104,6 +104,9 @@ public:
     bool is_running() const;
     bool has_events() const;
 
+    int client_width() const;
+    int client_height() const;
+
     void do_one_event();
     void do_all_events();
 
@@ -187,6 +190,24 @@ application_impl::is_running() const {
 bool
 application_impl::has_events() const {
     return SDL_PollEvent(nullptr) != 0;
+}
+
+int
+application_impl::client_width() const {
+    auto w = int {};
+    SDL_GetWindowSize(window_.get(), &w, nullptr);
+
+    BK_ASSERT_DBG(w > 0);
+    return w;
+}
+
+int
+application_impl::client_height() const {
+    auto h = int {};
+    SDL_GetWindowSize(window_.get(), nullptr, &h);
+
+    BK_ASSERT_DBG(h > 0);
+    return h;
 }
 
 void

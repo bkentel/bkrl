@@ -27,6 +27,16 @@ application::has_events() const {
     return impl_->has_events();
 }
 
+int
+application::client_width() const {
+    return impl_->client_width();
+}
+
+int
+application::client_height() const {
+    return impl_->client_height();
+}
+
 void
 application::do_one_event() {
     impl_->do_one_event();
