@@ -115,7 +115,7 @@ public:
     //--------------------------------------------------------------------------
     //! sanity checks
     //--------------------------------------------------------------------------
-    static bool check() {
+    static bool check(bool const allow_sparse = false) {
         //check for duplicates => hash collision
         auto const it = std::adjacent_find(
             std::cbegin(string_to_value_), std::cend(string_to_value_)
@@ -124,7 +124,7 @@ public:
         BK_ASSERT(it == std::cend(string_to_value_)); //hash collision
 
         //check for "sparse" enums
-        for (size_t i = 0; i < value_to_string_.size(); ++i) {
+        for (size_t i = 0; !allow_sparse && i < value_to_string_.size(); ++i) {
             //TODO
             if (i != static_cast<size_t>(value_to_string_[i].value)) {
                 std::cout << "warning sparse enum\n";

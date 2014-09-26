@@ -319,7 +319,7 @@ namespace {
 
 scancode_vector_t const scancode_map_t::string_to_value_ = scancode_init_string_to_value();
 scancode_vector_t const scancode_map_t::value_to_string_ = scancode_init_value_to_string(scancode_map_t::string_to_value_);
-bool              const scancode_map_t::checked_         = scancode_map_t::check();
+bool              const scancode_map_t::checked_         = scancode_map_t::check(true);
 
 ////////////////////////////////////////////////////////////////////////////////
 // enum_map<tile_type>

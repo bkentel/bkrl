@@ -205,6 +205,7 @@
     </ClCompile>
     <ClCompile Include="..\src\assert.cpp" />
     <ClCompile Include="..\src\bsp_layout.cpp" />
+    <ClCompile Include="..\src\config.cpp" />
     <ClCompile Include="..\src\engine_client.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
@@ -216,6 +217,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\src\item.cpp" />
+    <ClCompile Include="..\src\json.cpp" />
     <ClCompile Include="..\src\keyboard.cpp" />
     <ClCompile Include="..\src\main.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">true</ExcludedFromBuild>
@@ -264,6 +266,7 @@
     <ClInclude Include="..\include\assert.hpp" />
     <ClInclude Include="..\include\bsp_layout.hpp" />
     <ClInclude Include="..\include\command_type.hpp" />
+    <ClInclude Include="..\include\config.hpp" />
     <ClInclude Include="..\include\detail\bsp_layout.i.hpp" />
     <ClInclude Include="..\include\detail\freetype_text.i.hpp" />
     <ClInclude Include="..\include\detail\sdl_application.i.hpp" />

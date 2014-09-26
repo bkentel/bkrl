@@ -70,7 +70,14 @@ struct application_base {
 //==============================================================================
 class application : public detail::application_base {
 public:
-    explicit application(string_ref keymap);
+    explicit application(
+        string_ref keymap
+      , optional<uint32_t> width
+      , optional<uint32_t> height
+      , optional<int32_t>  x
+      , optional<int32_t>  y
+    );
+
     ~application();
 
     handle_t handle() const;
@@ -172,6 +179,10 @@ public:
         set_translation_y(dy);
     }
 
+    void set_translation(vec2 const trans) {
+        set_scale(trans.x, trans.y);
+    }
+
     void set_scale(scalar const sx, scalar const sy) {
         set_scale_x(sx);
         set_scale_y(sy);
@@ -180,20 +191,18 @@ public:
     void set_scale(scalar const scale) {
         set_scale(scale, scale);
     }
+
+    void set_scale(vec2 const scale) {
+        set_scale(scale.x, scale.y);
+    }
     
+    vec2 get_scale() const;
+    vec2 get_translation() const;
+
     ////////////////////////////////////////////////////////////////////////////
 
     void draw_texture(texture const& tex, scalar x, scalar y);
-
     void draw_texture(texture const& tex, rect src, rect dst);
-    ////////////////////////////////////////////////////////////////////////////
-    void draw_tile(
-        tile_sheet const& sheet
-      , unsigned ix
-      , unsigned iy
-      , scalar   x
-      , scalar   y
-    );
 private:
     std::unique_ptr<detail::renderer_impl> impl_;
 };

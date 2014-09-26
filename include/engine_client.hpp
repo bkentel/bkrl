@@ -10,13 +10,14 @@
 namespace bkrl {
 
 class renderer;
+struct config;
 
 //==============================================================================
 //! engine_client
 //==============================================================================
 class engine_client {
 public:
-    engine_client();
+    engine_client(config const& conf);
     ~engine_client();
 
     void on_command(command_type const cmd);

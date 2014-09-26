@@ -34,6 +34,9 @@
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
 #include <boost/utility/string_ref.hpp>
+#include <boost/optional.hpp>
+#include <boost/container/flat_map.hpp>
+#include <boost/container/static_vector.hpp>
 
 ////////////////////////////////////////////////////////////////////////////////
 // SDL2

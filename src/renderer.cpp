@@ -5,7 +5,13 @@ using namespace bkrl;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-application::application(string_ref keymap)
+application::application(
+    string_ref keymap
+  , optional<uint32_t> width
+  , optional<uint32_t> height
+  , optional<int32_t>  x
+  , optional<int32_t>  y
+)
   : impl_ {std::make_unique<detail::application_impl>(keymap)}
 {
 }
@@ -121,6 +127,16 @@ renderer::set_scale_y(scalar const sy) {
     impl_->set_scale_y(sy);
 }
 
+vec2
+renderer::get_scale() const {
+    return impl_->get_scale();
+}
+
+vec2
+renderer::get_translation() const {
+    return impl_->get_translation();
+}
+
 void
 renderer::draw_texture(texture const& tex, scalar x, scalar y) {
     impl_->draw_texture(tex, x, y);
@@ -129,17 +145,6 @@ renderer::draw_texture(texture const& tex, scalar x, scalar y) {
 void
 renderer::draw_texture(texture const& tex, rect const src, rect const dst) {
     impl_->draw_texture(tex, src, dst);
-}
-
-void
-renderer::draw_tile(
-    tile_sheet const& sheet
-  , unsigned const ix
-  , unsigned const iy
-  , scalar   const x
-  , scalar   const y
-) {
-    impl_->draw_tile(sheet, ix, iy, x, y);
 }
 
 texture

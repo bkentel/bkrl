@@ -21,36 +21,31 @@ inline static SDL_Rect make_sdl_rect(axis_aligned_rect<T> const rect) noexcept {
 template <typename T>
 struct sdl_deleter;
 
-template <>
-struct sdl_deleter<SDL_Window> {
+template <> struct sdl_deleter<SDL_Window> {
     void operator()(SDL_Window* ptr) const noexcept {
         ::SDL_DestroyWindow(ptr);
     }
 };
 
-template <>
-struct sdl_deleter<SDL_Renderer> {
+template <> struct sdl_deleter<SDL_Renderer> {
     void operator()(SDL_Renderer* ptr) const noexcept {
         ::SDL_DestroyRenderer(ptr);
     }
 };
 
-template <>
-struct sdl_deleter<SDL_Texture> {
+template <> struct sdl_deleter<SDL_Texture> {
     void operator()(SDL_Texture* ptr) const noexcept {
         ::SDL_DestroyTexture(ptr);
     }
 };
 
-template <>
-struct sdl_deleter<SDL_Surface> {
+template <> struct sdl_deleter<SDL_Surface> {
     void operator()(SDL_Surface* ptr) const noexcept {
         ::SDL_FreeSurface(ptr);
     }
 };
 
-template <>
-struct sdl_deleter<SDL_PixelFormat> {
+template <> struct sdl_deleter<SDL_PixelFormat> {
     void operator()(SDL_PixelFormat* ptr) const noexcept {
         ::SDL_FreeFormat(ptr);
     }
@@ -143,7 +138,8 @@ private:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-sdl_unique<SDL_Window> application_impl::create_window_() {
+sdl_unique<SDL_Window>
+application_impl::create_window_() {
     auto const result = SDL_CreateWindow(
         "BKRL"
       , SDL_WINDOWPOS_UNDEFINED
@@ -161,8 +157,8 @@ sdl_unique<SDL_Window> application_impl::create_window_() {
     return sdl_unique<SDL_Window> {result};
 }
 
-
-application_impl::application_impl(string_ref keymap)
+//------------------------------------------------------------------------------
+application_impl::application_impl(string_ref const keymap)
   : state_   {}
   , window_  {create_window_()}
   , key_map_ {keymap}
@@ -176,22 +172,25 @@ application_impl::application_impl(string_ref keymap)
     on_mouse_wheel_  = [](mouse_wheel_info const&) {};
 }
 
-
+//------------------------------------------------------------------------------
 application::handle_t
 application_impl::handle() const {
     return window_;
 }
 
+//------------------------------------------------------------------------------
 bool
 application_impl::is_running() const {
     return running_;
 }
 
+//------------------------------------------------------------------------------
 bool
 application_impl::has_events() const {
     return SDL_PollEvent(nullptr) != 0;
 }
 
+//------------------------------------------------------------------------------
 int
 application_impl::client_width() const {
     auto w = int {};
@@ -201,6 +200,7 @@ application_impl::client_width() const {
     return w;
 }
 
+//------------------------------------------------------------------------------
 int
 application_impl::client_height() const {
     auto h = int {};
@@ -210,6 +210,7 @@ application_impl::client_height() const {
     return h;
 }
 
+//------------------------------------------------------------------------------
 void
 application_impl::handle_event(SDL_Event const& event) {
     switch (event.type) {
@@ -279,12 +280,14 @@ application_impl::handle_event(SDL_Event const& event) {
     }
 }
 
+//------------------------------------------------------------------------------
 void
 application_impl::handle_event_quit(SDL_QuitEvent const&) {
     BK_ASSERT_DBG(running_);
     running_ = false;
 }
 
+//------------------------------------------------------------------------------
 void
 application_impl::handle_event_window(SDL_WindowEvent const& event) {
     switch (event.event) {
@@ -337,6 +340,7 @@ application_impl::handle_event_window(SDL_WindowEvent const& event) {
     }
 }
 
+//------------------------------------------------------------------------------
 void
 application_impl::handle_event_kb(SDL_KeyboardEvent const& event) {  
     if (event.type != SDL_KEYDOWN) {
@@ -350,27 +354,21 @@ application_impl::handle_event_kb(SDL_KeyboardEvent const& event) {
 
     if (flags & KMOD_LCTRL) {
         mods.set(key_modifier_type::ctrl_left);
-        //mods.set(key_modifier_type::ctrl);
     }
     if (flags & KMOD_RCTRL) {
         mods.set(key_modifier_type::ctrl_right);
-        //mods.set(key_modifier_type::ctrl);
     }
     if (flags & KMOD_LALT) {
         mods.set(key_modifier_type::alt_left);
-        //mods.set(key_modifier_type::alt);
     }
     if (flags & KMOD_RALT) {
         mods.set(key_modifier_type::alt_right);
-        //mods.set(key_modifier_type::alt);
     }
     if (flags & KMOD_LSHIFT) {
         mods.set(key_modifier_type::shift_left);
-        //mods.set(key_modifier_type::shift);
     }
     if (flags & KMOD_RSHIFT) {
         mods.set(key_modifier_type::shift_right);
-        //mods.set(key_modifier_type::shift);
     }
 
     key_combo const key {
@@ -382,6 +380,7 @@ application_impl::handle_event_kb(SDL_KeyboardEvent const& event) {
     on_command_(command);
 }
 
+//------------------------------------------------------------------------------
 void
 application_impl::handle_event_mouse_move(SDL_MouseMotionEvent const& event) {
     mouse_move_info const info {
@@ -393,6 +392,7 @@ application_impl::handle_event_mouse_move(SDL_MouseMotionEvent const& event) {
     on_mouse_move_(info);
 }
 
+//------------------------------------------------------------------------------
 void
 application_impl::handle_event_mouse_button(SDL_MouseButtonEvent const& event) {
     mouse_button_info const info {
@@ -407,6 +407,7 @@ application_impl::handle_event_mouse_button(SDL_MouseButtonEvent const& event) {
     on_mouse_button_(info);
 }
 
+//------------------------------------------------------------------------------
 void
 application_impl::handle_event_mouse_wheel(SDL_MouseWheelEvent const& event) {
     mouse_wheel_info const info {
@@ -416,11 +417,13 @@ application_impl::handle_event_mouse_wheel(SDL_MouseWheelEvent const& event) {
     on_mouse_wheel_(info);
 }
 
+//------------------------------------------------------------------------------
 void
 application_impl::do_one_event() {
     BK_TODO_FAIL();
 }
 
+//------------------------------------------------------------------------------
 void
 application_impl::do_all_events() {
     SDL_Event event;
@@ -431,7 +434,8 @@ application_impl::do_all_events() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-
+//! SDL implementation of renderer.
+////////////////////////////////////////////////////////////////////////////////
 class renderer_impl : public renderer_base {
 public:
     renderer_impl(application const& app);
@@ -456,30 +460,13 @@ public:
     void set_scale_x(scalar sx);
     void set_scale_y(scalar sy);
     
+    vec2 get_scale() const;
+    vec2 get_translation() const;
+
     ////////////////////////////////////////////////////////////////////////////
 
-    void draw_texture(texture const& tex, scalar x, scalar y) {
-        auto const sdl_tex = tex.handle().as<SDL_Texture*>();
-        
-        SDL_SetTextureBlendMode(sdl_tex, SDL_BLENDMODE_BLEND);
-        SDL_SetTextureColorMod(sdl_tex, 0xFF, 0, 0);
-        
-        SDL_Rect r {static_cast<int>(x), static_cast<int>(y), 0, 0};
-        SDL_QueryTexture(sdl_tex, nullptr, nullptr, &r.w, &r.h);
-
-        SDL_RenderCopy(renderer_.get(), sdl_tex, nullptr, &r);
-    }
-
+    void draw_texture(texture const& tex, scalar x, scalar y);
     void draw_texture(texture const& tex, rect src, rect dst);
-
-    void draw_tile(
-        tile_sheet const& sheet
-      , unsigned ix
-      , unsigned iy
-      , scalar   x
-      , scalar   y
-    );
-
 private:
     texture create_texture_(SDL_Surface* surface);
 
@@ -511,27 +498,6 @@ renderer_impl::create_renderer_(application const& app) {
 
     return sdl_unique<SDL_Renderer> {result};
 }
-
-//------------------------------------------------------------------------------
-//sdl_unique<SDL_Texture>
-//renderer_impl::create_tile_sheet_texture_(SDL_Renderer& renderer) {
-//    //TODO
-//    auto const result_bmp = SDL_LoadBMP("./data/Myne.bmp");
-//    if (result_bmp == nullptr) {
-//        BK_TODO_FAIL();
-//        //BOOST_THROW_EXCEPTION(error::make_sdl_error("SDL_LoadBMP"));
-//    }
-//
-//    sdl_unique<SDL_Surface> surface {result_bmp};
-//
-//    auto const result_texture = SDL_CreateTextureFromSurface(&renderer, surface.get());
-//    if (result_bmp == nullptr) {
-//        BK_TODO_FAIL();
-//        //BOOST_THROW_EXCEPTION(error::make_sdl_error("SDL_CreateTextureFromSurface"));
-//    }
-//
-//    return sdl_unique<SDL_Texture> {result_texture};
-//}
 
 //------------------------------------------------------------------------------
 renderer_impl::renderer_impl(application const& app)
@@ -570,7 +536,7 @@ renderer_impl::present() {
 
 //------------------------------------------------------------------------------
 texture
-renderer_impl::create_texture_(SDL_Surface* surface) {
+renderer_impl::create_texture_(SDL_Surface* const surface) {
     BK_ASSERT_DBG(surface);
 
     auto const result = SDL_CreateTextureFromSurface(renderer_.get(), surface);
@@ -590,7 +556,7 @@ renderer_impl::create_texture_(SDL_Surface* surface) {
 }
 
 texture
-renderer_impl::create_texture(string_ref filename) {
+renderer_impl::create_texture(string_ref const filename) {
     //TODO make this work for not just bmp.
 
     auto const result = SDL_LoadBMP(filename.data());
@@ -655,68 +621,66 @@ renderer_impl::delete_texture(texture& tex) {
 }
 
 //------------------------------------------------------------------------------
-void renderer_impl::set_translation_x(scalar const dx) {
+void
+renderer_impl::set_translation_x(scalar const dx) {
     translation_.x = dx;
 }
 
 //------------------------------------------------------------------------------
-void renderer_impl::set_translation_y(scalar const dy) {
+void
+renderer_impl::set_translation_y(scalar const dy) {
     translation_.y = dy;
 }
 
 //------------------------------------------------------------------------------
-void renderer_impl::set_scale_x(scalar const sx) {
+void
+renderer_impl::set_scale_x(scalar const sx) {
     scale_.x = sx;
 }
 
 //------------------------------------------------------------------------------
-void renderer_impl::set_scale_y(scalar const sy) {
+void
+renderer_impl::set_scale_y(scalar const sy) {
     scale_.y = sy;
 }
 
 //------------------------------------------------------------------------------
-void
-renderer_impl::draw_tile(
-    tile_sheet const& sheet
-  , unsigned const ix
-  , unsigned const iy
-  , scalar   const x
-  , scalar   const y
-) {
-    //auto const src = make_sdl_rect(sheet.at(ix, iy));
+vec2
+renderer_impl::get_scale() const {
+    return scale_;
+}
 
-    //auto const w = src.w;
-    //auto const h = src.h;
-
-    //auto const dst_x = static_cast<int>(scale_.x * (x*w + translation_.x));
-    //auto const dst_y = static_cast<int>(scale_.y * (y*h + translation_.y));
-
-    //auto const dst = SDL_Rect {
-    //    dst_x
-    //  , dst_y
-    //  , static_cast<int>(w * scale_.x)
-    //  , static_cast<int>(h * scale_.y)
-    //};
-
-    //auto const tex = reinterpret_cast<SDL_Texture*>(
-    //    sheet.tile_texture.handle().value
-    //);
-
-    //auto const result = SDL_RenderCopy(
-    //    renderer_.get()
-    //  , tex
-    //  , &src
-    //  , &dst
-    //);
-
-    //if (result != 0) {
-    //    BK_TODO_FAIL(); //TODO
-    //}
+//------------------------------------------------------------------------------
+vec2
+renderer_impl::get_translation() const {
+    return translation_;
 }
 
 //------------------------------------------------------------------------------
 void
-renderer_impl::draw_texture(texture const& tex, rect const src, rect const dst) {
+renderer_impl::draw_texture(
+    texture const& tex
+  , scalar  const  x
+  , scalar  const  y
+) {
+    auto const sdl_tex = tex.handle().as<SDL_Texture*>();
+        
+    SDL_SetTextureBlendMode(sdl_tex, SDL_BLENDMODE_BLEND);
+    SDL_SetTextureColorMod(sdl_tex, 0xFF, 0, 0);
+        
+    SDL_Rect r {static_cast<int>(x), static_cast<int>(y), 0, 0};
+    SDL_QueryTexture(sdl_tex, nullptr, nullptr, &r.w, &r.h);
+
+    SDL_RenderCopy(renderer_.get(), sdl_tex, nullptr, &r);
+}
+
+//------------------------------------------------------------------------------
+void
+renderer_impl::draw_texture(
+    texture const& tex
+  , rect    const  src
+  , rect    const  dst
+) {
     auto const sdl_tex  = tex.handle().as<SDL_Texture*>();
     auto const src_rect = make_sdl_rect(src);
 

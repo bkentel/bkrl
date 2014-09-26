@@ -23,6 +23,9 @@ using std::uint32_t;
 using std::uint16_t;
 using std::uint8_t;
 
+template <typename T>
+using optional = boost::optional<T>;
+
 using hash_t = uint32_t;
 
 using utf8string = std::string;

@@ -78,6 +78,12 @@
     <ClCompile Include="..\src\item.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\config.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\json.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pch.hpp">
@@ -159,6 +165,9 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\player.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\config.hpp">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

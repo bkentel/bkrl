@@ -126,6 +126,12 @@ transitory_text_layout::render(
   , int const  x
   , int const  y
 ) {
+    auto const scale = r.get_scale();
+    auto const trans = r.get_translation();
+
+    r.set_scale(1.0f);
+    r.set_translation(0.0f, 0.0f);
+
     for (auto i = 0u; i < codepoints_.size(); ++i) {
         auto const cp   = unicode::codepoint {codepoints_[i]};
         auto const p    = positions_[i];
@@ -142,4 +148,7 @@ transitory_text_layout::render(
 
         r.draw_texture(*info.t, info.r, rect {left, top, right, bottom});
     }
+
+    r.set_scale(scale);
+    r.set_translation(trans);
 }

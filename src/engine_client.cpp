@@ -6,7 +6,7 @@
 
 #include "font.hpp"
 
-
+#include "config.hpp"
 #include "keyboard.hpp" //temp
 #include "renderer.hpp"
 #include "grid.hpp"
@@ -641,10 +641,13 @@ room_connector::connect(
         open_.pop_back();
         closed_.push_back(p);
 
+        if (p == cur) {
+            continue;
+        }
+
         auto const dir    = p - cur;
         auto const len    = random::uniform_range(gen, 1, 10);
         auto const result = generate_segment_(grid, bounds, cur, dir, len, src_id, dst_id);
-
 
         if (result.second == corridor_result::failed) {
             failures++;
@@ -756,10 +759,10 @@ public:
         player_.move_to(r0.center());
     }
 
-    impl_t()
-      : random_substantive_ {random::true_random()}
-      , random_trivial_     {random::true_random()}
-      , app_ {"./data/key_map.json"}
+    explicit impl_t(config const& conf)
+      : random_substantive_ {conf.substantive_seed}
+      , random_trivial_     {conf.trivial_seed}
+      , app_ {"./data/key_map.json", conf.window_w, conf.window_h, conf.window_x, conf.window_y}
       , renderer_ {app_}
       , font_lib_ {}
       , font_face_ {renderer_, font_lib_, "", 20}
@@ -773,8 +776,8 @@ public:
         init_map();
 
         ////////////////////////////////////////////////////
-        display_w_ = app_.client_width();
-        display_h_ = app_.client_height();
+        display_w_ = static_cast<float>(app_.client_width());
+        display_h_ = static_cast<float>(app_.client_height());
         
         center_on_grid(player_.position());
 
@@ -1063,13 +1066,21 @@ public:
 
     void on_mouse_move(application::mouse_move_info const& info) {
         auto const right = (info.state & (1<<2)) != 0;
-
-        if (right) {
-            scroll_by(info.dx, info.dy);
+        if (!right) {
+            return;
         }
+
+        scroll_by(
+            static_cast<float>(info.dx)
+          , static_cast<float>(info.dy)
+        );
     }
 
     void on_mouse_button(application::mouse_button_info const& info) {
+        if (info.state != application::mouse_button_info::state_t::pressed) {
+            return;
+        }
+        
         auto const q = screen_to_grid(info.x, info.y);
         if (q.x < 0 || q.y < 0) {
             return;
@@ -1134,8 +1145,8 @@ private:
 
 engine_client::~engine_client() = default;
 
-engine_client::engine_client()
-  : impl_ {std::make_unique<impl_t>()}
+engine_client::engine_client(bkrl::config const& conf)
+  : impl_ {std::make_unique<impl_t>(conf)}
 {
 }
 

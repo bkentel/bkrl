@@ -1,0 +1,10 @@
+{
+    "file_type": "LOCALE"
+  , "string_type": "MESSAGE"
+  , "language": "en"
+  , "definitions": [
+        ["DIRECTION_PROMPT", "Which direction?"]
+      , ["NO_DOOR", "You see no door here."]
+ 
+    ]
+}
