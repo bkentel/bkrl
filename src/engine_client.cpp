@@ -1081,6 +1081,10 @@ public:
             return;
         }
         
+        if (info.button != 1) {
+            return;
+        }
+
         auto const q = screen_to_grid(info.x, info.y);
         if (q.x < 0 || q.y < 0) {
             return;
