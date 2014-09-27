@@ -180,7 +180,7 @@ public:
     }
 
     void set_translation(vec2 const trans) {
-        set_scale(trans.x, trans.y);
+        set_translation(trans.x, trans.y);
     }
 
     void set_scale(scalar const sx, scalar const sy) {

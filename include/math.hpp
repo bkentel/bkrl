@@ -9,7 +9,6 @@
 #include "assert.hpp"
 
 namespace bkrl {
-
 ////////////////////////////////////////////////////////////////////////////////
 template <typename T>
 inline T clamp(T const n, T const lo, T const hi) noexcept {

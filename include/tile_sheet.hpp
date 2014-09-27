@@ -86,7 +86,7 @@ public:
         return tile_y_;
     }
 
-    void render(renderer& render, int tile_x, int tile_y, float x, float y) {
+    void render(renderer& render, int tile_x, int tile_y, float x, float y) const {
         auto const w = tile_width();
         auto const h = tile_height();
 
