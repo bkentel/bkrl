@@ -78,6 +78,8 @@ struct bsp_layout_base {
 //==============================================================================
 class bsp_layout : public detail::bsp_layout_base {
 public:
+    BK_NOCOPY(bsp_layout);
+
     static bsp_layout generate(
         random::generator&    gen
       , split_callback const& on_split
@@ -87,8 +89,8 @@ public:
     );
 
     bsp_layout();
-    bsp_layout(bsp_layout const&) = delete;
-    bsp_layout& operator=(bsp_layout const&) = delete;
+    //bsp_layout(bsp_layout const&) = delete;
+    //bsp_layout& operator=(bsp_layout const&) = delete;
     bsp_layout(bsp_layout&& other);
     bsp_layout& operator=(bsp_layout&&);
     ~bsp_layout();

@@ -92,7 +92,13 @@ private:
 //==============================================================================
 class application_impl : public application_base {
 public:
-    explicit application_impl(string_ref keymap);
+    application_impl(
+        string_ref          keymap
+      , optional<uint32_t> width
+      , optional<uint32_t> height
+      , optional<int32_t>  x
+      , optional<int32_t>  y
+    );
 
     handle_t handle() const;
 
@@ -112,7 +118,12 @@ public:
     void on_mouse_button(mouse_button_sink sink) { on_mouse_button_ = sink; }
     void on_mouse_wheel(mouse_wheel_sink sink)   { on_mouse_wheel_  = sink; }
 private:
-    static sdl_unique<SDL_Window> create_window_();
+    static sdl_unique<SDL_Window> create_window_(
+        optional<uint32_t> width
+      , optional<uint32_t> height
+      , optional<int32_t>  x
+      , optional<int32_t>  y
+    );
 
     void handle_event(SDL_Event const& event);
     void handle_event_quit(SDL_QuitEvent const& event);
@@ -139,13 +150,21 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////
 sdl_unique<SDL_Window>
-application_impl::create_window_() {
+application_impl::create_window_(
+    optional<uint32_t> width
+  , optional<uint32_t> height
+  , optional<int32_t>  x
+  , optional<int32_t>  y
+) {
+    constexpr auto default_w = 1280;
+    constexpr auto default_h = 1024;
+
     auto const result = SDL_CreateWindow(
         "BKRL"
-      , SDL_WINDOWPOS_UNDEFINED
-      , SDL_WINDOWPOS_UNDEFINED
-      , 1024
-      , 768
+      , x.get_value_or(SDL_WINDOWPOS_UNDEFINED)
+      , y.get_value_or(SDL_WINDOWPOS_UNDEFINED)
+      , width.get_value_or(default_w)
+      , height.get_value_or(default_h)
       , SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL
     );
 
@@ -158,9 +177,15 @@ application_impl::create_window_() {
 }
 
 //------------------------------------------------------------------------------
-application_impl::application_impl(string_ref const keymap)
+application_impl::application_impl(
+    string_ref const   keymap
+  , optional<uint32_t> width
+  , optional<uint32_t> height
+  , optional<int32_t>  x
+  , optional<int32_t>  y
+)
   : state_   {}
-  , window_  {create_window_()}
+  , window_  {create_window_(width, height, x, y)}
   , key_map_ {keymap}
   , running_ {true}
 {

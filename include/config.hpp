@@ -8,10 +8,10 @@ struct config {
     uint32_t   substantive_seed;
     uint32_t   trivial_seed;
     utf8string font_name;
-    uint32_t   window_w;
-    uint32_t   window_h;
-    int32_t    window_x;
-    int32_t    window_y;
+    optional<uint32_t> window_w;
+    optional<uint32_t> window_h;
+    optional<int32_t>  window_x;
+    optional<int32_t>  window_y;
 };
 
 config load_config(string_ref filename);

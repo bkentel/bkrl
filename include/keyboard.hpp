@@ -8,7 +8,6 @@
 
 #include "types.hpp"
 #include "scancode.hpp"
-#include "command_type.hpp"
 #include "enum_map.hpp"
 
 namespace bkrl {
@@ -122,7 +121,5 @@ inline bool operator<(key_combo const lhs, key_combo const rhs) noexcept {
     return (lhs.key < rhs.key)
         || ((lhs.key == rhs.key) && (lhs.modifier < rhs.modifier));
 }
-
-
 
 } //namespace bkrl

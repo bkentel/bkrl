@@ -12,7 +12,7 @@ application::application(
   , optional<int32_t>  x
   , optional<int32_t>  y
 )
-  : impl_ {std::make_unique<detail::application_impl>(keymap)}
+  : impl_ {std::make_unique<detail::application_impl>(keymap, width, height, x, y)}
 {
 }
 

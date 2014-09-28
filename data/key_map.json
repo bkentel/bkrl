@@ -19,8 +19,9 @@
       , ["south_west", "kb_kp_1"]
       , ["south_east", "kb_kp_3"]
       
-      , ["zoom_in",  "kb_kp_plus"]
-      , ["zoom_out", "kb_kp_minus"]
+      , ["zoom_in",    "kb_kp_plus"]
+      , ["zoom_out",   "kb_kp_minus"]
+      , ["zoom_reset", "kb_home"]
 
       , ["scroll_n", "kb_up",    "ctrl"]
       , ["scroll_s", "kb_down",  "ctrl"]

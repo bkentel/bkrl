@@ -1,6 +1,6 @@
 {
     "file_type": "texture_map"
-  , "file_name": "data/tiles.bmp"
+  , "file_name": "./data/tiles.bmp"
   , "tile_size": [18, 18]
   , "mappings": [
         ["invalid", 0]

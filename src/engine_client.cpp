@@ -182,86 +182,6 @@ get_texture_type(
     return texture_type::invalid;
 }
 
-//------------------------------------------------------------------------------
-//! update the texture type for the tile at @p p.
-//------------------------------------------------------------------------------
-void
-update_texture_type(
-    grid_storage&    grid
-  , grid_point const p
-) {
-    auto const type     = grid.get(attribute::tile_type, p);
-    auto const tex_type = get_texture_type(grid, p, type);
-
-    grid.set(attribute::texture_type, p, tex_type);
-}
-
-//------------------------------------------------------------------------------
-//! update the texture type for every tile in @p grid.
-//------------------------------------------------------------------------------
-void
-update_texture_type(
-    grid_storage& grid
-) {
-    for_each_xy(grid, [&](grid_index const x, grid_index const y) {
-        update_texture_type(grid, grid_point {x, y});
-    });
-}
-
-//------------------------------------------------------------------------------
-//! update the texture id for the tile at @p p using the mappings in @p map.
-//------------------------------------------------------------------------------
-void
-update_texture_id(
-    grid_storage&    grid
-  , tile_map  const& map
-  , grid_point const p
-) {
-    auto const type = grid.get(attribute::texture_type, p);
-    auto const id   = map[type];
-    grid.set(attribute::texture_id, p, id);
-}
-
-//------------------------------------------------------------------------------
-//! update the texture id for every tile in @p grid using the mappings in @p map.
-//------------------------------------------------------------------------------
-void
-update_texture_id(
-    grid_storage&  grid
- , tile_map const& map
-) {
-    for_each_xy(grid, [&](grid_index const x, grid_index const y) {
-        update_texture_id(grid, map, grid_point {x, y});
-    });
-}
-
-
-//------------------------------------------------------------------------------
-//! update the texture type and id for the tile at @p p and each of its 8 neighbors.
-//------------------------------------------------------------------------------
-void
-update_grid(
-    grid_storage&    grid
-  , tile_map const&  map
-  , grid_point const p
-) {
-    auto const x = {p.x - 1, p.x, p.x + 1};
-    auto const y = {p.y - 1, p.y, p.y + 1};
-
-    for (auto iy : y) {
-        for (auto ix : x) {
-            auto const ip = grid_point {ix, iy};
-
-            if (!grid.is_valid(ip)) {
-                break;
-            }
-
-            update_texture_type(grid, ip);
-            update_texture_id(grid, map, ip);
-        }
-    }
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 
 //------------------------------------------------------------------------------
@@ -666,9 +586,11 @@ room_connector::connect(
 ////////////////////////////////////////////////////////////////////////////////
 
 //==============================================================================
+//! One level within the world.
 //==============================================================================
 class level {
 public:
+    //--------------------------------------------------------------------------
     level(random::generator& substantive, random::generator& trivial
         , tile_sheet const& sheet, grid_size width, grid_size height
     )
@@ -677,7 +599,8 @@ public:
     {
         generate_(substantive, trivial);
     }
-
+    
+    //--------------------------------------------------------------------------
     void render(renderer& r) {
         auto const w = grid_.width();
         auto const h = grid_.height();
@@ -695,6 +618,7 @@ public:
         }
     }
 
+    //--------------------------------------------------------------------------
     using adjacency = boost::container::static_vector<ipoint2, 9>;
 
     adjacency check_adjacent(ipoint2 const p, tile_type const type) const {
@@ -715,18 +639,22 @@ public:
         return result;
     }
 
+    //--------------------------------------------------------------------------
     door_data get_door_at(ipoint2 const p) const {
         return {grid_, p};
     }
 
+    //--------------------------------------------------------------------------
     void open_door(ipoint2 const p) {
         set_door_state_(p, true);
     }
     
+    //--------------------------------------------------------------------------
     void close_door(ipoint2 const p) {
         set_door_state_(p, false);
     }
 
+    //--------------------------------------------------------------------------
     bool can_move_to(entity const& e, signed const dx, signed const dy) {
         if (std::abs(dx) > 1 || std::abs(dy) > 1) {
             BK_TODO_FAIL();
@@ -754,12 +682,21 @@ public:
 
         return false;
     }
+
+    ipoint2 down_stair() const noexcept {
+        return stairs_down_;
+    }
+
+    ipoint2 up_stair() const noexcept {
+        return stairs_up_;
+    }
 private:
-    void generate_(random::generator& substantive, random::generator& trivial) {
+    //--------------------------------------------------------------------------
+    void generate_rooms_(random::generator& substantive) {
         generate::simple_room room_gen   {};
         generate::circle_room circle_gen {};
 
-        std::vector<room> rooms;
+        auto& rooms = rooms_;
 
         auto const on_split = [](grid_region const) {
             return true;
@@ -767,16 +704,19 @@ private:
 
         auto const on_room_gen = [&](grid_region const bounds, unsigned const id) {
             rooms.emplace_back(room_gen.generate(substantive, bounds, id));
-            BK_ASSERT(id == rooms.size());
+            
+            BK_ASSERT_SAFE(id == rooms.size());
         };
 
-        grid_region const reserve {20, 20, 40, 40};
+        //TODO temp; for testing only
+        auto const reserve = grid_region {20, 20, 40, 40};
+        auto const params  = bsp_layout::params_t {};
 
-        auto layout = bsp_layout::generate(
+        layout_ = bsp_layout::generate(
             substantive
           , on_split
           , on_room_gen
-          , bsp_layout::params_t {}
+          , params
           , reserve
         );
 
@@ -787,27 +727,68 @@ private:
             grid_.write(room, grid_point {x, y});
         }
 
-        auto const stair_up   = rooms.front().center();
-        auto const stair_down = rooms.back().center();
-
-        grid_.set(attribute::tile_type, stair_up,   tile_type::stair);
-        grid_.set(attribute::tile_type, stair_down, tile_type::stair);
-
         for (auto const& room : rooms) {
             merge_walls(grid_, room.bounds());
         }
+    }
+
+    //--------------------------------------------------------------------------
+    void connect_rooms_(random::generator& substantive) {
+        auto& rooms = rooms_;
 
         room_connector connector;
 
-        layout.connect(substantive, [&](grid_region const& bounds, unsigned const id0, unsigned const id1) {
-            auto const connected = connector.connect(substantive, grid_, bounds, rooms[id0-1], rooms[id1-1]);
+        layout_.connect(substantive, [&](grid_region const& bounds, unsigned const id0, unsigned const id1) {
+            auto const connected = connector.connect(
+                substantive
+              , grid_
+              , bounds
+              , rooms[id0-1]
+              , rooms[id1-1]
+            );
+
             return true;
         });
+    }
+
+    //--------------------------------------------------------------------------
+    void generate_stairs_(random::generator& substantive) {
+        auto& rooms = rooms_;
+
+        //TODO
+        stairs_up_   = rooms.front().center();
+        stairs_down_ = rooms.back().center();
+
+        grid_.set(attribute::tile_type, stairs_up_,   tile_type::stair);
+        grid_.set(attribute::tile_type, stairs_down_, tile_type::stair);
+    }
+
+    //--------------------------------------------------------------------------
+    void place_player_(random::generator& substantive) {
+    }
+
+    //--------------------------------------------------------------------------
+    void place_items_(random::generator& substantive) {
+    }
+
+    //--------------------------------------------------------------------------
+    void place_entities_(random::generator& substantive) {
+    }
+
+    //--------------------------------------------------------------------------
+    void generate_(random::generator& substantive, random::generator& trivial) {
+        generate_rooms_(substantive);
+        connect_rooms_(substantive);
+        generate_stairs_(substantive);
+        place_items_(substantive);
+        place_entities_(substantive);
+        place_player_(substantive);
 
         update_texture_type_();
         update_texture_id_();
     }
 
+    //--------------------------------------------------------------------------
     void update_grid_(ipoint2 const p) {
         static std::array<int, 9> const xi = {-1,  0,  1, -1, 0, 1, -1, 0, 1};
         static std::array<int, 9> const yi = {-1, -1, -1,  0, 0, 0,  1, 1, 1};
@@ -863,6 +844,7 @@ private:
         });
     }
 
+    //--------------------------------------------------------------------------
     void set_door_state_(ipoint2 const p, bool const opened) {
         auto const type = grid_.get(attribute::tile_type, p);
         if (type != tile_type::door) {
@@ -893,20 +875,30 @@ private:
         update_texture_id_(p);
     }
 
+    //--------------------------------------------------------------------------
     tile_map const& get_tile_map_() const {
         BK_ASSERT_DBG(tile_sheet_);
         return tile_sheet_->map();
     }
 
+    //--------------------------------------------------------------------------
     tile_sheet const* tile_sheet_;
     grid_storage      grid_;
+
+    bsp_layout        layout_;
+    std::vector<room> rooms_;
+
+    ipoint2 stairs_up_   {{0, 0}};
+    ipoint2 stairs_down_ {{0, 0}};
 };
 
 //==============================================================================
+//! The "view" into the world; scaling and translation within the viewport.
 //==============================================================================
 class view {
 public:
-    explicit view(tile_sheet const& sheet, float const width, float const height)
+    //--------------------------------------------------------------------------
+    view(tile_sheet const& sheet, float const width, float const height)
       : sheet_     {&sheet}
       , display_w_ {width}
       , display_h_ {height}
@@ -915,6 +907,7 @@ public:
         BK_ASSERT_SAFE(height > 0.0f);
     }
 
+    //--------------------------------------------------------------------------
     void set_size(float const width, float const height) {
         BK_ASSERT_SAFE(width > 0.0f);
         BK_ASSERT_SAFE(height > 0.0f);
@@ -923,14 +916,17 @@ public:
         display_h_ = height;
     }
 
+    //--------------------------------------------------------------------------
     point2 center() const noexcept {
         return {display_w_ / 2.0f, display_h_ / 2.0f};
     }
 
+    //--------------------------------------------------------------------------
     void zoom_by(float const delta, ipoint2 const center) {
         zoom_to(zoom_ + delta, center);
     }
 
+    //--------------------------------------------------------------------------
     void zoom_to(float const z, ipoint2 const center) {
         auto constexpr min =  0.1f;
         auto constexpr max = 10.0f;
@@ -944,14 +940,17 @@ public:
         center_on_grid(center);
     }
 
+    //--------------------------------------------------------------------------
     void zoom_by(float const delta) {
         zoom_to(zoom_ + delta, screen_to_grid(center()));
     }
 
+    //--------------------------------------------------------------------------
     void zoom_to(float const z) {
         zoom_to(z, screen_to_grid(center()));
     }
 
+    //--------------------------------------------------------------------------
     void scroll_by_tile(int const dx, int const dy) {
         auto const z = zoom_;
         auto const w = sheet_->tile_width()  * z;
@@ -960,6 +959,7 @@ public:
         scroll_by(-dx * w, -dy * h);
     }
 
+    //--------------------------------------------------------------------------
     void scroll_by(float const dx, float const dy) {
         auto const z = zoom_;
         BK_ASSERT_DBG(z > 0.0f);
@@ -970,11 +970,13 @@ public:
         scroll_to(scroll_x_ + x, scroll_y_ + y);
     }
 
+    //--------------------------------------------------------------------------
     void scroll_to(float const x, float const y) {
         scroll_x_ = x;
         scroll_y_ = y;
     }
 
+    //--------------------------------------------------------------------------
     ipoint2 screen_to_grid(float const x, float const y) const {
         auto const px = display_x_ + scroll_x_;
         auto const py = display_y_ + scroll_y_;
@@ -988,10 +990,12 @@ public:
         return {ix, iy};
     }
     
+    //--------------------------------------------------------------------------
     ipoint2 screen_to_grid(point2 const p) const {
         return screen_to_grid(p.x, p.y);
     }
 
+    //--------------------------------------------------------------------------
     point2 grid_to_screen(int const x, int const y) const {
         auto const tw = sheet_->tile_width();
         auto const th = sheet_->tile_height();
@@ -1003,10 +1007,12 @@ public:
         };
     }
 
+    //--------------------------------------------------------------------------
     point2 grid_to_screen(ipoint2 const p) const {
         return grid_to_screen(p.x, p.y);
     }
 
+    //--------------------------------------------------------------------------
     void center_on_grid(int const x, int const y) {
         auto const z  = zoom_;
         auto const dw = display_w_;
@@ -1021,16 +1027,20 @@ public:
         display_y_ = dy / z;
     }
 
+    //--------------------------------------------------------------------------
     void center_on_grid(ipoint2 const p) {
         center_on_grid(p.x, p.y);
     }
 
+    //--------------------------------------------------------------------------
     float zoom() const noexcept { return zoom_; }
 
+    //--------------------------------------------------------------------------
     vec2 translation() const noexcept {
         return {display_x_ + scroll_x_, display_y_ + scroll_y_};
     }
 
+    //--------------------------------------------------------------------------
     vec2 scale() const noexcept {
         return {zoom_, zoom_};
     }
@@ -1049,6 +1059,7 @@ private:
 };
 
 //==============================================================================
+//! Polymorphic base for all input modes.
 //==============================================================================
 class input_mode_base {
 public:
@@ -1076,6 +1087,7 @@ private:
 };
 
 //==============================================================================
+//! Direction selection input mode.
 //==============================================================================
 class input_mode_direction final : public input_mode_base {
 public:
@@ -1083,6 +1095,7 @@ public:
 
     using completion_handler = std::function<void (ivec2 dir)>;
 
+    //--------------------------------------------------------------------------
     input_mode_base* enter_mode(completion_handler handler) {
         std::cout << "which direction?\n"; //TODO
 
@@ -1093,6 +1106,7 @@ public:
         return this;
     }
 
+    //--------------------------------------------------------------------------
     void on_command(command_type const cmd) override {
         bool done = true;
         
@@ -1146,9 +1160,11 @@ public:
         }
     }
     
+    //--------------------------------------------------------------------------
     void on_mouse_move(mouse_move_info const& info) override {
     }
     
+    //--------------------------------------------------------------------------
     void on_mouse_button(mouse_button_info const& info) override {
     }
 private:
@@ -1188,69 +1204,9 @@ public:
             }
         });
     }
+
     void init_map() {
-        //auto& gen = random_substantive_;
-
-        //generate::simple_room room_gen {};
-        //generate::circle_room circle_gen {};
-
-        //std::vector<room> rooms;
-
-        //auto const on_split = [](grid_region const) {
-        //    return true;
-        //};
-
-        //auto const on_room_gen = [&rooms, &gen, &room_gen](grid_region const bounds, unsigned const id) {
-        //    rooms.emplace_back(room_gen.generate(gen, bounds, id));
-        //    BK_ASSERT(id == rooms.size());
-        //};
-
-        //grid_region const reserve {20, 20, 40, 40};
-
-        //auto layout = bsp_layout::generate(
-        //    gen
-        //  , on_split
-        //  , on_room_gen
-        //  , bsp_layout::params_t {}
-        //  , reserve
-        //);
-
-        //for (auto const& room : rooms) {
-        //    auto const x = room.bounds().left;
-        //    auto const y = room.bounds().top;
-
-        //    map_.write(room, grid_point {x, y});
-        //}
-
-        //auto const stair_up   = rooms.front().center();
-        //auto const stair_down = rooms.back().center();
-
-        //map_.set(attribute::tile_type, stair_up, tile_type::stair);
-        //map_.set(attribute::tile_type, stair_down, tile_type::stair);
-
-        //for (auto const& room : rooms) {
-        //    merge_walls(map_, room.bounds());
-        //}
-
-        //room_connector connector;
-
-        //layout.connect(gen, [&](grid_region const& bounds, unsigned const id0, unsigned const id1) {
-        //    auto const connected = connector.connect(gen, map_, bounds, rooms[id0-1], rooms[id1-1]);
-        //    if (connected) {
-        //        //std::cout << "connected " << id0 << " -> " << id1 << std::endl;
-        //    } else {
-        //        //std::cout << "failed    " << id0 << " -> " << id1 << std::endl;
-        //    }
-
-        //    return true;
-        //});
-
-        //update_texture_type(map_);
-        //update_texture_id(map_, sheet_.map());
-
-        ////TODO temp
-        //auto const& r0 = rooms[0];
-        //player_.move_to(r0.center());
+        player_.move_to(level_.up_stair());
     }
 
     explicit impl_t(config const& conf)
@@ -1394,6 +1350,10 @@ public:
         view_.zoom_to(view_.zoom() * 0.9f);
     }
 
+    void do_zoom_reset() {
+        view_.zoom_to(1.0f, player_.position());
+    }
+
     void on_command(command_type const cmd) {
         if (input_mode_) {
             input_mode_->on_command(cmd);
@@ -1448,6 +1408,9 @@ public:
             break;
         case command_type::zoom_out :
             do_zoom_out();
+            break;
+        case command_type::zoom_reset :
+            do_zoom_reset();
             break;
         default:
             break;

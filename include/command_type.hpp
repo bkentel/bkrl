@@ -30,6 +30,7 @@ enum class command_type : uint16_t {
 
   , zoom_in
   , zoom_out
+  , zoom_reset
 
   , scroll_n
   , scroll_s

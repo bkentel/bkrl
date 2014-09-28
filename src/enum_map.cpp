@@ -448,6 +448,7 @@ namespace {
 
         BK_ENUMMAP_ADD_STRING(result, command, zoom_in);
         BK_ENUMMAP_ADD_STRING(result, command, zoom_out);
+        BK_ENUMMAP_ADD_STRING(result, command, zoom_reset);
 
         BK_ENUMMAP_ADD_STRING(result, command, scroll_n);
         BK_ENUMMAP_ADD_STRING(result, command, scroll_s);

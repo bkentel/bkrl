@@ -3,8 +3,7 @@
 #include "util.hpp"
 #include "assert.hpp"
 #include "algorithm.hpp"
-
-#include "json11/json11.hpp"
+#include "json.hpp"
 
 using namespace bkrl;
 
@@ -13,8 +12,7 @@ using namespace bkrl;
 ////////////////////////////////////////////////////////////////////////////////
 class tile_map::impl_t {
 public:
-    using json_value = json11::Json;
-    using cref       = json_value const&;
+    using cref       = json::cref;
     using value_type = std::pair<texture_type, texture_id>;
 
     explicit impl_t(std::string const& source);
@@ -86,9 +84,7 @@ tile_map::impl_t::impl_t(std::string const& source) {
 //------------------------------------------------------------------------------
 void
 tile_map::impl_t::rule_root(cref value) {
-    if (!value.is_object()) {
-        BK_TODO_FAIL();
-    }
+    json::require_object(value);
 
     rule_file_type(value);
     rule_file_name(value);
@@ -97,50 +93,25 @@ tile_map::impl_t::rule_root(cref value) {
 }
 
 //------------------------------------------------------------------------------
-void
-tile_map::impl_t::rule_file_type(cref value) {
-    static std::string const key {"file_type"};
-    static std::string const valid_file_type {"texture_map"};
-
-    cref file_type = value[key];
-    if (!file_type.is_string()) {
-        BK_TODO_FAIL();
-    }
-
-    if (file_type != valid_file_type) {
-        BK_TODO_FAIL();
-    }
+void tile_map::impl_t::rule_file_type(cref value) {
+    static utf8string const expected {"texture_map"};
+    json::common::get_filetype(value, expected);
 }
 
 //------------------------------------------------------------------------------
-void
-tile_map::impl_t::rule_file_name(cref value) {
-    static std::string const key {"file_name"};
-
-    cref file_name = value[key];
-    if (!file_name.is_string()) {
-        BK_TODO_FAIL();
-    }
-
-    filename_ = file_name.string_value();
+void tile_map::impl_t::rule_file_name(cref value) {
+    static utf8string const field {"file_name"};
+    filename_ = json::require_string(value[field]).to_string();
 }
 
 //------------------------------------------------------------------------------
-void
-tile_map::impl_t::rule_tile_size(cref value) {
-    static std::string const key {"tile_size"};
+void tile_map::impl_t::rule_tile_size(cref value) {
+    static utf8string const field {"tile_size"};
 
-    cref size = value[key];
-    if (!size.is_array()) {
-        BK_TODO_FAIL();
-    }
+    cref size = json::require_array(value[field], 2, 2);
 
-    if (size.array_items().size() != 2) {
-        BK_TODO_FAIL();
-    }
-
-    auto const w = size[0].int_value();
-    auto const h = size[1].int_value();
+    auto const w = json::require_int(size[0]);
+    auto const h = json::require_int(size[1]);
 
     if (w <= 0) {
         BK_TODO_FAIL();
@@ -155,42 +126,22 @@ tile_map::impl_t::rule_tile_size(cref value) {
 }
 
 //------------------------------------------------------------------------------
-void
-tile_map::impl_t::rule_mappings(cref value) {
-    static std::string const key {"mappings"};
+void tile_map::impl_t::rule_mappings(cref value) {
+    static utf8string const field {"mappings"};
 
-    cref mappings = value[key];
-    if (!mappings.is_array()) {
-        BK_TODO_FAIL();
-    }
+    cref mappings = json::require_array(value[field]);
 
-    for (auto const& mapping_pair : mappings.array_items()) {
+    for (cref mapping_pair : mappings.array_items()) {
         rule_mapping_pair(mapping_pair);
     }
 }
 
 //------------------------------------------------------------------------------
-void
-tile_map::impl_t::rule_mapping_pair(cref value) {
-    if (!value.is_array()) {
-        BK_TODO_FAIL();
-    }
+void tile_map::impl_t::rule_mapping_pair(cref value) {
+    cref array = json::require_array(value, 2, 2);
     
-    if (value.array_items().size() != 2) {
-        BK_TODO_FAIL();
-    }
-
-    auto const& array = value.array_items();
-    if (!array[0].is_string()) {
-        BK_TODO_FAIL();
-    }
-
-    if (!array[1].is_number()) {
-        BK_TODO_FAIL();
-    }
-
-    auto const& str  = array[0].string_value();
-    auto const  id   = array[1].int_value();
+    auto const& str  = json::require_string(array[0]);
+    auto const  id   = json::require_int(array[1]);
     auto const  hash = slash_hash32(str);
     auto const  e    = enum_map<texture_type>::get(hash);
 

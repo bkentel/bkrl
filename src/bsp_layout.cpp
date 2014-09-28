@@ -10,6 +10,11 @@ bsp_layout::bsp_layout(bsp_layout&& other)
 {
 }
 
+bsp_layout& bsp_layout::operator=(bsp_layout&& rhs) {
+    std::swap(impl_, rhs.impl_);
+    return *this;
+}
+
 bsp_layout::bsp_layout() = default;
 
 bsp_layout::bsp_layout(
