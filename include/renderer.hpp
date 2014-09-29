@@ -22,6 +22,7 @@ class application;
 class renderer;
 class tile_sheet;
 class texture;
+class config;
 
 namespace detail { class renderer_impl; }
 namespace detail { class application_impl; }
@@ -70,14 +71,7 @@ struct application_base {
 //==============================================================================
 class application : public detail::application_base {
 public:
-    explicit application(
-        string_ref keymap
-      , optional<uint32_t> width
-      , optional<uint32_t> height
-      , optional<int32_t>  x
-      , optional<int32_t>  y
-    );
-
+    application(string_ref keymap, config const& cfg);
     ~application();
 
     handle_t handle() const;

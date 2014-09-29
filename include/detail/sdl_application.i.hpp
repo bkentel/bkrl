@@ -5,6 +5,7 @@
 #include "renderer.hpp"
 #include "tile_sheet.hpp"
 #include "keyboard.hpp"
+#include "config.hpp"
 
 namespace bkrl { namespace detail {
 
@@ -92,13 +93,7 @@ private:
 //==============================================================================
 class application_impl : public application_base {
 public:
-    application_impl(
-        string_ref          keymap
-      , optional<uint32_t> width
-      , optional<uint32_t> height
-      , optional<int32_t>  x
-      , optional<int32_t>  y
-    );
+    application_impl(string_ref keymap, config const& cfg);
 
     handle_t handle() const;
 
@@ -178,14 +173,11 @@ application_impl::create_window_(
 
 //------------------------------------------------------------------------------
 application_impl::application_impl(
-    string_ref const   keymap
-  , optional<uint32_t> width
-  , optional<uint32_t> height
-  , optional<int32_t>  x
-  , optional<int32_t>  y
+    string_ref const  keymap
+  , config     const& cfg
 )
   : state_   {}
-  , window_  {create_window_(width, height, x, y)}
+  , window_  {create_window_(cfg.window_w, cfg.window_h, cfg.window_x, cfg.window_y)}
   , key_map_ {keymap}
   , running_ {true}
 {

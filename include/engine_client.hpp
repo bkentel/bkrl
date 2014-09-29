@@ -10,7 +10,7 @@
 namespace bkrl {
 
 class renderer;
-struct config;
+class config;
 
 //==============================================================================
 //! engine_client

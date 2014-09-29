@@ -513,7 +513,10 @@ bsp_layout_impl::connect(
     auto const which0 = random::uniform_range(gen, lhs.lo, lhs.hi - 1);
     auto const which1 = random::uniform_range(gen, rhs.lo, rhs.hi - 1);
 
-    on_connect_(node.region, which0 + 1, which1 + 1);
+    auto const id0 = static_cast<room_id>(which0 + 1);
+    auto const id1 = static_cast<room_id>(which1 + 1);
+
+    on_connect_(node.region, id0, id1);
 
     BK_ASSERT(lhs.hi == rhs.lo);
 

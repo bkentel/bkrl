@@ -86,16 +86,16 @@ public:
         return tile_y_;
     }
 
-    void render(renderer& render, int tile_x, int tile_y, float x, float y) const {
+    void render(renderer& render, int const tile_x, int const tile_y, int const x, int const y) const {
         auto const w = tile_width();
         auto const h = tile_height();
 
         auto const src_r = get_rect(tile_x, tile_y);
         auto const dst_r = rect {
-            x * w
-          , y * h
-          , x * w + w
-          , y * h + h
+            static_cast<float>(x * w)
+          , static_cast<float>(y * h)
+          , static_cast<float>(x * w + w)
+          , static_cast<float>(y * h + h)
         };
 
         render.draw_texture(tile_texture_, src_r, dst_r);

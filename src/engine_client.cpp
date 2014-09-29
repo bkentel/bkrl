@@ -17,7 +17,17 @@
 
 using bkrl::engine_client;
 using bkrl::command_type;
+using bkrl::string_ref;
+
 namespace random = bkrl::random;
+
+namespace {
+    static string_ref const file_key_map           {R"(./data/key_map.json)"};
+    static string_ref const file_texture_map       {R"(./data/texture_map.json)"};
+    static string_ref const file_materials         {R"(./data/materials.def)"};
+    static string_ref const file_materials_strings {R"(./data/locale/en/materials.def)"};
+    static string_ref const file_messages          {R"(./data/key_map.json)"};
+}
 
 namespace bkrl {
 
@@ -756,7 +766,9 @@ private:
     }
 
     //--------------------------------------------------------------------------
-    void generate_stairs_(random::generator& substantive) {
+    void generate_stairs_(
+        random::generator& //substantive //TODO
+    ) {
         auto& rooms = rooms_;
 
         //TODO
@@ -774,19 +786,28 @@ private:
     }
 
     //--------------------------------------------------------------------------
-    void place_player_(random::generator& substantive) {
+    void place_player_(
+        random::generator& //substantive //TODO
+    ) {
     }
 
     //--------------------------------------------------------------------------
-    void place_items_(random::generator& substantive) {
+    void place_items_(
+        random::generator& //substantive //TODO
+    ) {
     }
 
     //--------------------------------------------------------------------------
-    void place_entities_(random::generator& substantive) {
+    void place_entities_(
+        random::generator& //substantive //TODO
+    ) {
     }
 
     //--------------------------------------------------------------------------
-    void generate_(random::generator& substantive, random::generator& trivial) {
+    void generate_(
+        random::generator& substantive
+      , random::generator& //trivial //TODO
+    ) {
         generate_rooms_(substantive);
         connect_rooms_(substantive);
         generate_stairs_(substantive);
@@ -915,6 +936,14 @@ public:
     {
         BK_ASSERT_SAFE(width > 0.0f);
         BK_ASSERT_SAFE(height > 0.0f);
+    }
+
+    //--------------------------------------------------------------------------
+    template <typename T>
+    view(tile_sheet const& sheet, T const width, T const height)
+      : view {sheet, static_cast<float>(width), static_cast<float>(height)}
+    {
+        static_assert(std::is_arithmetic<T>::value, "")    ;
     }
 
     //--------------------------------------------------------------------------
@@ -1167,6 +1196,12 @@ private:
 //==============================================================================
 struct engine_client::impl_t {
 public:
+    enum : int {
+        level_w   = 100
+      , level_h   = 100
+      , font_size = 20
+    };
+
     void init_sinks() {
         app_.on_command([&](command_type const cmd) {
             on_command(cmd);
@@ -1198,34 +1233,40 @@ public:
     }
 
     void print_message(string_ref const msg) {
-        last_message_ = transitory_text_layout {font_face_, msg, 1024, 100};
+        constexpr auto width  = 1024;
+        constexpr auto height = 100;
+
+        last_message_ = transitory_text_layout {font_face_, msg, width, height};
     }
 
-    explicit impl_t(config const& conf)
-      : random_substantive_ {conf.substantive_seed}
-      , random_trivial_     {conf.trivial_seed}
-      , app_ {"./data/key_map.json", conf.window_w, conf.window_h, conf.window_x, conf.window_y}
-      , renderer_ {app_}
-      , font_lib_ {}
-      , font_face_ {renderer_, font_lib_, "", 20}
-      , last_message_ {font_face_, "Welcome.", 1024, 100}
-      , sheet_ {"./data/texture_map.json", renderer_}
-      , view_ {sheet_, static_cast<float>(app_.client_width()), static_cast<float>(app_.client_height())}
-      , level_ {random_substantive_, random_trivial_, sheet_, 100, 100}
-
-      , imode_direction_ {[&] {input_mode_ = nullptr;}}
-
-      , materials_ {string_ref {"./data/materials.def"}}
-      , materials_strings_ {string_ref {"./data/locale/en/materials.def"}}
+    explicit impl_t(config const& cfg)
+      : random_substantive_ {cfg.substantive_seed}
+      , random_trivial_     {cfg.trivial_seed}
+      , app_                {file_key_map, cfg}
+      , renderer_           {app_}
+      , font_lib_           {}
+      , font_face_          {renderer_, font_lib_, "", font_size}
+      , last_message_       {}
+      , sheet_              {file_texture_map, renderer_}
+      , view_               {sheet_, app_.client_width(), app_.client_height()}
+      , level_              {random_substantive_, random_trivial_, sheet_, level_w, level_h}
+      , player_             {}
+      , input_mode_         {nullptr}
+      , imode_direction_    {[&] {input_mode_ = nullptr;}}
+      , materials_          {file_materials}
+      , materials_strings_  {file_materials_strings}
     {
         ////////////////////////////////////////////////////
         init_sinks();
         init_map();
 
         ////////////////////////////////////////////////////
-        
         view_.center_on_grid(player_.position());
 
+        ////////////////////////////////////////////////////
+        print_message("Welcome.");
+
+        ////////////////////////////////////////////////////
         while (app_.is_running()) {
             app_.do_all_events();
             render(renderer_);
@@ -1466,7 +1507,7 @@ private:
 
     player player_;
 
-    input_mode_base* input_mode_ = nullptr;
+    input_mode_base* input_mode_;
     input_mode_direction imode_direction_;
 
     definition<item_material_def>       materials_;

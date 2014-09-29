@@ -4,7 +4,8 @@
 
 namespace bkrl {
 
-struct config {
+class config {
+public:
     uint32_t   substantive_seed;
     uint32_t   trivial_seed;
     utf8string font_name;

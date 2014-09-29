@@ -230,7 +230,11 @@ library::operator FT_Library() const {
 ////////////////////////////////////////////////////////////////////////////////
 
 //------------------------------------------------------------------------------
-face::face(FT_Library lib, string_ref const filename, unsigned size) {
+face::face(
+    FT_Library const lib
+  , string_ref const //filename //TODO
+  , unsigned   const size
+) {
     FT_Face face {};
     auto error = FT_New_Face(lib, R"(C:\windows\fonts\meiryo.ttc)", 0, &face);
     if (error) {

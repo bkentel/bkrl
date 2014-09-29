@@ -5,14 +5,8 @@ using namespace bkrl;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-application::application(
-    string_ref keymap
-  , optional<uint32_t> width
-  , optional<uint32_t> height
-  , optional<int32_t>  x
-  , optional<int32_t>  y
-)
-  : impl_ {std::make_unique<detail::application_impl>(keymap, width, height, x, y)}
+application::application(string_ref keymap, config const& cfg)
+  : impl_ {std::make_unique<detail::application_impl>(keymap, cfg)}
 {
 }
 

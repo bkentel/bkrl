@@ -150,12 +150,13 @@ private:
 //==============================================================================
 class transitory_text_layout {
 public:
+    transitory_text_layout() = default;
     transitory_text_layout(font_face& face, string_ref string, int w = 0, int h = 0);
 
     void render(renderer& r, font_face& face, int x, int y);
 private:
-    int w_;
-    int h_;
+    int w_ = 0;
+    int h_ = 0;
 
     std::vector<codepoint_t> codepoints_;
     std::vector<ipoint2>     positions_;
