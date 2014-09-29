@@ -19,6 +19,9 @@
       , ["south_west", "kb_kp_1"]
       , ["south_east", "kb_kp_3"]
       
+      , ["up",   "kb_comma",  "shift"]
+      , ["down", "kb_period", "shift"]
+      
       , ["zoom_in",    "kb_kp_plus"]
       , ["zoom_out",   "kb_kp_minus"]
       , ["zoom_reset", "kb_home"]

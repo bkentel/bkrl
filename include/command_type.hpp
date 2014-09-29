@@ -28,6 +28,9 @@ enum class command_type : uint16_t {
   , south_west
   , south_east
 
+  , up
+  , down
+
   , zoom_in
   , zoom_out
   , zoom_reset

@@ -446,6 +446,9 @@ namespace {
         BK_ENUMMAP_ADD_STRING(result, command, south_west);
         BK_ENUMMAP_ADD_STRING(result, command, south_east);
 
+        BK_ENUMMAP_ADD_STRING(result, command, up);
+        BK_ENUMMAP_ADD_STRING(result, command, down);
+
         BK_ENUMMAP_ADD_STRING(result, command, zoom_in);
         BK_ENUMMAP_ADD_STRING(result, command, zoom_out);
         BK_ENUMMAP_ADD_STRING(result, command, zoom_reset);

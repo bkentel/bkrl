@@ -4,7 +4,10 @@
   , "language": "en"
   , "definitions": [
         ["DIRECTION_PROMPT", "Which direction?"]
-      , ["NO_DOOR", "You see no door here."]
+      , ["CANCELED",         "Cancelled."]
+      , ["DOOR_NO_DOOR",     "You see no door here."]
+      , ["DOOR_IS_OPEN",     "There is nothing to open."]
+      , ["DOOR_IS_CLOSED",   "There is nothing to close."]
  
     ]
 }

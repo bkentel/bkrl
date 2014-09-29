@@ -425,7 +425,8 @@ inline uint8_t check_grid_block9(
 
 ///
 
-struct door_data {
+class door_data {
+public:
     enum flag : uint32_t {
         is_open_flag
       , is_locked_flag
@@ -463,5 +464,51 @@ struct door_data {
 private:
     std::bitset<sizeof(grid_data_value)*8> value_;
 };
+
+static_assert(sizeof(door_data) == sizeof(grid_data_value), "");
+
+class stair_data {
+public:
+    enum class type : uint8_t {
+        stair_up, stair_down
+    };
+
+    explicit stair_data(type const stair_type)
+      : value_ {0}
+    {
+        data_.type = stair_type;
+    }
+
+    stair_data(grid_storage const& grid, grid_point const where)
+      : value_ {grid.get(attribute::data, where).value}
+    {
+        BK_ASSERT_DBG(grid.get(attribute::tile_type, where) == tile_type::stair);
+        BK_ASSERT_DBG(data_.type == type::stair_up || data_.type == type::stair_down);
+    }
+
+    bool is_down() const noexcept {
+        return data_.type == type::stair_down;
+    }
+
+    bool is_up() const noexcept {
+        return data_.type == type::stair_up;
+    }
+
+    operator grid_data() const noexcept {
+        return grid_data {value_};
+    }
+private:
+    struct data_t {
+        type    type;
+        uint8_t reserved[3];
+    };
+
+    union {
+        data_t          data_;
+        grid_data_value value_;
+    };
+};
+
+static_assert(sizeof(stair_data) == sizeof(grid_data_value), "");
 
 } //namespace bkrl

@@ -1,13 +1,9 @@
 ﻿#pragma execution_character_set("utf-8")
 
 #include "item.hpp"
-
 #include "engine_client.hpp"
-
 #include "font.hpp"
-
 #include "config.hpp"
-#include "keyboard.hpp" //temp
 #include "renderer.hpp"
 #include "grid.hpp"
 #include "command_type.hpp"
@@ -39,7 +35,6 @@ get_texture_type(
   , grid_point   const  //p
 ) {
     BK_TODO_FAIL();
-    //return texture_type::invalid;
 }
 
 //------------------------------------------------------------------------------
@@ -99,7 +94,6 @@ get_texture_type<tile_type::door>(
     }
 
     BK_TODO_FAIL();
-    //return texture_type::invalid;
 }
 
 //------------------------------------------------------------------------------
@@ -111,7 +105,17 @@ get_texture_type<tile_type::stair>(
     grid_storage const& grid
   , grid_point   const  p
 ) {
-    return texture_type::stair_down;
+    stair_data const stair {grid, p};
+
+    if (stair.is_down()) {
+        return texture_type::stair_down;
+    }
+
+    if (stair.is_up()) {
+        return texture_type::stair_up;
+    }
+
+    BK_TODO_FAIL();
 }
 
 //------------------------------------------------------------------------------
@@ -622,8 +626,8 @@ public:
     using adjacency = boost::container::static_vector<ipoint2, 9>;
 
     adjacency check_adjacent(ipoint2 const p, tile_type const type) const {
-        static std::array<int, 9> const xi = {-1,  0,  1, -1, 0, 1, -1, 0, 1};
-        static std::array<int, 9> const yi = {-1, -1, -1,  0, 0, 0,  1, 1, 1};
+        auto const& xi = x_off9;
+        auto const& yi = y_off9;
 
         adjacency result;
 
@@ -761,6 +765,12 @@ private:
 
         grid_.set(attribute::tile_type, stairs_up_,   tile_type::stair);
         grid_.set(attribute::tile_type, stairs_down_, tile_type::stair);
+
+        stair_data const up   {stair_data::type::stair_up};
+        stair_data const down {stair_data::type::stair_down};
+
+        grid_.set(attribute::data, stairs_up_,   up);
+        grid_.set(attribute::data, stairs_down_, down);
     }
 
     //--------------------------------------------------------------------------
@@ -790,8 +800,8 @@ private:
 
     //--------------------------------------------------------------------------
     void update_grid_(ipoint2 const p) {
-        static std::array<int, 9> const xi = {-1,  0,  1, -1, 0, 1, -1, 0, 1};
-        static std::array<int, 9> const yi = {-1, -1, -1,  0, 0, 0,  1, 1, 1};
+        auto const& xi = x_off9;
+        auto const& yi = y_off9;
         
         for (size_t i = 0; i < 9; ++i) {
             ipoint2 const q {p.x + xi[i], p.y + yi[i]};
@@ -1093,12 +1103,10 @@ class input_mode_direction final : public input_mode_base {
 public:
     using input_mode_base::input_mode_base;
 
-    using completion_handler = std::function<void (ivec2 dir)>;
+    using completion_handler = std::function<void (bool cancel, ivec2 dir)>;
 
     //--------------------------------------------------------------------------
     input_mode_base* enter_mode(completion_handler handler) {
-        std::cout << "which direction?\n"; //TODO
-
         handler_ = std::move(handler);
         dir_ = ivec2 {0, 0};
         ok_  = false;
@@ -1115,36 +1123,19 @@ public:
             done = false;
             break;
         case command_type::cancel :
-            std::cout << "cancelled.\n"; //TODO
             break;
         case command_type::here :
             ok_ = true;
             dir_ = ivec2 {0, 0};
             break;
-        case command_type::north :
-            dir_ = ivec2 {0, -1};
-            break;
-        case command_type::south :
-            dir_ = ivec2 {0, 1};
-            break;
-        case command_type::east :
-            dir_ = ivec2 {1, 0};
-            break;
-        case command_type::west :
-            dir_ = ivec2 {-1, 0};
-            break;
-        case command_type::north_west :
-            dir_ = ivec2 {-1, -1};
-            break;
-        case command_type::north_east :
-            dir_ = ivec2 {1, -1};
-            break;
-        case command_type::south_west :
-            dir_ = ivec2 {-1, 1};
-            break;
-        case command_type::south_east :
-            dir_ = ivec2 {1, 1};
-            break;
+        case command_type::north      : dir_ = ivec2 { 0, -1}; break;
+        case command_type::south      : dir_ = ivec2 { 0,  1}; break;
+        case command_type::east       : dir_ = ivec2 { 1,  0}; break;
+        case command_type::west       : dir_ = ivec2 {-1,  0}; break;
+        case command_type::north_west : dir_ = ivec2 {-1, -1}; break;
+        case command_type::north_east : dir_ = ivec2 { 1, -1}; break;
+        case command_type::south_west : dir_ = ivec2 {-1,  1}; break;
+        case command_type::south_east : dir_ = ivec2 { 1,  1}; break;
         }
 
         if (dir_.x || dir_.y) {
@@ -1152,10 +1143,7 @@ public:
         }
 
         if (done) {
-            if (ok_) {
-                handler_(dir_);
-            }
-
+            handler_(!ok_, dir_);
             do_on_exit_();
         }
     }
@@ -1209,6 +1197,10 @@ public:
         player_.move_to(level_.up_stair());
     }
 
+    void print_message(string_ref const msg) {
+        last_message_ = transitory_text_layout {font_face_, msg, 1024, 100};
+    }
+
     explicit impl_t(config const& conf)
       : random_substantive_ {conf.substantive_seed}
       , random_trivial_     {conf.trivial_seed}
@@ -1216,6 +1208,7 @@ public:
       , renderer_ {app_}
       , font_lib_ {}
       , font_face_ {renderer_, font_lib_, "", 20}
+      , last_message_ {font_face_, "Welcome.", 1024, 100}
       , sheet_ {"./data/texture_map.json", renderer_}
       , view_ {sheet_, static_cast<float>(app_.client_width()), static_cast<float>(app_.client_height())}
       , level_ {random_substantive_, random_trivial_, sheet_, 100, 100}
@@ -1250,8 +1243,7 @@ public:
         auto const player_pos = player_.position();
         sheet_.render(r, 1, 0, player_pos.x, player_pos.y);
 
-        transitory_text_layout layout {font_face_, R"(Hello World! and みさこ)", 100, 500};
-        layout.render(r, font_face_, 1, 1);
+        last_message_.render(r, font_face_, 1, 1);
 
         r.present();
     }
@@ -1262,7 +1254,7 @@ public:
         //get all adjacent doors
         auto adjacent = level_.check_adjacent(p, tile_type::door);
         if (adjacent.empty()) {
-            std::cout << "no doors here!\n"; //TODO
+            print_message("No doors here.");
             return;
         }
 
@@ -1278,11 +1270,10 @@ public:
         //the number of eligible doors
         auto const n = std::distance(beg, it);
         if (n == 0) {
-            std::cout << "all the doors are already "; //TODO
             if (opened) {
-                std::cout << "open\n";
+                print_message("There is nothing to open.");
             } else {
-                std::cout << "closed\n";
+                print_message("There is nothing to close.");
             }
 
             return;
@@ -1298,7 +1289,7 @@ public:
         
         if (n == 1) {
             if (*beg == p) {
-                std::cout << "you're in the way!\n"; //TODO
+                print_message("You are in the way.");
             } else {
                 set_state(*beg);
             }
@@ -1306,9 +1297,15 @@ public:
             return;
         }
 
-        input_mode_ = imode_direction_.enter_mode([p, set_state](ivec2 const dir) {
+        print_message("Which direction?");
+        input_mode_ = imode_direction_.enter_mode([this, p, set_state](bool const cancel, ivec2 const dir) {
+            if (cancel) {
+                print_message("Cancelled.");
+                return;
+            }
+            
             if (dir.x == 0 && dir.y == 0) {
-                std::cout << "you're in the way!\n"; //TODO
+                print_message("You are in the way.");
                 return;
             }
 
@@ -1354,6 +1351,14 @@ public:
         view_.zoom_to(1.0f, player_.position());
     }
 
+    void do_go_up() {
+        std::cout << "up\n";
+    }
+
+    void do_go_down() {
+        std::cout << "down\n";
+    }
+
     void on_command(command_type const cmd) {
         if (input_mode_) {
             input_mode_->on_command(cmd);
@@ -1361,57 +1366,25 @@ public:
         }
 
         switch (cmd) {
-        case command_type::open :
-            do_open();
-            break;
-        case command_type::close :
-            do_close();
-            break;
-        case command_type::scroll_n :
-            do_scroll(0, 1);
-            break;
-        case command_type::scroll_s :
-            do_scroll(0, -1);
-            break;
-        case command_type::scroll_e :
-            do_scroll(-1, 0);
-            break;
-        case command_type::scroll_w :
-            do_scroll(1, 0);
-            break;
-        case command_type::north :
-            do_move_player(0, -1);
-            break;
-        case command_type::south :
-            do_move_player(0, 1);
-            break;
-        case command_type::east :
-            do_move_player(1, 0);
-            break;
-        case command_type::west :
-            do_move_player(-1, 0);
-            break;
-        case command_type::north_west :
-            do_move_player(-1, -1);
-            break;
-        case command_type::north_east :
-            do_move_player(1, -1);
-            break;
-        case command_type::south_west :
-            do_move_player(-1, 1);
-            break;
-        case command_type::south_east :
-            do_move_player(1, 1);
-            break;
-        case command_type::zoom_in :
-            do_zoom_in();
-            break;
-        case command_type::zoom_out :
-            do_zoom_out();
-            break;
-        case command_type::zoom_reset :
-            do_zoom_reset();
-            break;
+        case command_type::open       : do_open(); break;
+        case command_type::close      : do_close(); break;
+        case command_type::scroll_n   : do_scroll( 0,  1); break;
+        case command_type::scroll_s   : do_scroll( 0, -1); break;
+        case command_type::scroll_e   : do_scroll(-1,  0); break;
+        case command_type::scroll_w   : do_scroll( 1,  0); break;
+        case command_type::north      : do_move_player (0, -1); break;
+        case command_type::south      : do_move_player( 0,  1); break;
+        case command_type::east       : do_move_player( 1,  0); break;
+        case command_type::west       : do_move_player(-1,  0); break;
+        case command_type::north_west : do_move_player(-1, -1); break;
+        case command_type::north_east : do_move_player( 1, -1); break;
+        case command_type::south_west : do_move_player(-1,  1); break;
+        case command_type::south_east : do_move_player( 1,  1); break;
+        case command_type::up         : do_go_up(); break;
+        case command_type::down       : do_go_down(); break;
+        case command_type::zoom_in    : do_zoom_in(); break;
+        case command_type::zoom_out   : do_zoom_out(); break;
+        case command_type::zoom_reset : do_zoom_reset(); break;
         default:
             break;
         }
@@ -1473,7 +1446,6 @@ public:
         //std::cout << "===================="                      << "\n";
         //std::cout << std::endl;
     }
-    ////////////////////////////////////////////////////////////////////////////
 private:
     random::generator random_substantive_;
     random::generator random_trivial_;
@@ -1484,6 +1456,8 @@ private:
     font_libary font_lib_;
     font_face   font_face_;
 
+    transitory_text_layout last_message_;
+
     tile_sheet sheet_;
 
     view   view_;
@@ -1493,7 +1467,6 @@ private:
     player player_;
 
     input_mode_base* input_mode_ = nullptr;
-
     input_mode_direction imode_direction_;
 
     definition<item_material_def>       materials_;
