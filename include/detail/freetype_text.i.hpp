@@ -142,7 +142,7 @@ public:
     BK_NOCOPY(bitmap_glyph);
     BK_DEFAULT_MOVE(bitmap_glyph);
 
-    bitmap_glyph(glyph& source);
+    bitmap_glyph(glyph const& source);
 
     void render(
         uint8_t* const buffer
@@ -402,7 +402,7 @@ glyph::operator bool() const noexcept {
 ////////////////////////////////////////////////////////////////////////////////
 
 //------------------------------------------------------------------------------
-bitmap_glyph::bitmap_glyph(glyph& source) {
+bitmap_glyph::bitmap_glyph(glyph const& source) {
     if (!source) {
         return;
     }

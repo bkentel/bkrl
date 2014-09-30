@@ -10,7 +10,7 @@ namespace bkrl {
 class entity {
 public:
     entity(ipoint2 const pos)
-      : pos_ {pos}
+      : pos_ (pos)
     {
     }
 

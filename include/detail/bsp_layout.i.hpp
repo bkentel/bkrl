@@ -23,9 +23,9 @@ public:
           , index_t     const parent_index = index_none
           , index_t     const child_index  = index_none
         )
-          : region {region}
-          , child_index {child_index}
-          , parent_index {parent_index}
+          : region       (region)
+          , child_index  (child_index)
+          , parent_index (parent_index)
         {
         }
 
@@ -475,13 +475,15 @@ bsp_layout_impl::connect(
     // base case
     //
     if (node.is_leaf()) {
-        auto const size = connected_nodes_.size();
+        auto const size0 = static_cast<unsigned>(connected_nodes_.size());
 
         if (node.is_reserved()) {
             connected_nodes_.emplace_back(index);
         }
 
-        return range_t {size, connected_nodes_.size()};
+        auto const size1 = static_cast<unsigned>(connected_nodes_.size());
+
+        return range_t {size0, size1};
     }
 
     //

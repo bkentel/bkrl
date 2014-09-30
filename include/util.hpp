@@ -7,6 +7,7 @@
 #pragma once
 
 #include <string>
+#include <memory>
 #include <boost/utility/string_ref.hpp>
 
 #include "types.hpp"

@@ -1,4 +1,6 @@
 #include <atomic>
+#include <cstdlib>
+
 #include <assert.h>
 #include "assert.hpp"
 

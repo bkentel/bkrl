@@ -284,8 +284,8 @@ public:
     //--------------------------------------------------------------------------
     bool can_gen_corridor(
         grid_storage const& grid
-      , grid_region  const  bounds
-      , grid_point   const  p
+      , grid_region         bounds
+      , grid_point          p
     ) const;
 private:
     enum class corridor_result {
@@ -298,33 +298,33 @@ private:
     // add the positions at each cardinal direction from @p p ordered accoring
     // @p delta as candidates if the staisfy can_gen_corridor();
     //--------------------------------------------------------------------------
-    void room_connector::add_candidates_(
+    void add_candidates_(
         random::generator&  gen
       , grid_storage&       grid
-      , grid_region   const bounds
-      , grid_point    const p
-      , vector2d<int> const delta
+      , grid_region         bounds
+      , grid_point          p
+      , vector2d<int>       delta
     );
 
     //--------------------------------------------------------------------------
     // transform the tile at @p p to a corridor.
     //--------------------------------------------------------------------------
     void generate_at_(
-        grid_storage&      grid
-      , grid_point   const p
+        grid_storage& grid
+      , grid_point    p
     ) const;
 
     //--------------------------------------------------------------------------
     //! generate a corridor segment of length @p len starting at @p start.
     //--------------------------------------------------------------------------
     std::pair<grid_point, corridor_result> generate_segment_(
-        grid_storage&       grid
-      , grid_region   const bounds
-      , grid_point    const start
-      , vector2d<int> const dir
-      , grid_size     const len
-      , room_id       const src_id
-      , room_id       const dst_id
+        grid_storage& grid
+      , grid_region   bounds
+      , grid_point    start
+      , vector2d<int> dir
+      , grid_size     len
+      , room_id       src_id
+      , room_id       dst_id
     ) const;
 
     std::vector<grid_point> closed_;
@@ -919,8 +919,8 @@ private:
     bsp_layout        layout_;
     std::vector<room> rooms_;
 
-    ipoint2 stairs_up_   {{0, 0}};
-    ipoint2 stairs_down_ {{0, 0}};
+    ipoint2 stairs_up_   = ipoint2{0, 0};
+    ipoint2 stairs_down_ = ipoint2{0, 0};
 };
 
 //==============================================================================
@@ -1186,7 +1186,7 @@ public:
     }
 private:
     completion_handler handler_;
-    ivec2 dir_ = {{0, 0}};
+    ivec2 dir_ = ivec2 {0, 0};
     bool  ok_  = false;
 };
 

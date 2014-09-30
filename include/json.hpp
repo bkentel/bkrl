@@ -20,9 +20,9 @@ inline optional<string_ref> optional_string(cref value) {
 
 //==============================================================================
 //==============================================================================
-inline string_ref default_string(cref value, string_ref const default) {
+inline string_ref default_string(cref value, string_ref const def) {
     auto const result = optional_string(value);
-    return result ? *result : default;
+    return result ? *result : def;
 }
 
 //==============================================================================
@@ -67,9 +67,9 @@ inline optional<T> optional_int(cref value) {
 //==============================================================================
 //==============================================================================
 template <typename T = int>
-inline T default_int(cref value, T const default) {
+inline T default_int(cref value, T const def) {
     auto const result = optional_int<T>(value);
-    return result ? *result : default;
+    return result ? *result : def;
 }
 
 //==============================================================================
@@ -115,9 +115,9 @@ inline optional<T> optional_float(cref value) {
 //==============================================================================
 //==============================================================================
 template <typename T = float>
-inline T default_float(cref value, T const default) {
+inline T default_float(cref value, T const def) {
     auto const result = optional_float<T>(value);
-    return result ? *result : default;
+    return result ? *result : def;
 }
 
 //==============================================================================

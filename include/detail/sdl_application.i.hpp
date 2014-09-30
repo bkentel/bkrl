@@ -518,9 +518,9 @@ renderer_impl::create_renderer_(application const& app) {
 
 //------------------------------------------------------------------------------
 renderer_impl::renderer_impl(application const& app)
-  : renderer_           {create_renderer_(app)}
-  , translation_ {{0.0f, 0.0f}}
-  , scale_       {{1.0f, 1.0f}}
+  : renderer_    {create_renderer_(app)}
+  , translation_ (vec2 {0.0f, 0.0f})
+  , scale_       (vec2 {1.0f, 1.0f})
 {
 }
 

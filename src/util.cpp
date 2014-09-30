@@ -1,6 +1,7 @@
 #include "util.hpp"
 
 #include <fstream>
+#include <cstring>
 
 bkrl::uint64_t bkrl::slash_hash64(char const* s, size_t const len) {
     union {

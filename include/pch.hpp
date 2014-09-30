@@ -20,9 +20,10 @@
 
 #include <chrono>
 #include <string>
+
+#include <iterator>
 #include <array>
 #include <vector>
-
 #include <bitset>
 
 #include <fstream>
@@ -30,6 +31,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Boost
 ////////////////////////////////////////////////////////////////////////////////
+#include <boost/predef.h>
+
 #include <boost/exception/all.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>

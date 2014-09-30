@@ -177,8 +177,8 @@ private:
 //==============================================================================
 template <typename T>
 struct definition_base {
-    using definition_t = typename definition<T>;
-    using localized_t  = typename localized_string<T>;
+    using definition_t = definition<T>;
+    using localized_t  = localized_string<T>;
 
     BK_NOCOPY(definition_base);
     BK_DEFAULT_MOVE(definition_base);

@@ -5,6 +5,9 @@
 //! Game engine client.
 //##############################################################################
 #pragma once
+
+#include <memory>
+
 #include "types.hpp"
 
 namespace bkrl {

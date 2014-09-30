@@ -8,6 +8,11 @@
 #include "scancode.hpp"
 #include "keyboard.hpp"
 
+#define BK_DEFINE_ENUM_VARS(type) \
+template <> type##_vector_t const type##_map_t::string_to_value_ = type##_init_string_to_value(); \
+template <> type##_vector_t const type##_map_t::value_to_string_ = type##_init_value_to_string(type##_map_t::string_to_value_); \
+template <> bool            const type##_map_t::checked_         = type##_map_t::check()
+
 ////////////////////////////////////////////////////////////////////////////////
 // enum_map<key_modifier_type>
 ////////////////////////////////////////////////////////////////////////////////
@@ -45,9 +50,12 @@ namespace {
     }
 }
 
-modifier_vector_t const modifier_map_t::string_to_value_ = modifier_init_string_to_value();
-modifier_vector_t const modifier_map_t::value_to_string_ = modifier_init_value_to_string(modifier_map_t::string_to_value_);
-bool              const modifier_map_t::checked_         = modifier_map_t::check();
+BK_DEFINE_ENUM_VARS(modifier);
+
+//template<> modifier_vector_t const modifier_map_t::string_to_value_ = modifier_init_string_to_value();
+//template<> modifier_vector_t const modifier_map_t::value_to_string_ = modifier_init_value_to_string(modifier_map_t::string_to_value_);
+//template<> bool              const modifier_map_t::checked_         = modifier_map_t::check();
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // enum_map<scancode>
@@ -317,9 +325,11 @@ namespace {
     }
 }
 
-scancode_vector_t const scancode_map_t::string_to_value_ = scancode_init_string_to_value();
-scancode_vector_t const scancode_map_t::value_to_string_ = scancode_init_value_to_string(scancode_map_t::string_to_value_);
-bool              const scancode_map_t::checked_         = scancode_map_t::check(true);
+BK_DEFINE_ENUM_VARS(scancode);
+
+//scancode_vector_t const scancode_map_t::string_to_value_ = scancode_init_string_to_value();
+//scancode_vector_t const scancode_map_t::value_to_string_ = scancode_init_value_to_string(scancode_map_t::string_to_value_);
+//bool              const scancode_map_t::checked_         = scancode_map_t::check(true);
 
 ////////////////////////////////////////////////////////////////////////////////
 // enum_map<tile_type>
@@ -355,9 +365,11 @@ namespace {
     }
 }
 
-tile_vector_t const tile_map_t::string_to_value_ = tile_init_string_to_value();
-tile_vector_t const tile_map_t::value_to_string_ = tile_init_value_to_string(tile_map_t::string_to_value_);
-bool          const tile_map_t::checked_         = tile_map_t::check();
+BK_DEFINE_ENUM_VARS(tile);
+
+//tile_vector_t const tile_map_t::string_to_value_ = tile_init_string_to_value();
+//tile_vector_t const tile_map_t::value_to_string_ = tile_init_value_to_string(tile_map_t::string_to_value_);
+//bool          const tile_map_t::checked_         = tile_map_t::check();
 
 ////////////////////////////////////////////////////////////////////////////////
 // enum_map<texture_type>
@@ -414,9 +426,11 @@ namespace {
     }
 }
 
-texture_vector_t const texture_map_t::string_to_value_ = texture_init_string_to_value();
-texture_vector_t const texture_map_t::value_to_string_ = texture_init_value_to_string(texture_map_t::string_to_value_);
-bool             const texture_map_t::checked_         = texture_map_t::check();
+BK_DEFINE_ENUM_VARS(texture);
+
+//texture_vector_t const texture_map_t::string_to_value_ = texture_init_string_to_value();
+//texture_vector_t const texture_map_t::value_to_string_ = texture_init_value_to_string(texture_map_t::string_to_value_);
+//bool             const texture_map_t::checked_         = texture_map_t::check();
 
 ////////////////////////////////////////////////////////////////////////////////
 // enum_map<command_type>
@@ -473,6 +487,10 @@ namespace {
     }
 }
 
-command_vector_t const command_map_t::string_to_value_ = command_init_string_to_value();
-command_vector_t const command_map_t::value_to_string_ = command_init_value_to_string(command_map_t::string_to_value_);
-bool             const command_map_t::checked_         = command_map_t::check();
+BK_DEFINE_ENUM_VARS(command);
+
+//command_vector_t const command_map_t::string_to_value_ = command_init_string_to_value();
+//command_vector_t const command_map_t::value_to_string_ = command_init_value_to_string(command_map_t::string_to_value_);
+//bool             const command_map_t::checked_         = command_map_t::check();
+
+#undef BK_DEFINE_ENUM_VARS

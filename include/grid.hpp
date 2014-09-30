@@ -6,6 +6,9 @@
 //##############################################################################
 #pragma once
 
+#include <bitset>
+#include <vector>
+
 #include "math.hpp"
 #include "types.hpp"
 #include "texture_type.hpp"
@@ -76,9 +79,12 @@ public:
     using data_t         = attribute::value_t<attribute::data_t>;
 
     grid_storage(grid_size const w, grid_size const h)
-      : width_  {w}
-      , height_ {h}
+      : width_  {static_cast<size_t>(w)}
+      , height_ {static_cast<size_t>(h)}
     {
+        BK_ASSERT_SAFE(w > 0);
+        BK_ASSERT_SAFE(h > 0);
+
         auto const size = w * h;
 
         tile_type_.resize(    size, tile_type_t    {} );
@@ -250,12 +256,12 @@ public:
     room(
         grid_region const bounds
       , grid_point  const center
-      , room_id const id
+      , room_id     const id
     )
       : grid_storage {bounds}
-      , location_    {{bounds.left, bounds.top}}
-      , center_      {center}
-      , id_          {id}
+      , location_    (grid_point{bounds.left, bounds.top})
+      , center_      (grid_point{center.x,    center.y})
+      , id_          (id)
     {
     }
 
