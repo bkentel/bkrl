@@ -5,6 +5,7 @@
 //! Tile types.
 //##############################################################################
 #pragma once
+
 #include "enum_map.hpp"
 
 namespace bkrl {

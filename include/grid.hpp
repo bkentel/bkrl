@@ -79,8 +79,8 @@ public:
     using data_t         = attribute::value_t<attribute::data_t>;
 
     grid_storage(grid_size const w, grid_size const h)
-      : width_  {static_cast<size_t>(w)}
-      , height_ {static_cast<size_t>(h)}
+      : width_  {w}
+      , height_ {h}
     {
         BK_ASSERT_SAFE(w > 0);
         BK_ASSERT_SAFE(h > 0);
@@ -225,8 +225,8 @@ private:
         data_[i] = value;
     }
 private:
-    size_t width_;
-    size_t height_;
+    grid_size width_;
+    grid_size height_;
 
     std::vector<tile_type_t>    tile_type_;
     std::vector<texture_type_t> texture_type_;
@@ -330,7 +330,7 @@ void for_each_edge(grid_region region, Function&& function) {
     for (grid_index x = l; x < r; ++x) {
         function(x, b-1);
     }
-};
+}
 
 //TODO could refactor these to share common code?
 template <typename Attribute, typename Predicate>

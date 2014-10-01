@@ -12,6 +12,7 @@
 #include "types.hpp"
 #include "util.hpp"
 #include "assert.hpp"
+#include "algorithm.hpp"
 
 namespace bkrl {
 //==============================================================================
@@ -88,18 +89,15 @@ public:
     //! string (hash) -> mapping.
     //--------------------------------------------------------------------------
     static value_type get(hash_t const hash) {
-        auto const it = std::lower_bound(
-            std::cbegin(string_to_value_)  
-          , std::cend(string_to_value_)
+        auto const it = lower_bound(
+            string_to_value_
           , hash
           , [](value_type const& lhs, hash_t const rhs) {
                 return lhs.hash < rhs;
             }
         );
 
-        if (it == std::cend(string_to_value_)) {
-            return value_type {};
-        } else if (it->hash != hash) {
+        if ((it == std::cend(string_to_value_)) || (it->hash != hash)) {
             return value_type {};
         }
 
@@ -119,11 +117,9 @@ public:
     //--------------------------------------------------------------------------
     static bool check(bool const allow_sparse = false) {
         //check for duplicates => hash collision
-        auto const it = std::adjacent_find(
-            std::cbegin(string_to_value_), std::cend(string_to_value_)
-        );
+        auto const it = adjacent_find(string_to_value_);
 
-        BK_ASSERT(it == std::cend(string_to_value_)); //hash collision
+        BK_ASSERT_SAFE(it == std::cend(string_to_value_)); //hash collision
 
         //check for "sparse" enums
         for (size_t i = 0; !allow_sparse && i < value_to_string_.size(); ++i) {
@@ -142,18 +138,3 @@ private:
 };
 
 } //namespace bkrl
-
-//==============================================================================
-//! convenience macro get a unique reference to a compile-time cstring.
-//==============================================================================
-#define BK_ENUMMAP_MAKE_STRING(ENUM, VALUE) \
-[]() -> ::bkrl::string_ref { \
-    static char const string[] {#VALUE}; \
-    return {string, ::bkrl::string_len(string)}; \
-}()
-
-//==============================================================================
-//! convenience macro to add a mapping,
-//==============================================================================
-#define BK_ENUMMAP_ADD_STRING(OUT, ENUM, VALUE) \
-    OUT.emplace_back(BK_ENUMMAP_MAKE_STRING(ENUM, VALUE), ENUM::VALUE)

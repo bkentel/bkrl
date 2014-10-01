@@ -21,7 +21,7 @@ template <
 inline auto lower_bound(
     Container&  container
   , Type const& value
-  , Predicate&& predicate = Predicate{}
+  , Predicate   predicate = Predicate {}
 ) {
     return std::lower_bound(
         std::begin(container)
@@ -40,9 +40,26 @@ template <
 >
 inline void sort(
     Container& container
-  , Predicate&& predicate = {}
+  , Predicate  predicate = Predicate {}
 ) {
     std::sort(
+        std::begin(container)
+      , std::end(container)
+      , predicate
+    );
+}
+
+//==============================================================================
+//==============================================================================
+template <
+    typename Container
+  , typename Predicate = std::equal_to<>
+>
+inline auto adjacent_find(
+    Container& container
+  , Predicate  predicate = Predicate {}
+) {
+    return std::adjacent_find(
         std::begin(container)
       , std::end(container)
       , predicate

@@ -26,8 +26,8 @@ struct color_ref {
 //==============================================================================
 //==============================================================================
 struct string_id {
-    BK_DEFAULT_MOVE(string_id);
-    BK_DEFAULT_COPY(string_id);
+    BK_DEFMOVE(string_id);
+    BK_DEFCOPY(string_id);
 
     string_id(hash_t const hash, utf8string str)
       : hash {hash}
@@ -90,7 +90,7 @@ template <typename T>
 class localized_string {
 public:
     BK_NOCOPY(localized_string);
-    BK_DEFAULT_MOVE(localized_string);
+    BK_DEFMOVE(localized_string);
 
     using locale_t = typename T::locale;
     using map_t = boost::container::flat_map<
@@ -139,7 +139,7 @@ template <typename T>
 class definition {
 public:
     BK_NOCOPY(definition);
-    BK_DEFAULT_MOVE(definition);
+    BK_DEFMOVE(definition);
 
     using map_t = boost::container::flat_map<hash_t, T>;
 
@@ -181,7 +181,7 @@ struct definition_base {
     using localized_t  = localized_string<T>;
 
     BK_NOCOPY(definition_base);
-    BK_DEFAULT_MOVE(definition_base);
+    BK_DEFMOVE(definition_base);
 
     definition_base() = default;
 };

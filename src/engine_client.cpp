@@ -338,7 +338,7 @@ room_connector::can_gen_corridor(
   , grid_region  const  bounds
   , grid_point   const  p
 ) const {
-    if (!bounds.contains(p)) {
+    if (!intersects(p, bounds)) {
         return false;
     }
 
@@ -432,11 +432,11 @@ room_connector::generate_segment_(
   , room_id       const src_id
   , room_id       const dst_id
 ) const {
-    BK_PRECONDITION(len > 0);
-    BK_PRECONDITION(bounds.contains(start));
-    BK_PRECONDITION(dir.x || dir.y && !(dir.x && dir.y));
-    BK_PRECONDITION(src_id && dst_id && src_id != dst_id);
-    BK_PRECONDITION(can_gen_corridor(grid, bounds, start));
+    BK_ASSERT_DBG(len > 0);
+    BK_ASSERT_DBG(intersects(bounds, start));
+    BK_ASSERT_DBG((dir.x || dir.y) && !(dir.x && dir.y));
+    BK_ASSERT_DBG(src_id && dst_id && src_id != dst_id);
+    BK_ASSERT_DBG(can_gen_corridor(grid, bounds, start));
 
     auto const step = (dir.x ? dir.x : dir.y) > 0 ? 1 : -1;
 
@@ -557,12 +557,12 @@ room_connector::connect(
     auto const src_id = src_room.id();
     auto const dst_id = dst_room.id();
 
-    BK_PRECONDITION(bounds.contains(beg));
-    BK_PRECONDITION(bounds.contains(end));
+    BK_ASSERT_DBG(intersects(bounds, beg));
+    BK_ASSERT_DBG(intersects(bounds, end));
 
     //TODO
-    BK_PRECONDITION(grid.get(attribute::tile_type, beg) != tile_type::wall);
-    BK_PRECONDITION(grid.get(attribute::tile_type, end) != tile_type::wall);
+    BK_ASSERT_DBG(grid.get(attribute::tile_type, beg) != tile_type::wall);
+    BK_ASSERT_DBG(grid.get(attribute::tile_type, end) != tile_type::wall);
 
     add_candidates_(gen, grid, bounds, cur, end - cur);
 
@@ -692,6 +692,8 @@ public:
             return true;
         case tile_type::door :
             return door_data {grid_, to}.is_open();
+        default :
+            break;
         }
 
         return false;
@@ -970,7 +972,6 @@ public:
         auto constexpr min =  0.1f;
         auto constexpr max = 10.0f;
 
-        auto const prev_z = zoom_;
         zoom_ = clamp(z, min, max);
 
         scroll_x_ = 0.0f;
@@ -1108,6 +1109,7 @@ public:
     using exit_mode_handler = std::function<void ()>;
 
     virtual ~input_mode_base() = default;
+    input_mode_base() = delete;
 
     explicit input_mode_base(exit_mode_handler on_exit_mode)
       : on_exit_ {std::move(on_exit_mode)}

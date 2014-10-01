@@ -121,7 +121,7 @@ private:
 class glyph {
 public:
     BK_NOCOPY(glyph);
-    BK_DEFAULT_MOVE(glyph);
+    BK_DEFMOVE(glyph);
 
     glyph(face& source_face, unicode::codepoint const cp);
 
@@ -140,7 +140,7 @@ private:
 class bitmap_glyph {
 public:
     BK_NOCOPY(bitmap_glyph);
-    BK_DEFAULT_MOVE(bitmap_glyph);
+    BK_DEFMOVE(bitmap_glyph);
 
     bitmap_glyph(glyph const& source);
 
@@ -171,7 +171,7 @@ private:
 class block_cache {
 public:
     BK_NOCOPY(block_cache);
-    BK_DEFAULT_MOVE(block_cache);
+    BK_DEFMOVE(block_cache);
 
     block_cache(face& font_face, unicode::block_value const block);
 
@@ -519,8 +519,8 @@ block_cache::block_cache(face& font_face, unicode::block_value const block)
             count++;
         }
 
-        BK_ASSERT_DBG(!w || w && h);
-        BK_ASSERT_DBG(!h || w && h);
+        BK_ASSERT_DBG(!w || (w && h));
+        BK_ASSERT_DBG(!h || (w && h));
     }
 
     required_area_ = max_h * max_w * count;

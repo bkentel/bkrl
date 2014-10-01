@@ -4,31 +4,7 @@
 //!
 //! Assertion and debug macros.
 //##############################################################################
-#include <boost/predef.h>
-
-#if BOOST_COMP_MSVC
-#define BK_NORETURN __declspec(noreturn)
-#define BK_THREADLOCAL __declspec(thread)
-#else
-#define BK_NORETURN [[noreturn]]
-#define BK_THREADLOCAL thread_local
-#endif
-
-#define BK_NOCOPY(name)     \
-name(name const&) = delete; \
-name& operator=(name const&) = delete
-
-#define BK_NOMOVE(name) \
-name(name&&) = delete;  \
-name& operator=(name&&) = delete
-
-#define BK_DEFAULT_MOVE(name) \
-name(name&&) = default;  \
-name& operator=(name&&) = default
-
-#define BK_DEFAULT_COPY(name) \
-name(name const&) = default;  \
-name& operator=(name const&) = default
+#include "macros.hpp"
 
 #undef BK_ASSERT_OPT_IS_ACTIVE
 #undef BK_ASSERT_DBG_IS_ACTIVE
@@ -142,9 +118,6 @@ public:
 private:
     assert_handler old_;
 };
-
-#define BK_TODO_FAIL() __debugbreak(); std::terminate()
-#define BK_PRECONDITION(x) BK_ASSERT(x)
 
 } //namespace bkrl
 

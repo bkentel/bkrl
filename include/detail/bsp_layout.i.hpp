@@ -106,10 +106,10 @@ public:
     //--------------------------------------------------------------------------
     void reserve_region(grid_region const& region);
 private:
+    params_t             params_;
     std::vector<node_t_> nodes_;
     room_callback        on_room_gen_;
     split_callback       on_split_;
-    params_t             params_;
     room_id              next_room_id_ = 0;
     std::vector<index_t> connected_nodes_;
     connect_callback     on_connect_;
@@ -146,9 +146,9 @@ void
 bsp_layout_impl::reserve_region(
     grid_region const& region
 ) {
-    BK_PRECONDITION(nodes_.size() == 1);
-    BK_PRECONDITION(region.right  <= params_.width);
-    BK_PRECONDITION(region.bottom <= params_.height);
+    BK_ASSERT_DBG(nodes_.size() == 1);
+    BK_ASSERT_DBG(region.right  <= params_.width);
+    BK_ASSERT_DBG(region.bottom <= params_.height);
 
     if (region.area() == 0) {
         return;
@@ -169,10 +169,10 @@ bsp_layout_impl::split_y(
     index_t    const index
   , grid_index const where
 ) {
-    BK_PRECONDITION(index < nodes_.size());
+    BK_ASSERT_DBG(index < nodes_.size());
 
     auto& node = nodes_[index];
-    BK_PRECONDITION(node.is_leaf() && !node.is_reserved());
+    BK_ASSERT_DBG(node.is_leaf() && !node.is_reserved());
 
     auto const split = bkrl::split_y(node.region, where);
     add_children(index, split.first, split.second);
@@ -184,10 +184,10 @@ bsp_layout_impl::split_x(
     index_t    const index
   , grid_index const where
 ) {
-    BK_PRECONDITION(index < nodes_.size());
+    BK_ASSERT_DBG(index < nodes_.size());
 
     auto& node = nodes_[index];
-    BK_PRECONDITION(node.is_leaf() && !node.is_reserved());
+    BK_ASSERT_DBG(node.is_leaf() && !node.is_reserved());
 
     auto const split = bkrl::split_x(node.region, where);
     add_children(index, split.first, split.second);
@@ -200,11 +200,11 @@ bsp_layout_impl::add_children(
   , grid_region const& child0
   , grid_region const& child1
 ) {
-    BK_PRECONDITION(parent_index < nodes_.size());
+    BK_ASSERT_DBG(parent_index < nodes_.size());
 
     auto& parent = nodes_[parent_index];
 
-    BK_PRECONDITION(parent.is_leaf() && !parent.is_reserved());
+    BK_ASSERT_DBG(parent.is_leaf() && !parent.is_reserved());
 
     node_t_ n0 {child0, parent_index};
     node_t_ n1 {child1, parent_index};
@@ -290,7 +290,7 @@ bsp_layout_impl::gen_rooms(
     random::generator& gen
   , index_t const      index
 ) {
-    BK_PRECONDITION(index < nodes_.size());
+    BK_ASSERT_DBG(index < nodes_.size());
     auto& node = nodes_[index];
 
     //
@@ -315,13 +315,13 @@ bsp_layout_impl::gen_rooms(
     auto const lhs = node.child_index + 0;
     auto const rhs = node.child_index + 1;
 
-    BK_ASSERT(lhs != node_t_::index_none);
+    BK_ASSERT_DBG(lhs != node_t_::index_none);
 
     auto const& left  = nodes_[lhs];
     auto const& right = nodes_[rhs];
 
     //only one child
-    BK_ASSERT(left.parent_index == right.parent_index);
+    BK_ASSERT_DBG(left.parent_index == right.parent_index);
     //if (left.parent_index != right.parent_index) {
     //    gen_rooms(gen, lhs);
     //    return;
@@ -337,8 +337,8 @@ bsp_layout_impl::choose_split_type(
     random::generator& gen
   , node_t_ const&     node
 ) const {
-    BK_PRECONDITION(node.is_leaf());
-    BK_PRECONDITION(!node.is_reserved());
+    BK_ASSERT_DBG(node.is_leaf());
+    BK_ASSERT_DBG(!node.is_reserved());
 
     auto const& p = params_;
     auto const  w = node.region.width();
@@ -402,7 +402,7 @@ bsp_layout_impl::split(
     random::generator& gen
   , index_t const      index
 ) {
-    BK_PRECONDITION(index < nodes_.size());
+    BK_ASSERT_DBG(index < nodes_.size());
     auto& node = nodes_[index];
 
     //
@@ -468,7 +468,7 @@ bsp_layout_impl::connect(
     random::generator& gen
   , index_t const      index
 ) {
-    BK_PRECONDITION(index < nodes_.size());
+    BK_ASSERT_DBG(index < nodes_.size());
     auto const& node = nodes_[index];
 
     //

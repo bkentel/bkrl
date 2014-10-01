@@ -8,19 +8,42 @@
 #include "scancode.hpp"
 #include "keyboard.hpp"
 
-#define BK_DEFINE_ENUM_VARS(type) \
-template <> type##_vector_t const type##_map_t::string_to_value_ = type##_init_string_to_value(); \
-template <> type##_vector_t const type##_map_t::value_to_string_ = type##_init_value_to_string(type##_map_t::string_to_value_); \
-template <> bool            const type##_map_t::checked_         = type##_map_t::check()
+//==============================================================================
+//! convenience macro get a unique reference to a compile-time cstring.
+//==============================================================================
+#define BK_ENUMMAP_MAKE_STRING(ENUM, VALUE) \
+[]() -> ::bkrl::string_ref { \
+    static char const string[] {#VALUE}; \
+    return {string, ::bkrl::string_len(string)}; \
+}()
+
+//==============================================================================
+//! convenience macro to add a mapping.
+//==============================================================================
+#define BK_ENUMMAP_ADD_STRING(OUT, ENUM, VALUE) \
+OUT.emplace_back(BK_ENUMMAP_MAKE_STRING(ENUM, VALUE), ENUM::VALUE)
+
+//------------------------------------------------------------------------------
+#define BK_DEFINE_ENUM_VARS(PREFIX, DISABLE) \
+template <> PREFIX##_vector_t const PREFIX##_map_t::string_to_value_ = PREFIX##_init_string_to_value(); \
+template <> PREFIX##_vector_t const PREFIX##_map_t::value_to_string_ = PREFIX##_init_value_to_string(PREFIX##_map_t::string_to_value_); \
+template <> bool              const PREFIX##_map_t::checked_         = PREFIX##_map_t::check(DISABLE)
+//------------------------------------------------------------------------------
+#define BK_DECLARE_ENUM_TYPES(PREFIX, TYPE) \
+using PREFIX##_map_t    = bkrl::enum_map<bkrl::TYPE>; \
+using PREFIX##_vector_t = std::vector<PREFIX##_map_t::value_type>
+//------------------------------------------------------------------------------
+template class bkrl::enum_map<bkrl::key_modifier_type>;
+template class bkrl::enum_map<bkrl::scancode>;
+template class bkrl::enum_map<bkrl::tile_type>;
+template class bkrl::enum_map<bkrl::texture_type>;
+template class bkrl::enum_map<bkrl::command_type>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // enum_map<key_modifier_type>
 ////////////////////////////////////////////////////////////////////////////////
-template class bkrl::enum_map<bkrl::key_modifier_type>;
-
 namespace {
-    using modifier_map_t    = bkrl::enum_map<bkrl::key_modifier_type>;
-    using modifier_vector_t = std::vector<modifier_map_t::value_type>;
+    BK_DECLARE_ENUM_TYPES(modifier, key_modifier_type);
 
     modifier_vector_t modifier_init_string_to_value() {
         using modifier_type = bkrl::key_modifier_type;
@@ -50,21 +73,11 @@ namespace {
     }
 }
 
-BK_DEFINE_ENUM_VARS(modifier);
-
-//template<> modifier_vector_t const modifier_map_t::string_to_value_ = modifier_init_string_to_value();
-//template<> modifier_vector_t const modifier_map_t::value_to_string_ = modifier_init_value_to_string(modifier_map_t::string_to_value_);
-//template<> bool              const modifier_map_t::checked_         = modifier_map_t::check();
-
-
 ////////////////////////////////////////////////////////////////////////////////
 // enum_map<scancode>
 ////////////////////////////////////////////////////////////////////////////////
-template class bkrl::enum_map<bkrl::scancode>;
-
 namespace {
-    using scancode_map_t    = bkrl::enum_map<bkrl::scancode>;
-    using scancode_vector_t = std::vector<scancode_map_t::value_type>;
+    BK_DECLARE_ENUM_TYPES(scancode, scancode);
 
     scancode_vector_t scancode_init_string_to_value() {
         using scancode = bkrl::scancode;
@@ -325,20 +338,11 @@ namespace {
     }
 }
 
-BK_DEFINE_ENUM_VARS(scancode);
-
-//scancode_vector_t const scancode_map_t::string_to_value_ = scancode_init_string_to_value();
-//scancode_vector_t const scancode_map_t::value_to_string_ = scancode_init_value_to_string(scancode_map_t::string_to_value_);
-//bool              const scancode_map_t::checked_         = scancode_map_t::check(true);
-
 ////////////////////////////////////////////////////////////////////////////////
 // enum_map<tile_type>
 ////////////////////////////////////////////////////////////////////////////////
-template class bkrl::enum_map<bkrl::tile_type>;
-
 namespace {
-    using tile_map_t    = bkrl::enum_map<bkrl::tile_type>;
-    using tile_vector_t = std::vector<tile_map_t::value_type>;
+    BK_DECLARE_ENUM_TYPES(tile, tile_type);
 
     tile_vector_t tile_init_string_to_value() {
         using tile_type = bkrl::tile_type;
@@ -365,20 +369,11 @@ namespace {
     }
 }
 
-BK_DEFINE_ENUM_VARS(tile);
-
-//tile_vector_t const tile_map_t::string_to_value_ = tile_init_string_to_value();
-//tile_vector_t const tile_map_t::value_to_string_ = tile_init_value_to_string(tile_map_t::string_to_value_);
-//bool          const tile_map_t::checked_         = tile_map_t::check();
-
 ////////////////////////////////////////////////////////////////////////////////
 // enum_map<texture_type>
 ////////////////////////////////////////////////////////////////////////////////
-template class bkrl::enum_map<bkrl::texture_type>;
-
 namespace {
-    using texture_map_t    = bkrl::enum_map<bkrl::texture_type>;
-    using texture_vector_t = std::vector<texture_map_t::value_type>;
+    BK_DECLARE_ENUM_TYPES(texture, texture_type);
 
     texture_vector_t texture_init_string_to_value() {
         using texture_type = bkrl::texture_type;
@@ -426,20 +421,11 @@ namespace {
     }
 }
 
-BK_DEFINE_ENUM_VARS(texture);
-
-//texture_vector_t const texture_map_t::string_to_value_ = texture_init_string_to_value();
-//texture_vector_t const texture_map_t::value_to_string_ = texture_init_value_to_string(texture_map_t::string_to_value_);
-//bool             const texture_map_t::checked_         = texture_map_t::check();
-
 ////////////////////////////////////////////////////////////////////////////////
 // enum_map<command_type>
 ////////////////////////////////////////////////////////////////////////////////
-template class bkrl::enum_map<bkrl::command_type>;
-
 namespace {
-    using command_map_t    = bkrl::enum_map<bkrl::command_type>;
-    using command_vector_t = std::vector<command_map_t::value_type>;
+    BK_DECLARE_ENUM_TYPES(command, command_type);
 
     command_vector_t command_init_string_to_value() {
         using command = bkrl::command_type;
@@ -487,10 +473,15 @@ namespace {
     }
 }
 
-BK_DEFINE_ENUM_VARS(command);
+//------------------------------------------------------------------------------
+BK_DEFINE_ENUM_VARS(modifier, false);
+BK_DEFINE_ENUM_VARS(scancode, true);
+BK_DEFINE_ENUM_VARS(tile, false);
+BK_DEFINE_ENUM_VARS(texture, false);
+BK_DEFINE_ENUM_VARS(command, false);
 
-//command_vector_t const command_map_t::string_to_value_ = command_init_string_to_value();
-//command_vector_t const command_map_t::value_to_string_ = command_init_value_to_string(command_map_t::string_to_value_);
-//bool             const command_map_t::checked_         = command_map_t::check();
-
+//------------------------------------------------------------------------------
 #undef BK_DEFINE_ENUM_VARS
+#undef BK_DECLARE_ENUM_TYPES
+#undef BK_ENUMMAP_ADD_STRING
+#undef BK_ENUMMAP_MAKE_STRING

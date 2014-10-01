@@ -84,6 +84,9 @@
     <ClCompile Include="..\src\json.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\math.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pch.hpp">
@@ -168,6 +171,9 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\config.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\macros.hpp">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

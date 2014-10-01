@@ -6,12 +6,23 @@
 //##############################################################################
 #pragma once
 
+#include <cmath>
+#include <utility>
+#include <functional>
+
 #include "assert.hpp"
 
 namespace bkrl {
-////////////////////////////////////////////////////////////////////////////////
+//==============================================================================
+//! clamp the value @p n to the range [lo, hi]
+//==============================================================================
 template <typename T>
-inline T clamp(T const n, T const lo, T const hi) noexcept {
+inline T
+clamp(
+    T const n
+  , T const lo
+  , T const hi
+) noexcept {
     return (n < lo)
       ? lo
       : (n > hi)
@@ -19,6 +30,9 @@ inline T clamp(T const n, T const lo, T const hi) noexcept {
         : n;
 }
 
+//==============================================================================
+//! linearize a 2d value to a 1d value.
+//==============================================================================
 inline int next_nearest_power_of_2(int value) noexcept {
     int result = 1;
 
@@ -29,65 +43,109 @@ inline int next_nearest_power_of_2(int value) noexcept {
     return result;
 }
 
+
 //==============================================================================
-//! 2d point type
+//! linearize a 2d value to a 1d value.
 //==============================================================================
 template <typename T>
-struct point2d {
+inline T
+linearize(
+    T const w
+  , T const h
+  , T const x
+  , T const y
+) noexcept {
+    BK_ASSERT_DBG(x < w);
+    BK_ASSERT_DBG(y < h);
+
+    return y*w + x;
+}
+
+//==============================================================================
+enum class geometry {
+    vector, point
+};
+
+//==============================================================================
+template <typename T, geometry>
+struct xy_type {
     T x, y;
 };
 
 template <typename T>
-inline bool operator==(point2d<T> const p, point2d<T> const q) noexcept {
+using point2d = xy_type<T, geometry::point>;
+
+template <typename T>
+using vector2d = xy_type<T, geometry::vector>;
+
+//------------------------------------------------------------------------------
+template <typename T, geometry G>
+inline bool
+operator==(
+    xy_type<T, G> const p
+  , xy_type<T, G> const q
+) noexcept {
+    static_assert(!std::is_floating_point<T>::value, "TODO");
     return (p.x == q.x) && (p.y == q.y);
 }
 
-template <typename T>
-inline bool operator!=(point2d<T> const p, point2d<T> const q) noexcept {
+//------------------------------------------------------------------------------
+template <typename T, geometry G>
+inline bool
+operator!=(
+    xy_type<T, G> const p
+  , xy_type<T, G> const q
+) noexcept {
     return !(p == q);
 }
 
-template <typename T, typename R>
-inline point2d<T> translate(point2d<T> const p, R const dx, R const dy) {
-    return point2d<T> {
-        static_cast<T>(p.x + dx)
-      , static_cast<T>(p.y + dy)
-    };
+//------------------------------------------------------------------------------
+template <typename T, geometry G>
+inline xy_type<T, G>
+operator+(
+    xy_type<T, G> const p
+  , xy_type<T, G> const q
+) noexcept {
+    return {p.x + q.x, p.y + q.y};
 }
 
-//==============================================================================
-//! 2d vector type
-//==============================================================================
-template <typename T = signed>
-struct vector2d {
-    T x, y;
-};
-
+//------------------------------------------------------------------------------
 template <typename T>
-inline point2d<T> operator+(point2d<T> const p, vector2d<T> const v) {
-    return point2d<T> {p.x + v.x, p.y + v.y};
+inline xy_type<T, geometry::point>
+operator+(
+    xy_type<T, geometry::point>  const p
+  , xy_type<T, geometry::vector> const q
+) noexcept {
+    return {p.x + q.x, p.y + q.y};
 }
 
-template <
-    typename T
-  , typename U = std::make_signed_t<T>
->
-inline point2d<U> operator-(point2d<T> const p, vector2d<T> const v) {
-    return point2d<U> {
-        static_cast<U>(p.x) - static_cast<U>(v.x)
-      , static_cast<U>(p.y) - static_cast<U>(v.y)
-    };
+//------------------------------------------------------------------------------
+template <typename T>
+inline xy_type<T, geometry::point>
+operator-(
+    xy_type<T, geometry::point>  const p
+  , xy_type<T, geometry::vector> const q
+) noexcept {
+    return {p.x - q.x, p.y - q.y};
 }
 
-template <
-    typename T
-  , typename U = std::make_signed_t<T>
->
-inline vector2d<U> operator-(point2d<T> const p, point2d<T> const q) {
-    return vector2d<U> {
-        static_cast<U>(p.x) - static_cast<U>(q.x)
-      , static_cast<U>(p.y) - static_cast<U>(q.y)
-    };
+//------------------------------------------------------------------------------
+template <typename T>
+inline xy_type<T, geometry::vector>
+operator-(
+    xy_type<T, geometry::point> const p
+  , xy_type<T, geometry::point> const q
+) noexcept {
+    return {p.x - q.x, p.y - q.y};
+}
+
+//------------------------------------------------------------------------------
+template <typename T>
+inline xy_type<T, geometry::vector>
+operator-(
+    xy_type<T, geometry::vector> const p
+) noexcept {
+    return {-p.x, p.y};
 }
 
 //==============================================================================
@@ -133,15 +191,15 @@ bool operator<(R const& lhs, R const& rhs) {
 //==============================================================================
 template <typename T>
 struct axis_aligned_rect {
-    T width()  const { return right - left; }
-    T height() const { return bottom - top; }
+    T width()  const noexcept { return right - left; }
+    T height() const noexcept { return bottom - top; }
 
-    explicit operator bool() const {
+    explicit operator bool() const noexcept {
         return left <= right && top <= bottom;
     }
 
     T area() const {
-        BK_PRECONDITION(!!*this);
+        BK_ASSERT_DBG(!!*this);
         return width() * height();
     }
 
@@ -154,30 +212,16 @@ struct axis_aligned_rect {
         };
     }
 
-    bool contains(T const x, T const y) const {
-        return (x >= left && x < right)
-            && (y >= top  && y < bottom);
-    }
-
-    bool contains(point2d<T> const p) const {
-        return contains(p.x, p.y);
-    }
-
     T left, top, right, bottom;
 };
 
-template <typename T, typename R>
-axis_aligned_rect<T> translate(axis_aligned_rect<T> const r, R const dx, R const dy) {
-    return axis_aligned_rect<T> {
-        static_cast<T>(r.left + dx)
-      , static_cast<T>(r.top + dy)
-      , static_cast<T>(r.right + dx)
-      , static_cast<T>(r.bottom + dy)
-    };
-}
-
+//------------------------------------------------------------------------------
 template <typename T>
-inline bool operator==(axis_aligned_rect<T> const a, axis_aligned_rect<T> const b) {
+inline bool
+operator==(
+    axis_aligned_rect<T> const a
+  , axis_aligned_rect<T> const b
+) noexcept {
     return (a.left   == b.left)
         && (a.top    == b.top)
         && (a.right  == b.right)
@@ -185,20 +229,54 @@ inline bool operator==(axis_aligned_rect<T> const a, axis_aligned_rect<T> const 
     ;
 }
 
+//------------------------------------------------------------------------------
 template <typename T>
-inline bool operator!=(axis_aligned_rect<T> const a, axis_aligned_rect<T> const b) {
+inline bool
+operator!=(
+    axis_aligned_rect<T> const a
+  , axis_aligned_rect<T> const b
+) noexcept {
     return !(a == b);
 }
 
+//------------------------------------------------------------------------------
+template <typename T>
+inline axis_aligned_rect<T>
+make_rect_size(
+    T const x
+  , T const y
+  , T const w
+  , T const h
+) noexcept {
+    return {x, y, x + w, y + h};
+}
+
+//------------------------------------------------------------------------------
+template <typename T>
+inline axis_aligned_rect<T>
+make_rect_bounds(
+    T const left
+  , T const top
+  , T const right
+  , T const bottom
+) noexcept {
+    return {left, top, right, bottom};
+}
+
+//------------------------------------------------------------------------------
 template <
-    typename T
-  , typename P = axis_aligned_rect<T>
-  , typename R = std::pair<P, P>
+    typename Scalar
+  , typename Rect   = axis_aligned_rect<Scalar>
+  , typename Result = std::pair<Rect, Rect>
 >
-inline R split_y(P const& rect, T const split) {
-    BK_PRECONDITION(!!rect);
-    BK_PRECONDITION(split >= rect.left);
-    BK_PRECONDITION(split <= rect.right);
+inline Result
+split_y(
+    Rect   const rect
+  , Scalar const split
+) noexcept {
+    BK_ASSERT_DBG(!!rect);
+    BK_ASSERT_DBG(split >= rect.left);
+    BK_ASSERT_DBG(split <= rect.right);
 
     auto const l0 = rect.left;
     auto const t0 = rect.top;
@@ -211,20 +289,25 @@ inline R split_y(P const& rect, T const split) {
     auto const b1 = rect.bottom;
 
     return std::make_pair(
-        P {l0, t0, r0, b0}
-      , P {l1, t1, r1, b1}
+        make_rect_bounds(l0, t0, r0, b0)
+      , make_rect_bounds(l1, t1, r1, b1)
     );
 }
 
+//------------------------------------------------------------------------------
 template <
-    typename T
-  , typename P = axis_aligned_rect<T>
-  , typename R = std::pair<P, P>
+    typename Scalar
+  , typename Rect   = axis_aligned_rect<Scalar>
+  , typename Result = std::pair<Rect, Rect>
 >
-inline R split_x(P const& rect, T const split) {
-    BK_PRECONDITION(!!rect);
-    BK_PRECONDITION(split >= rect.top);
-    BK_PRECONDITION(split <= rect.bottom);
+inline Result
+split_x(
+    Rect   const rect
+  , Scalar const split
+) noexcept {
+    BK_ASSERT_DBG(!!rect);
+    BK_ASSERT_DBG(split >= rect.top);
+    BK_ASSERT_DBG(split <= rect.bottom);
 
     auto const l0 = rect.left;
     auto const t0 = rect.top;
@@ -237,19 +320,105 @@ inline R split_x(P const& rect, T const split) {
     auto const b1 = rect.bottom;
 
     return std::make_pair(
-        P {l0, t0, r0, b0}
-      , P {l1, t1, r1, b1}
+        make_rect_bounds(l0, t0, r0, b0)
+      , make_rect_bounds(l1, t1, r1, b1)
     );
 }
 
-//==============================================================================
-//! linearize a 2d value to a 1d value.
-//==============================================================================
-inline size_t linearize(size_t const w, size_t const h, size_t const x, size_t const y) {
-    BK_PRECONDITION(x < w);
-    BK_PRECONDITION(y < h);
-
-    return y*w + x;
+//------------------------------------------------------------------------------
+template <typename T, geometry G, typename R>
+inline xy_type<T, G>
+translate(
+    xy_type<T, G> const p
+  , R             const dx
+  , R             const dy
+) noexcept {
+    return {
+        static_cast<T>(p.x + dx)
+      , static_cast<T>(p.y + dy)
+    };
 }
+
+//------------------------------------------------------------------------------
+template <typename T, typename R>
+inline axis_aligned_rect<T>
+translate(
+    axis_aligned_rect<T> const r
+  , R                    const dx
+  , R                    const dy
+) noexcept {
+    return make_rect_bounds(
+        static_cast<T>(r.left   + dx)
+      , static_cast<T>(r.top    + dy)
+      , static_cast<T>(r.right  + dx)
+      , static_cast<T>(r.bottom + dy)
+    );
+}
+
+//------------------------------------------------------------------------------
+template <typename T>
+inline bool
+intersects(
+    point2d<T> const a
+  , point2d<T> const b
+) {
+    return (a == b);
+}
+
+//------------------------------------------------------------------------------
+template <typename Float = double, typename T>
+inline bool
+intersects(
+    point2d<T>  const p
+  , vector2d<T> const v
+) {
+    auto const slope = static_cast<Float>(v.x / v.y);
+    auto const y = slope * p.x;
+
+    return p.y == static_cast<T>(std::round(y));
+}
+
+//------------------------------------------------------------------------------
+template <typename Float = double, typename T>
+inline bool
+intersects(
+    vector2d<T> const v
+  , point2d<T>  const p
+) {
+    return intersects<Float>(p, v);
+}
+
+//------------------------------------------------------------------------------
+template <typename T>
+inline bool
+intersects(
+    point2d<T>           const p
+  , axis_aligned_rect<T> const r
+) noexcept {
+    return (p.x >= r.left)   &&
+           (p.x <  r.right)  &&
+           (p.y >= r.top)    &&
+           (p.y <  r.bottom)
+    ;
+}
+
+//------------------------------------------------------------------------------
+template <typename T>
+inline bool
+intersects(
+    axis_aligned_rect<T> const r
+  , point2d<T>           const p
+) noexcept {
+    return intersects(p, r);
+}
+
+extern template struct xy_type<int,   geometry::point>;
+extern template struct xy_type<float, geometry::point>;
+
+extern template struct xy_type<int,   geometry::vector>;
+extern template struct xy_type<float, geometry::vector>;
+
+extern template struct axis_aligned_rect<int>;
+extern template struct axis_aligned_rect<float>;
 
 } //namespace bkrl

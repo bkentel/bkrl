@@ -7,6 +7,7 @@ set(SOURCE_FILES
     include/detail/bsp_layout.i.hpp
     include/detail/freetype_text.i.hpp
     include/detail/sdl_application.i.hpp
+    include/macros.hpp
     include/algorithm.hpp
     include/assert.hpp
     include/bsp_layout.hpp
@@ -58,6 +59,7 @@ set(SOURCE_FILES
     src/renderer.cpp
     src/tile_sheet.cpp
     src/util.cpp
+    src/math.cpp
 #    test/algorithm.t.cpp
 #    test/bsp_layout.t.cpp
 #    test/engine_client.t.cpp
@@ -68,8 +70,8 @@ set(SOURCE_FILES
 include_directories(include)
 include_directories(lib)
 
-include_directories(D:/lib/include/)
-include_directories(D:/lib/include/freetype/)
+include_directories(SYSYEM D:/lib/include/)
+include_directories(SYSYEM D:/lib/include/freetype/)
 
 # set the path to the library folder
 link_directories(D:/lib/lib/x86/)
@@ -80,3 +82,4 @@ add_executable(bkrl ${SOURCE_FILES})
 
 # link the libraries to the executable
 target_link_libraries (bkrl sdl2_gcc_debug)
+target_link_libraries (bkrl freetype)

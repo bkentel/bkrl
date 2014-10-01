@@ -12,10 +12,6 @@
 
 #include "types.hpp"
 
-#define BK_NO_COPY(class_name) \
-class_name(class_name const&) = delete; \
-class_name& operator=(class_name const&) = delete
-
 namespace bkrl {
 ////////////////////////////////////////////////////////////////////////////////
 template <typename T, typename Tag>
