@@ -151,9 +151,19 @@ renderer::create_texture(uint8_t* buffer, int width, int height) {
     return impl_->create_texture(buffer, width, height);
 }
 
+texture
+renderer::create_texture(int width, int height) {
+    return impl_->create_texture(width, height);
+}
+
 void
 renderer::delete_texture(texture& tex) {
     impl_->delete_texture(tex);
+}
+
+void
+renderer::update_texture(texture& tex, void* data, int pitch, int x, int y, int w, int h) {
+    impl_->update_texture(tex, data, pitch, x, y, w, h);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

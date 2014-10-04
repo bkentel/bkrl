@@ -45,12 +45,7 @@ public:
     using cref = json::cref;
 
     explicit item_material_parser(utf8string const& data) {
-        std::string error;
-        auto const root = json11::Json::parse(data, error);
-        if (!error.empty()) {
-            BK_TODO_FAIL();
-        }
-
+        auto const root = json::common::from_memory(data);
         rule_root(root);
     }
 

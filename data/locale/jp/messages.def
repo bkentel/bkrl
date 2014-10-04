@@ -1,0 +1,15 @@
+{
+    "file_type": "LOCALE"
+  , "string_type": "MESSAGE"
+  , "language": "jp"
+  , "definitions": [
+        ["welcome",          "ダンジョンへようこそ！"]
+      , ["direction_prompt", "どの方向へ？"]
+      , ["canceled",         "止めた。"]
+      , ["door_no_door",     "ここにはドアがない。"]
+      , ["door_is_open",     "開けるものがない。"]
+      , ["door_is_closed",   "閉めるものがない。"]
+      , ["door_blocked",     "自分が邪魔になっている。"]
+ 
+    ]
+}

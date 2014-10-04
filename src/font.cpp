@@ -2,7 +2,6 @@
 #include "detail/freetype_text.i.hpp"
 
 #include "renderer.hpp"
-#include <utf8.h>
 
 using namespace bkrl;
 

@@ -3,11 +3,13 @@
   , "string_type": "MESSAGE"
   , "language": "en"
   , "definitions": [
-        ["DIRECTION_PROMPT", "Which direction?"]
-      , ["CANCELED",         "Cancelled."]
-      , ["DOOR_NO_DOOR",     "You see no door here."]
-      , ["DOOR_IS_OPEN",     "There is nothing to open."]
-      , ["DOOR_IS_CLOSED",   "There is nothing to close."]
+        ["welcome",          "Welcome to the dungeon!"]
+      , ["direction_prompt", "Which direction?"]
+      , ["canceled",         "Cancelled."]
+      , ["door_no_door",     "You see no door here."]
+      , ["door_is_open",     "You see nothing to open."]
+      , ["door_is_closed",   "You see nothing to close."]
+      , ["door_blocked",     "You are in the way."]
  
     ]
 }

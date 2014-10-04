@@ -12,6 +12,7 @@
 #include "bsp_layout.hpp"
 #include "tile_sheet.hpp"
 #include "player.hpp"
+#include "messages.hpp"
 
 #include <boost/container/static_vector.hpp>
 
@@ -26,7 +27,8 @@ namespace {
     static string_ref const file_texture_map       {R"(./data/texture_map.json)"};
     static string_ref const file_materials         {R"(./data/materials.def)"};
     static string_ref const file_materials_strings {R"(./data/locale/en/materials.def)"};
-    static string_ref const file_messages          {R"(./data/key_map.json)"};
+    static string_ref const file_messages_en       {R"(./data/locale/en/messages.def)"}; //TODO
+    static string_ref const file_messages_jp       {R"(./data/locale/jp/messages.def)"}; //TODO
 }
 
 namespace bkrl {
@@ -212,8 +214,8 @@ can_merge_wall(
     }
 
     auto const n = check_grid_block9f(grid, p.x, p.y, attribute::tile_type
-      , [](tile_type const type) {
-            return type == tile_type::wall || type == tile_type::door;
+      , [](tile_type const t) {
+            return (t == tile_type::wall) || (t == tile_type::door);
         }
     );
 
@@ -434,7 +436,7 @@ room_connector::generate_segment_(
 ) const {
     BK_ASSERT_DBG(len > 0);
     BK_ASSERT_DBG(intersects(bounds, start));
-    BK_ASSERT_DBG((dir.x || dir.y) && !(dir.x && dir.y));
+    //BK_ASSERT_DBG((dir.x || dir.y) && !(dir.x && dir.y)); TODO
     BK_ASSERT_DBG(src_id && dst_id && src_id != dst_id);
     BK_ASSERT_DBG(can_gen_corridor(grid, bounds, start));
 
@@ -521,11 +523,11 @@ room_connector::add_candidates_(
 
     std::copy_if(
         std::crbegin(dirs), std::crend(dirs), std::back_inserter(open_)
-      , [&](grid_point const p) {
+      , [&](grid_point const gp) {
             auto const it = std::find_if(
                 std::cbegin(closed_), std::cend(closed_)
               , [&](grid_point const q) {
-                    return p == q;
+                    return gp == q;
                 }
             );
 
@@ -533,7 +535,7 @@ room_connector::add_candidates_(
                 return false;
             }
 
-            return can_gen_corridor(grid, bounds, p);
+            return can_gen_corridor(grid, bounds, gp);
         }
     );
 }
@@ -1241,6 +1243,10 @@ public:
         last_message_ = transitory_text_layout {font_face_, msg, width, height};
     }
 
+    void print_message(message_type const msg, hash_t lang = 0) {
+        print_message(messages_(msg, lang));
+    }
+
     explicit impl_t(config const& cfg)
       : random_substantive_ {cfg.substantive_seed}
       , random_trivial_     {cfg.trivial_seed}
@@ -1248,6 +1254,7 @@ public:
       , renderer_           {app_}
       , font_lib_           {}
       , font_face_          {renderer_, font_lib_, "", font_size}
+      , messages_           {file_messages_jp}
       , last_message_       {}
       , sheet_              {file_texture_map, renderer_}
       , view_               {sheet_, app_.client_width(), app_.client_height()}
@@ -1266,7 +1273,7 @@ public:
         view_.center_on_grid(player_.position());
 
         ////////////////////////////////////////////////////
-        print_message("Welcome.");
+        print_message(message_type::welcome);
 
         ////////////////////////////////////////////////////
         while (app_.is_running()) {
@@ -1297,7 +1304,7 @@ public:
         //get all adjacent doors
         auto adjacent = level_.check_adjacent(p, tile_type::door);
         if (adjacent.empty()) {
-            print_message("No doors here.");
+            print_message(message_type::door_no_door);
             return;
         }
 
@@ -1314,9 +1321,9 @@ public:
         auto const n = std::distance(beg, it);
         if (n == 0) {
             if (opened) {
-                print_message("There is nothing to open.");
+                print_message(message_type::door_is_open);
             } else {
-                print_message("There is nothing to close.");
+                print_message(message_type::door_is_closed);
             }
 
             return;
@@ -1332,7 +1339,7 @@ public:
         
         if (n == 1) {
             if (*beg == p) {
-                print_message("You are in the way.");
+                print_message(message_type::door_blocked);
             } else {
                 set_state(*beg);
             }
@@ -1340,15 +1347,15 @@ public:
             return;
         }
 
-        print_message("Which direction?");
+        print_message(message_type::direction_prompt);
         input_mode_ = imode_direction_.enter_mode([this, p, set_state](bool const cancel, ivec2 const dir) {
             if (cancel) {
-                print_message("Cancelled.");
+                print_message(message_type::canceled);
                 return;
             }
             
             if (dir.x == 0 && dir.y == 0) {
-                print_message("You are in the way.");
+                print_message(message_type::door_blocked);
                 return;
             }
 
@@ -1498,6 +1505,8 @@ private:
     
     font_libary font_lib_;
     font_face   font_face_;
+
+    message_map messages_;
 
     transitory_text_layout last_message_;
 

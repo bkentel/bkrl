@@ -44,6 +44,11 @@ struct block {
 };
 
 struct block_value {
+    explicit block_value(codepoint const cp)
+      : first {cp}, last {cp}
+    {
+    }
+    
     template <codepoint_t First, codepoint_t Last>
     block_value(block<First, Last>)
         : first {First}, last {Last}
@@ -72,10 +77,19 @@ inline bool operator<(codepoint const lhs, block_value const rhs) {
     return lhs < rhs.first;
 }
 
-using basic_latin = block<0x00,     0x7F>;
-using cjk_symbols = block<0x3000, 0x303F>;
-using hiragana    = block<0x3040, 0x309F>;
-using katakana    = block<0x30A0, 0x30FF>;
+inline bool operator<(block_value const lhs, codepoint const rhs) {
+    return lhs.last < rhs;
+}
+
+inline bool operator<(block_value const lhs, block_value const rhs) {
+    return lhs.last < rhs.first;
+}
+
+using basic_latin     = block<0x00,     0x7F>;
+using cjk_symbols     = block<0x3000, 0x303F>;
+using hiragana        = block<0x3040, 0x309F>;
+using katakana        = block<0x30A0, 0x30FF>;
+using half_full_forms = block<0xFF01, 0xFFEE>;
 
 using basic_japanese = block<cjk_symbols::first, katakana::last>;
 
@@ -141,6 +155,7 @@ public:
     texture_info get_texture(unicode::codepoint cp);
 
     int line_gap() const;
+    int size() const;
 private:
     std::unique_ptr<detail::font_face_impl> impl_;
 };

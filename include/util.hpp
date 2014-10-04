@@ -50,6 +50,8 @@ inline T value_of(tagged_type<T, Tag> const tagged) noexcept {
 ////////////////////////////////////////////////////////////////////////////////
 template <typename T>
 struct opaque_handle {
+    opaque_handle() : value {0} {}
+
     opaque_handle(std::nullptr_t)
       : value {0}
     {
@@ -68,7 +70,7 @@ struct opaque_handle {
     }
 
     template <typename U>
-    opaque_handle(U* ptr = nullptr) noexcept
+    opaque_handle(U* ptr) noexcept
       : value {reinterpret_cast<std::intptr_t>(ptr)}
     {
     }

@@ -87,6 +87,9 @@
     <ClCompile Include="..\src\math.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\messages.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pch.hpp">
@@ -176,5 +179,11 @@
     <ClInclude Include="..\include\macros.hpp">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\messages.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="boost_container.natvis" />
   </ItemGroup>
 </Project>

@@ -67,8 +67,10 @@ public:
     }
 
     sdl_state& operator=(sdl_state&& rhs) noexcept {
-        rhs.do_quit_ = false;
-        do_quit_ = true;
+        using std::swap;
+        swap(do_quit_, rhs.do_quit_);
+
+        return *this;
     }
 
     sdl_state() {
@@ -294,6 +296,8 @@ application_impl::handle_event(SDL_Event const& event) {
         break;
     case SDL_USEREVENT :
         break;
+    default :
+        break;
     }
 }
 
@@ -354,12 +358,14 @@ application_impl::handle_event_window(SDL_WindowEvent const& event) {
     case SDL_WINDOWEVENT_CLOSE :
         std::cout << "SDL_WINDOWEVENT_CLOSE" << std::endl;
         break;
+    default :
+        break;
     }
 }
 
 //------------------------------------------------------------------------------
 void
-application_impl::handle_event_kb(SDL_KeyboardEvent const& event) {  
+application_impl::handle_event_kb(SDL_KeyboardEvent const& event) {
     if (event.type != SDL_KEYDOWN) {
         return;
     }
@@ -467,7 +473,10 @@ public:
 
     texture create_texture(string_ref filename);
     texture create_texture(uint8_t* buffer, int width, int height);
+    texture create_texture(int width, int height);
     void delete_texture(texture& tex);
+
+    void update_texture(texture& tex, void* data, int pitch, int x, int y, int w, int h);
 
     ////////////////////////////////////////////////////////////////////////////
 
@@ -585,6 +594,32 @@ renderer_impl::create_texture(string_ref const filename) {
     sdl_unique<SDL_Surface> surface {result};
 
     return create_texture_(surface.get());
+}
+
+texture
+renderer_impl::create_texture(int width, int height) {
+    auto const result = SDL_CreateTexture(
+        renderer_.get()
+      , SDL_PIXELFORMAT_ARGB8888
+      , SDL_TEXTUREACCESS_STATIC
+      , width
+      , height
+    );
+
+    if (result == nullptr) {
+        BK_TODO_FAIL();
+    }
+
+    SDL_SetTextureBlendMode(result, SDL_BLENDMODE_BLEND);
+
+    auto const handle = texture::handle_t {result};
+    auto const id     = textures_.size();
+
+    textures_.emplace_back(
+        sdl_unique<SDL_Texture> {result}
+    );
+
+    return texture {handle, id, width, height};
 }
 
 //------------------------------------------------------------------------------
@@ -708,6 +743,18 @@ renderer_impl::draw_texture(
     dst_rect.h = static_cast<int>(scale_.y * dst_rect.h);
 
     auto const result = SDL_RenderCopy(renderer_.get(), sdl_tex, &src_rect, &dst_rect);
+    if (result) {
+        BK_TODO_FAIL();
+    }
+}
+
+void
+renderer_impl::update_texture(texture& tex, void* data, int pitch, int x, int y, int w, int h) {
+    auto const sdl_tex  = tex.handle().as<SDL_Texture*>();
+
+    SDL_Rect const rect {x, y, w, h};
+
+    auto const result = SDL_UpdateTexture(sdl_tex, &rect, data, pitch);
     if (result) {
         BK_TODO_FAIL();
     }

@@ -153,7 +153,7 @@ inline cref require_array(cref json, size_t const min_size = 0, size_t const max
 
     if (size < min_size) {
         BK_TODO_FAIL();
-    } else if (max_size && size > max_size) {
+    } else if (max_size && (size > max_size)) {
         BK_TODO_FAIL();
     }
 
@@ -189,7 +189,7 @@ inline bool has_field(cref value, size_t const i) {
 //    }
 //
 //    auto const result = value.number_value();
-//    
+//
 //    if (result < min) {
 //        BK_TODO_FAIL();
 //    } else if (result > max) {
@@ -259,6 +259,22 @@ inline string_ref get_filetype(cref value, string_ref const expected) {
     }
 
     return result;
+}
+
+inline json11::Json from_memory(utf8string const& data) {
+    std::string error;
+    auto const json = json11::Json::parse(data, error);   
+
+    if (!error.empty()) {
+        BK_TODO_FAIL();
+    }
+
+    return json;
+}
+
+inline json11::Json from_file(string_ref filename) {
+    auto const data = read_file(filename);
+    return from_memory(data);
 }
 
 } //namespace common

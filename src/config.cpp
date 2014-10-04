@@ -10,15 +10,8 @@ class config_parser {
 public:
     using cref = json::cref;
 
-    explicit config_parser(string_ref filename) {
-        auto const data = read_file(filename);
-        
-        std::string error;
-        auto const root = json11::Json::parse(data, error);
-        if (!error.empty()) {
-            BK_TODO_FAIL();
-        }
-
+    explicit config_parser(string_ref const filename) {
+        auto const root = json::common::from_file(filename);
         rule_root(root);
     }
 

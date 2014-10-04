@@ -209,6 +209,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\src\math.cpp" />
+    <ClCompile Include="..\src\messages.cpp" />
     <ClCompile Include="..\src\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">Create</PrecompiledHeader>
@@ -253,6 +254,7 @@
     <ClInclude Include="..\include\keyboard.hpp" />
     <ClInclude Include="..\include\macros.hpp" />
     <ClInclude Include="..\include\math.hpp" />
+    <ClInclude Include="..\include\messages.hpp" />
     <ClInclude Include="..\include\pch.hpp" />
     <ClInclude Include="..\include\player.hpp" />
     <ClInclude Include="..\include\random.hpp" />
@@ -263,6 +265,11 @@
     <ClInclude Include="..\include\tile_type.hpp" />
     <ClInclude Include="..\include\types.hpp" />
     <ClInclude Include="..\include\util.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="boost_container.natvis">
+      <SubType>Designer</SubType>
+    </Natvis>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

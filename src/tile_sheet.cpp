@@ -51,10 +51,8 @@ tile_map::impl_t::impl_t(string_ref filename)
 }
 
 //------------------------------------------------------------------------------
-tile_map::impl_t::impl_t(std::string const& source) {
-    std::string err;
-    auto root = json11::Json::parse(source, err);
-
+tile_map::impl_t::impl_t(utf8string const& source) {
+    auto const root = json::common::from_memory(source);
     rule_root(root);
 
     //sort by type

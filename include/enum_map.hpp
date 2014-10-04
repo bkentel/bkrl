@@ -32,7 +32,7 @@ struct enum_string {
     //--------------------------------------------------------------------------
     //! comparison by enum value predicate.
     //--------------------------------------------------------------------------
-    static bool less_enum(enum_string const& a, enum_string const& b) {
+    static bool less_enum(enum_string const& a, enum_string const& b) noexcept {
         return a.value < b.value;
     }
 
@@ -53,6 +53,10 @@ struct enum_string {
         BK_ASSERT_DBG(!result || hash == rhs.hash);
 
         return result;
+    }
+
+    bool operator<(enum_string const& rhs) const noexcept {
+        return less_enum(*this, rhs);
     }
 
     string_ref string {}; //!< The stringified enum.

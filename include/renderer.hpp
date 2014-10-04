@@ -15,9 +15,6 @@
 
 namespace bkrl {
 
-class font_cache;
-class transitory_text_layout;
-
 class application;
 class renderer;
 class tile_sheet;
@@ -26,7 +23,6 @@ class config;
 
 namespace detail { class renderer_impl; }
 namespace detail { class application_impl; }
-namespace detail { class font_manager_impl; }
 
 namespace detail {
 //==============================================================================
@@ -158,7 +154,11 @@ public:
 
     texture create_texture(string_ref filename);
     texture create_texture(uint8_t* buffer, int width, int height);
+    texture create_texture(int width, int height);
+
     void delete_texture(texture& tex);
+
+    void update_texture(texture& tex, void* data, int pitch, int x, int y, int w, int h);
 
     ////////////////////////////////////////////////////////////////////////////
 

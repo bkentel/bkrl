@@ -1,5 +1,4 @@
 #include "util.hpp"
-#include "assert.hpp"
 #include "algorithm.hpp"
 
 #include "command_type.hpp"
@@ -7,6 +6,7 @@
 #include "tile_type.hpp"
 #include "scancode.hpp"
 #include "keyboard.hpp"
+#include "messages.hpp"
 
 //==============================================================================
 //! convenience macro get a unique reference to a compile-time cstring.
@@ -38,6 +38,7 @@ template class bkrl::enum_map<bkrl::scancode>;
 template class bkrl::enum_map<bkrl::tile_type>;
 template class bkrl::enum_map<bkrl::texture_type>;
 template class bkrl::enum_map<bkrl::command_type>;
+template class bkrl::enum_map<bkrl::message_type>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // enum_map<key_modifier_type>
@@ -473,12 +474,46 @@ namespace {
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// enum_map<message_type>
+////////////////////////////////////////////////////////////////////////////////
+namespace {
+    BK_DECLARE_ENUM_TYPES(message, message_type);
+
+    message_vector_t message_init_string_to_value() {
+        using message = bkrl::message_type;
+
+        message_vector_t result;
+
+        BK_ENUMMAP_ADD_STRING(result, message, invalid);
+
+        BK_ENUMMAP_ADD_STRING(result, message, welcome);
+        BK_ENUMMAP_ADD_STRING(result, message, direction_prompt);
+        BK_ENUMMAP_ADD_STRING(result, message, canceled);
+        BK_ENUMMAP_ADD_STRING(result, message, door_no_door);
+        BK_ENUMMAP_ADD_STRING(result, message, door_is_open);
+        BK_ENUMMAP_ADD_STRING(result, message, door_is_closed);
+        BK_ENUMMAP_ADD_STRING(result, message, door_blocked);
+
+        bkrl::sort(result, message_map_t::value_type::less_hash);
+
+        return result;
+    }
+
+    //take a copy of string_to_value
+    message_vector_t message_init_value_to_string(message_vector_t string_to_value) {
+        bkrl::sort(string_to_value, message_map_t::value_type::less_enum);
+        return string_to_value;
+    }
+}
+
 //------------------------------------------------------------------------------
 BK_DEFINE_ENUM_VARS(modifier, false);
 BK_DEFINE_ENUM_VARS(scancode, true);
 BK_DEFINE_ENUM_VARS(tile, false);
 BK_DEFINE_ENUM_VARS(texture, false);
 BK_DEFINE_ENUM_VARS(command, false);
+BK_DEFINE_ENUM_VARS(message, false);
 
 //------------------------------------------------------------------------------
 #undef BK_DEFINE_ENUM_VARS

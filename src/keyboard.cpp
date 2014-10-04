@@ -23,15 +23,8 @@ private:
     std::vector<key_mapping> mappings_;
 };
 
-keymap::impl_t::impl_t(string_ref filename) {
-    auto const data = bkrl::read_file(filename);
-    
-    std::string error;
-    auto const json = json11::Json::parse(data, error);
-
-    if (!error.empty()) {
-        BK_TODO_FAIL();
-    }
+keymap::impl_t::impl_t(string_ref const filename) {
+    auto const json = json::common::from_file(filename);
 
     rule_root(json);
 
@@ -111,7 +104,7 @@ void keymap::impl_t::rule_mapping_value(cref value) {
         BK_TODO_FAIL();
     }
     
-    key_modifier mods;
+    key_modifier mods {};
 
     for (auto i = 2u; i < value.array_items().size(); ++i) {
         auto const mod = json::require_string(value[i]);

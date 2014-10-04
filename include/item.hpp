@@ -98,7 +98,7 @@ public:
       , boost::container::flat_map<hash_t, locale_t>
     >;
 
-    localized_string() = default; 
+    localized_string() = default;
 
     explicit localized_string(map_t&& data)
       : data_ {std::move(data)}
