@@ -107,8 +107,12 @@ struct glyph_metrics {
     int height;
     int left;
     int top;
+
     int advance_x;
     int advance_y;
+
+    int tex_x;
+    int tex_y;
 };
 
 //==============================================================================
@@ -146,13 +150,8 @@ public:
 
     glyph_metrics metrics(unicode::codepoint cp);
     glyph_metrics metrics(unicode::codepoint lhs, unicode::codepoint rhs);
-    
-    struct texture_info {
-        texture* t;
-        rect     r;
-    };
-    
-    texture_info get_texture(unicode::codepoint cp);
+       
+    texture const& get_texture() const;
 
     int line_gap() const;
     int size() const;

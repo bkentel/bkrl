@@ -54,11 +54,17 @@ font_face::metrics(
 }
 
 //------------------------------------------------------------------------------
-font_face::texture_info
-font_face::get_texture(
+glyph_metrics
+font_face::metrics(
     unicode::codepoint const cp
 ) {
-    return impl_->get_texture(cp);
+    return impl_->metrics(cp);
+}
+
+//------------------------------------------------------------------------------
+texture const&
+font_face::get_texture() const {
+    return impl_->get_texture();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -118,6 +124,25 @@ transitory_text_layout::transitory_text_layout(
 }
 
 //------------------------------------------------------------------------------
+namespace {
+
+template <typename T0, typename T1, typename T2, typename T3>
+inline bkrl::rect make_rect(
+    T0 const left
+  , T1 const top
+  , T2 const right
+  , T3 const bottom
+) noexcept {
+    return bkrl::rect {
+        static_cast<float>(left)
+      , static_cast<float>(top)
+      , static_cast<float>(right)
+      , static_cast<float>(bottom)
+    };
+}
+
+} //namespace
+
 void
 transitory_text_layout::render(
     renderer&  r
@@ -132,20 +157,24 @@ transitory_text_layout::render(
     r.set_translation(0.0f, 0.0f);
 
     for (auto i = 0u; i < codepoints_.size(); ++i) {
-        auto const cp   = unicode::codepoint {codepoints_[i]};
-        auto const p    = positions_[i];
-        auto const info = face.get_texture(cp);
-
-        if (!info.t) {
-            continue;
-        }
+        auto const cp = unicode::codepoint {codepoints_[i]};
+        auto const p  = positions_[i];
         
-        auto const left   = static_cast<float>(x + p.x);
-        auto const top    = static_cast<float>(y + p.y);
-        auto const right  = static_cast<float>(left + info.r.width());
-        auto const bottom = static_cast<float>(top  + info.r.height());
+        auto const& tex  = face.get_texture();
+        auto const& info = face.metrics(cp);
+        
+        auto const w = info.width;
+        auto const h = info.height;
 
-        r.draw_texture(*info.t, info.r, rect {left, top, right, bottom});
+        auto const left   = x + p.x;
+        auto const top    = y + p.y;
+        auto const right  = left + w;
+        auto const bottom = top  + h;
+
+        rect const dst_rect = make_rect(left, top, right, bottom);
+        rect const src_rect = make_rect(info.tex_x, info.tex_y, info.tex_x + w, info.tex_y + h);
+
+        r.draw_texture(tex, src_rect, dst_rect);
     }
 
     r.set_scale(scale);

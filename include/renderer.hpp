@@ -153,8 +153,13 @@ public:
     ////////////////////////////////////////////////////////////////////////////
 
     texture create_texture(string_ref filename);
+    
     texture create_texture(uint8_t* buffer, int width, int height);
+    
     texture create_texture(int width, int height);
+    texture create_texture(ipoint2 const size) {
+        return create_texture(size.x, size.y);
+    }
 
     void delete_texture(texture& tex);
 
