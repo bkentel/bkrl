@@ -661,13 +661,35 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    void open_door(ipoint2 const p) {
-        set_door_state_(p, true);
+    stair_data get_stair_at(ipoint2 const p) const {
+        return {grid_, p};
+    }
+
+    //--------------------------------------------------------------------------
+    message_type go_down(ipoint2 const p) const {
+        return use_stair_(p, true);
     }
     
     //--------------------------------------------------------------------------
-    void close_door(ipoint2 const p) {
-        set_door_state_(p, false);
+    message_type go_up(ipoint2 const p) const {
+        return use_stair_(p, false);
+    }
+
+    message_type use_stair_(ipoint2 const p, bool const down) const {
+        auto const type = grid_.get(attribute::tile_type, p);
+        if (type != tile_type::stair) {
+            return message_type::stairs_no_stairs;
+        }
+
+        auto const stair = stair_data {grid_, p};
+        
+        if (down && !stair.is_down()) {
+            return message_type::stairs_no_down;
+        } else if(!down && !stair.is_up()) {
+            return message_type::stairs_no_up;
+        }
+        
+        return message_type::none;
     }
 
     //--------------------------------------------------------------------------
@@ -707,6 +729,22 @@ public:
 
     ipoint2 up_stair() const noexcept {
         return stairs_up_;
+    }
+
+    message_type open_doors(ipoint2 const p) {
+        return set_doors_(p, true);
+    }
+
+    message_type open_door(ipoint2 const p) {
+        return set_door_(p, true);
+    }
+
+    message_type close_doors(ipoint2 const p) {
+        return set_doors_(p, false);
+    }
+
+    message_type close_door(ipoint2 const p) {
+        return set_door_(p, false);
     }
 private:
     //--------------------------------------------------------------------------
@@ -880,25 +918,23 @@ private:
     }
 
     //--------------------------------------------------------------------------
-    void set_door_state_(ipoint2 const p, bool const opened) {
+    message_type set_door_(ipoint2 const p, bool const opened) {
         auto const type = grid_.get(attribute::tile_type, p);
         if (type != tile_type::door) {
-            std::cout << "no door there!\n"; //TODO
-            return;
+            return message_type::door_no_door;
         }
+        
+        auto door = get_door_at(p);
 
-        auto door = door_data {grid_, p};
         if (opened) {
             if (door.is_open()) {
-                std::cout << "door is already open!\n"; //TODO
-                return;
+                return message_type::door_is_open;
             }
 
             door.open();
         } else {
             if (door.is_closed()) {
-                std::cout << "door is already closed!\n"; //TODO
-                return;
+                return message_type::door_is_closed;
             }
 
             door.close();
@@ -908,6 +944,52 @@ private:
 
         update_texture_type_(p);
         update_texture_id_(p);
+
+        return message_type::none;
+    }
+
+    //--------------------------------------------------------------------------
+    message_type set_doors_(ipoint2 const p, bool const opened) {
+        //get all adjacent doors
+        auto adjacent = check_adjacent(p, tile_type::door);
+        if (adjacent.empty()) {
+            return message_type::door_no_door;
+        }
+
+        auto const beg = std::begin(adjacent);
+        auto const end = std::end(adjacent);
+
+        //remove ineligible doors
+        auto it = std::remove_if(beg, end, [&] (ipoint2 const q) {
+            auto const door = get_door_at(q);
+            return opened ? !door.is_closed() : !door.is_open();
+        });
+
+        //the number of eligible doors
+        auto const n = std::distance(beg, it);
+        
+        //no eligible doors
+        if (n == 0) {
+            return (opened)
+                 ? (message_type::door_is_open)
+                 : (message_type::door_is_closed);
+        }
+        
+        //exactly one eligible door
+        if (n == 1) {
+            auto const q = *beg;
+
+            if (q == p) {
+                return message_type::door_blocked;
+            }
+            
+            set_door_(q, opened);
+                       
+            return message_type::none;
+        }
+
+        //more than one
+        return message_type::direction_prompt;
     }
 
     //--------------------------------------------------------------------------
@@ -1301,66 +1383,37 @@ public:
     void do_set_door_state(bool const opened) {
         auto const p = player_.position();
 
-        //get all adjacent doors
-        auto adjacent = level_.check_adjacent(p, tile_type::door);
-        if (adjacent.empty()) {
-            print_message(message_type::door_no_door);
+        auto msg = (opened)
+          ? level_.open_doors(p)
+          : level_.close_doors(p);
+
+        if (msg != message_type::none) {
+            print_message(msg);
+        }
+
+        if (msg != message_type::direction_prompt) {
             return;
         }
 
-        auto const beg = std::begin(adjacent);
-        auto const end = std::end(adjacent);
-
-        //remove ineligible doors
-        auto it = std::remove_if(beg, end, [&] (ipoint2 const q) {
-            auto const door = level_.get_door_at(q);
-            return opened ? !door.is_closed() : !door.is_open();
-        });
-
-        //the number of eligible doors
-        auto const n = std::distance(beg, it);
-        if (n == 0) {
-            if (opened) {
-                print_message(message_type::door_is_open);
-            } else {
-                print_message(message_type::door_is_closed);
-            }
-
-            return;
-        }
-        
-        auto const set_state = [this, opened](ipoint2 const p) {
-            if (opened) {
-                level_.open_door(p);
-            } else {
-                level_.close_door(p);
-            }
-        };
-        
-        if (n == 1) {
-            if (*beg == p) {
-                print_message(message_type::door_blocked);
-            } else {
-                set_state(*beg);
-            }
-            
-            return;
-        }
-
-        print_message(message_type::direction_prompt);
-        input_mode_ = imode_direction_.enter_mode([this, p, set_state](bool const cancel, ivec2 const dir) {
+        input_mode_ = imode_direction_.enter_mode([this, p, opened](bool const cancel, ivec2 const dir) {
             if (cancel) {
                 print_message(message_type::canceled);
                 return;
             }
             
-            if (dir.x == 0 && dir.y == 0) {
+            if ((dir.x == 0) && (dir.y == 0)) {
                 print_message(message_type::door_blocked);
                 return;
             }
 
-            set_state(p + dir);
-        });
+            auto const result_msg = (opened)
+                ? level_.open_door(p + dir)
+                : level_.close_door(p + dir);
+
+            if (result_msg != message_type::none) {
+                print_message(result_msg);
+            }
+        });        
     }
 
     void do_open() {
@@ -1402,11 +1455,31 @@ public:
     }
 
     void do_go_up() {
-        std::cout << "up\n";
+        auto const msg = level_.go_up(player_.position());
+
+        if (msg != message_type::none) {
+            print_message(msg);
+            return;
+        }
+
+        level_ = level {random_substantive_, random_trivial_, sheet_, level_w, level_h};
+
+        init_map();
+        do_zoom_reset();
     }
 
     void do_go_down() {
-        std::cout << "down\n";
+        auto const msg = level_.go_down(player_.position());
+
+        if (msg != message_type::none) {
+            print_message(msg);
+            return;
+        }
+
+        level_ = level {random_substantive_, random_trivial_, sheet_, level_w, level_h};
+
+        init_map();
+        do_zoom_reset();
     }
 
     void on_command(command_type const cmd) {

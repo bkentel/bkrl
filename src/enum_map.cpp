@@ -494,6 +494,9 @@ namespace {
         BK_ENUMMAP_ADD_STRING(result, message, door_is_open);
         BK_ENUMMAP_ADD_STRING(result, message, door_is_closed);
         BK_ENUMMAP_ADD_STRING(result, message, door_blocked);
+        BK_ENUMMAP_ADD_STRING(result, message, stairs_no_stairs);
+        BK_ENUMMAP_ADD_STRING(result, message, stairs_no_down);
+        BK_ENUMMAP_ADD_STRING(result, message, stairs_no_up);
 
         bkrl::sort(result, message_map_t::value_type::less_hash);
 

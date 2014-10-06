@@ -13,7 +13,8 @@
 namespace bkrl {
 
 enum class message_type : uint16_t {
-    invalid
+    invalid = 0
+  , none = 0
 
   , welcome
   , direction_prompt
@@ -22,6 +23,9 @@ enum class message_type : uint16_t {
   , door_is_open
   , door_is_closed
   , door_blocked
+  , stairs_no_stairs
+  , stairs_no_down
+  , stairs_no_up
 
   , enum_size
 };

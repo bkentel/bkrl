@@ -32,20 +32,32 @@ public:
         json::common::get_filetype(value, "CONFIG");
     }
 
+    static hash_t get_seed(cref value) {
+        switch (value.type()) {
+        case json11::Json::Type::NUL :
+            return random::true_random();
+        case json11::Json::Type::STRING :
+            return slash_hash32(value.string_value());
+        case json11::Json::Type::NUMBER :
+            return json::require_int<hash_t>(value);
+        default:
+            BK_DEBUG_BREAK();
+            break;
+        }
+
+        return 0;
+    }
+
     //--------------------------------------------------------------------------
     void rule_substantive_seed(cref value) {
         static const utf8string field {"substantive_seed"};
-
-        config_.substantive_seed = json::optional_int<uint32_t>(value[field])
-            .get_value_or(random::true_random());
+        config_.substantive_seed = get_seed(value[field]);
     }
 
     //--------------------------------------------------------------------------
     void rule_trivial_seed(cref value) {
         static const utf8string field {"trivial_seed"};
-        
-        config_.trivial_seed = json::optional_int<uint32_t>(value[field])
-            .get_value_or(random::true_random());
+        config_.substantive_seed = get_seed(value[field]);
     }
 
     //--------------------------------------------------------------------------

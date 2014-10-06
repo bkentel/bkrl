@@ -10,6 +10,8 @@
       , ["door_is_open",     "You see nothing to open."]
       , ["door_is_closed",   "You see nothing to close."]
       , ["door_blocked",     "You are in the way."]
- 
+      , ["stairs_no_stairs", "You see no stairs here."]
+      , ["stairs_no_down",   "You can't go down here."]
+      , ["stairs_no_up",     "You can't go up here."]
     ]
 }

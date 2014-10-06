@@ -30,14 +30,14 @@ struct string_id {
     BK_DEFCOPY(string_id);
 
     string_id(hash_t const hash, utf8string str)
-      : hash {hash}
-      , string {std::move(str)}
+      : hash   {hash}
+      , string (std::move(str))
     {
     }
     
     string_id(utf8string str)
-      : hash {slash_hash32(str)}
-      , string {std::move(str)}
+      : hash   {slash_hash32(str)}
+      , string (std::move(str))
     {
     }
 
