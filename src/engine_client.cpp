@@ -632,6 +632,11 @@ public:
                 sheet.render(r, tx, ty, x, y);
             }
         }
+
+        for (auto const& mob : mobs_) {
+            auto const p = mob.position();
+            sheet.render(r, 2, 0, p.x, p.y);
+        }
     }
 
     //--------------------------------------------------------------------------
@@ -841,8 +846,34 @@ private:
 
     //--------------------------------------------------------------------------
     void place_entities_(
-        random::generator& //substantive //TODO
+        random::generator& substantive
     ) {
+        for (auto const& room : rooms_) {
+            if (random::uniform_range(substantive, 0, 100) < 70) {
+                continue;
+            }
+            
+            auto p     = ipoint2 {room.width() / 2, room.height() / 2};
+            auto steps = random::uniform_range(substantive, 0, 10);
+
+            for (; steps > 0; --steps) {
+                auto const dx = random::uniform_range(substantive, -1, 1);
+                auto const dy = random::uniform_range(substantive, -1, 1);
+
+                auto const q = p + ivec2 {dx, dy};
+
+                if (!room.is_valid(q)) {
+                    continue;
+                }
+
+                auto const type = room.get(attribute::tile_type, q);
+                if (type == tile_type::floor) {
+                    p = q;
+                }
+            }
+
+            mobs_.emplace_back(room.bounds().top_left() + p);
+        }
     }
 
     //--------------------------------------------------------------------------
@@ -1007,6 +1038,8 @@ private:
 
     ipoint2 stairs_up_   = ipoint2{0, 0};
     ipoint2 stairs_down_ = ipoint2{0, 0};
+
+    std::vector<entity> mobs_;
 };
 
 //==============================================================================
@@ -1314,10 +1347,6 @@ public:
         });
     }
 
-    void init_map() {
-        player_.move_to(level_.up_stair());
-    }
-
     void print_message(string_ref const msg) {
         constexpr auto width  = 1024;
         constexpr auto height = 100;
@@ -1326,7 +1355,44 @@ public:
     }
 
     void print_message(message_type const msg, hash_t lang = 0) {
+        if (msg == message_type::none) {
+            last_message_ = transitory_text_layout {};
+        }
+        
         print_message(messages_(msg, lang));
+    }
+
+    void next_level(int level) {
+        BK_ASSERT_SAFE(level >= 0);
+
+        auto const size = static_cast<int>(levels_.size());
+
+        if (level == size) {
+            levels_.emplace_back(random_substantive_, random_trivial_, sheet_, level_w, level_h);
+            cur_level_ = &levels_.back();
+        } else if (level < size) {
+            cur_level_ = &levels_[level];
+        } else {
+            BK_TODO_FAIL();
+        }
+        
+        level_number_ = level;
+        player_.move_to(cur_level_->up_stair());
+        do_zoom_reset();
+    }
+
+    void prev_level(int level) {
+        if (level < 0) {
+            return;
+        }
+
+        BK_ASSERT_SAFE(level < static_cast<int>(levels_.size()));
+
+        cur_level_ = &levels_[level];
+
+        level_number_ = level;
+        player_.move_to(cur_level_->down_stair());
+        do_zoom_reset();
     }
 
     explicit impl_t(config const& cfg)
@@ -1335,26 +1401,22 @@ public:
       , app_                {file_key_map, cfg}
       , renderer_           {app_}
       , font_lib_           {}
-      , font_face_          {renderer_, font_lib_, "", font_size}
+      , font_face_          {renderer_, font_lib_, cfg.font_name, font_size}
       , messages_           {file_messages_jp}
       , last_message_       {}
       , sheet_              {file_texture_map, renderer_}
       , view_               {sheet_, app_.client_width(), app_.client_height()}
-      , level_              {random_substantive_, random_trivial_, sheet_, level_w, level_h}
+      , cur_level_          {nullptr}
       , player_             {}
       , input_mode_         {nullptr}
       , imode_direction_    {[&] {input_mode_ = nullptr;}}
       , materials_          {file_materials}
       , materials_strings_  {file_materials_strings}
     {
-        ////////////////////////////////////////////////////
         init_sinks();
-        init_map();
 
-        ////////////////////////////////////////////////////
-        view_.center_on_grid(player_.position());
+        next_level(0);
 
-        ////////////////////////////////////////////////////
         print_message(message_type::welcome);
 
         ////////////////////////////////////////////////////
@@ -1370,7 +1432,7 @@ public:
         r.set_translation(view_.translation());
         r.set_scale(view_.scale());
 
-        level_.render(r);
+        cur_level_->render(r);
 
         auto const player_pos = player_.position();
         sheet_.render(r, 1, 0, player_pos.x, player_pos.y);
@@ -1380,12 +1442,12 @@ public:
         r.present();
     }
 
-    void do_set_door_state(bool const opened) {
+    void set_door_state(bool const opened) {
         auto const p = player_.position();
 
         auto msg = (opened)
-          ? level_.open_doors(p)
-          : level_.close_doors(p);
+          ? cur_level_->open_doors(p)
+          : cur_level_->close_doors(p);
 
         if (msg != message_type::none) {
             print_message(msg);
@@ -1407,8 +1469,8 @@ public:
             }
 
             auto const result_msg = (opened)
-                ? level_.open_door(p + dir)
-                : level_.close_door(p + dir);
+                ? cur_level_->open_door(p + dir)
+                : cur_level_->close_door(p + dir);
 
             if (result_msg != message_type::none) {
                 print_message(result_msg);
@@ -1417,15 +1479,15 @@ public:
     }
 
     void do_open() {
-        do_set_door_state(true);
+        set_door_state(true);
     }
 
     void do_close() {
-        do_set_door_state(false);
+        set_door_state(false);
     }
 
     void do_move_player(int const dx, int const dy) {
-        if (!level_.can_move_to(player_, dx, dy)) {
+        if (!cur_level_->can_move_to(player_, dx, dy)) {
             return;
         }
 
@@ -1455,31 +1517,25 @@ public:
     }
 
     void do_go_up() {
-        auto const msg = level_.go_up(player_.position());
+        auto const msg = cur_level_->go_up(player_.position());
 
         if (msg != message_type::none) {
             print_message(msg);
             return;
         }
 
-        level_ = level {random_substantive_, random_trivial_, sheet_, level_w, level_h};
-
-        init_map();
-        do_zoom_reset();
+        prev_level(level_number_ - 1);
     }
 
     void do_go_down() {
-        auto const msg = level_.go_down(player_.position());
+        auto const msg = cur_level_->go_down(player_.position());
 
         if (msg != message_type::none) {
             print_message(msg);
             return;
         }
 
-        level_ = level {random_substantive_, random_trivial_, sheet_, level_w, level_h};
-
-        init_map();
-        do_zoom_reset();
+        next_level(level_number_ + 1);
     }
 
     void on_command(command_type const cmd) {
@@ -1587,7 +1643,9 @@ private:
 
     view   view_;
 
-    level  level_;
+    std::vector<level> levels_;
+    level* cur_level_    = nullptr;
+    int    level_number_ = 0;
 
     player player_;
 
@@ -1596,6 +1654,9 @@ private:
 
     definition<item_material_def>       materials_;
     localized_string<item_material_def> materials_strings_;
+
+    int frames_ = 0;
+    float fps_ = 0.0f;
 };
 
 engine_client::~engine_client() = default;

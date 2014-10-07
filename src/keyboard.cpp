@@ -1,6 +1,8 @@
 #include "keyboard.hpp"
 #include "json.hpp"
 #include "command_type.hpp"
+#include "algorithm.hpp"
+#include "iterable.hpp"
 
 using namespace bkrl;
 
@@ -28,35 +30,25 @@ keymap::impl_t::impl_t(string_ref const filename) {
 
     rule_root(json);
 
-    std::sort(
-        std::begin(mappings_)
-      , std::end(mappings_)
-      , [](key_mapping const& lhs, key_mapping const& rhs) {
-            return lhs.keys < rhs.keys;
-        }
-    );
+    bkrl::sort(mappings_, [](auto const& lhs, auto const& rhs) {
+        return lhs.keys < rhs.keys;
+    });
 }
 
 command_type
 keymap::impl_t::operator[](key_combo const& key) const {
-    auto const lower = std::lower_bound(
-        std::cbegin(mappings_)
-      , std::cend(mappings_)
-      , key
-      , [](key_mapping const& lhs, key_combo const& rhs) {
-            //match the key only; not mods
-            return lhs.keys.key < rhs.key;
-        }
-    );
+    auto const lower = bkrl::lower_bound(mappings_, key, [](auto& lhs, auto& rhs) {
+        return lhs.keys.key < rhs.key; //match the key only; not mods
+    });
 
     //for each matching key; not mods
-    for (auto it = lower; it != std::cend(mappings_); ++it) {
-        if (it->keys.key != key.key) {
+    for (auto const& mapping : make_iterable(lower, std::end(mappings_))) {
+        if (mapping.keys.key != key.key) {
             break;
         }
 
-        if (it->keys.modifier.test(key.modifier)) {
-            return it->command;
+        if (mapping.keys.modifier.test(key.modifier)) {
+            return mapping.command;
         }
     }
 

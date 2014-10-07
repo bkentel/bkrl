@@ -182,6 +182,12 @@
     <ClInclude Include="..\include\messages.hpp">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\scope_exit.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\iterable.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="boost_container.natvis" />

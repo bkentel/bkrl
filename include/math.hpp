@@ -212,6 +212,10 @@ struct axis_aligned_rect {
         };
     }
 
+    point2d<T> top_left() const noexcept {
+        return {left, top};
+    }
+
     T left, top, right, bottom;
 };
 

@@ -6,7 +6,7 @@
 
 #if BOOST_COMP_MSVC
 #   define BK_NORETURN __declspec(noreturn)
-#   define BK_THREADLOCAL __declspec(thread)
+#   define BK_THREADLOCAL thread_local
 #else
 #   define BK_NORETURN [[noreturn]]
 #   define BK_THREADLOCAL thread_local

@@ -56,14 +56,12 @@ tile_map::impl_t::impl_t(utf8string const& source) {
     rule_root(root);
 
     //sort by type
-    bkrl::sort(mappings_, [](value_type const& a, value_type const& b) {
+    bkrl::sort(mappings_, [](auto const& a, auto const& b) {
         return a.first < b.first;
     });
 
     //check for duplicates
-    auto const it = std::adjacent_find(
-        std::cbegin(mappings_), std::cend(mappings_)
-    );
+    auto const it = bkrl::adjacent_find(mappings_);
 
     if (it != std::cend(mappings_)) {
         BK_TODO_FAIL(); //duplicate mapping

@@ -455,10 +455,6 @@ face::get_bitmap_glyph_() {
         return nullptr;
     }
 
-    if (glyph_format_() == FT_GLYPH_FORMAT_NONE) {
-        return nullptr;
-    }
-
     auto result = glyph.get();
     if (result->format != FT_GLYPH_FORMAT_BITMAP) {
         auto const error = FT_Glyph_To_Bitmap(&result, FT_RENDER_MODE_NORMAL, nullptr, false);

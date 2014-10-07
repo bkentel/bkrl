@@ -250,6 +250,7 @@
     <ClInclude Include="..\include\generate.hpp" />
     <ClInclude Include="..\include\grid.hpp" />
     <ClInclude Include="..\include\item.hpp" />
+    <ClInclude Include="..\include\iterable.hpp" />
     <ClInclude Include="..\include\json.hpp" />
     <ClInclude Include="..\include\keyboard.hpp" />
     <ClInclude Include="..\include\macros.hpp" />
@@ -260,6 +261,7 @@
     <ClInclude Include="..\include\random.hpp" />
     <ClInclude Include="..\include\renderer.hpp" />
     <ClInclude Include="..\include\scancode.hpp" />
+    <ClInclude Include="..\include\scope_exit.hpp" />
     <ClInclude Include="..\include\texture_type.hpp" />
     <ClInclude Include="..\include\tile_sheet.hpp" />
     <ClInclude Include="..\include\tile_type.hpp" />
