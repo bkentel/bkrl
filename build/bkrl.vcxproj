@@ -217,6 +217,7 @@
     </ClCompile>
     <ClCompile Include="..\src\renderer.cpp" />
     <ClCompile Include="..\src\tile_sheet.cpp" />
+    <ClCompile Include="..\src\time.cpp" />
     <ClCompile Include="..\src\util.cpp" />
     <ClCompile Include="..\test\algorithm.t.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -232,6 +233,10 @@
     </ClCompile>
     <ClCompile Include="..\test\math.t.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\test\time.t.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -265,6 +270,7 @@
     <ClInclude Include="..\include\texture_type.hpp" />
     <ClInclude Include="..\include\tile_sheet.hpp" />
     <ClInclude Include="..\include\tile_type.hpp" />
+    <ClInclude Include="..\include\time.hpp" />
     <ClInclude Include="..\include\types.hpp" />
     <ClInclude Include="..\include\util.hpp" />
   </ItemGroup>

@@ -90,6 +90,12 @@
     <ClCompile Include="..\src\messages.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\test\time.t.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\time.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pch.hpp">
@@ -186,6 +192,9 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\iterable.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\time.hpp">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

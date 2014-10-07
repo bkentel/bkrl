@@ -1,6 +1,4 @@
-﻿#pragma execution_character_set("utf-8")
-
-#include "item.hpp"
+﻿#include "item.hpp"
 #include "engine_client.hpp"
 #include "font.hpp"
 #include "config.hpp"
@@ -13,6 +11,7 @@
 #include "tile_sheet.hpp"
 #include "player.hpp"
 #include "messages.hpp"
+#include "time.hpp"
 
 #include <boost/container/static_vector.hpp>
 
@@ -854,7 +853,7 @@ private:
             }
             
             auto p     = ipoint2 {room.width() / 2, room.height() / 2};
-            auto steps = random::uniform_range(substantive, 0, 10);
+            auto steps = random::uniform_range(substantive, 1, 10);
 
             for (; steps > 0; --steps) {
                 auto const dx = random::uniform_range(substantive, -1, 1);
@@ -866,7 +865,7 @@ private:
                     continue;
                 }
 
-                auto const type = room.get(attribute::tile_type, q);
+                auto const type = grid_.get(attribute::tile_type, q);
                 if (type == tile_type::floor) {
                     p = q;
                 }
@@ -1347,19 +1346,27 @@ public:
         });
     }
 
+    void fade_message() {
+        if (last_message_fade_) {
+            --last_message_fade_;
+        }
+    }
+
     void print_message(string_ref const msg) {
         constexpr auto width  = 1024;
         constexpr auto height = 100;
 
         last_message_ = transitory_text_layout {font_face_, msg, width, height};
+
+        last_message_fade_ = 5;
     }
 
     void print_message(message_type const msg, hash_t lang = 0) {
         if (msg == message_type::none) {
             last_message_ = transitory_text_layout {};
+        } else {
+            print_message(messages_(msg, lang));
         }
-        
-        print_message(messages_(msg, lang));
     }
 
     void next_level(int level) {
@@ -1419,6 +1426,12 @@ public:
 
         print_message(message_type::welcome);
 
+        auto const fade_time = std::chrono::milliseconds {1000};
+        timers_.add_timer(fade_time, [&](timer::id_t, timer::duration_t) {
+            fade_message();
+            return fade_time;
+        });
+
         ////////////////////////////////////////////////////
         while (app_.is_running()) {
             app_.do_all_events();
@@ -1427,6 +1440,8 @@ public:
     }
 
     void render(renderer& r) {
+        timers_.update(); //TODO move
+
         r.clear();
 
         r.set_translation(view_.translation());
@@ -1437,9 +1452,15 @@ public:
         auto const player_pos = player_.position();
         sheet_.render(r, 1, 0, player_pos.x, player_pos.y);
 
-        last_message_.render(r, font_face_, 1, 1);
+        if (last_message_fade_ > 0) {
+            last_message_.render(r, font_face_, 1, 1);
+        }
 
         r.present();
+    }
+
+    void next_turn() {
+        turn_++;
     }
 
     void set_door_state(bool const opened) {
@@ -1451,6 +1472,9 @@ public:
 
         if (msg != message_type::none) {
             print_message(msg);
+        } else {
+            //ok
+            next_turn();
         }
 
         if (msg != message_type::direction_prompt) {
@@ -1474,6 +1498,9 @@ public:
 
             if (result_msg != message_type::none) {
                 print_message(result_msg);
+            } else {
+                //ok
+                next_turn();
             }
         });        
     }
@@ -1493,6 +1520,7 @@ public:
 
         player_.move_by(dx, dy);
         view_.scroll_by_tile(dx, dy);
+        next_turn();
     }
 
     void do_scroll(int const dx, int const dy) {
@@ -1525,6 +1553,7 @@ public:
         }
 
         prev_level(level_number_ - 1);
+        next_turn();
     }
 
     void do_go_down() {
@@ -1536,6 +1565,7 @@ public:
         }
 
         next_level(level_number_ + 1);
+        next_turn();
     }
 
     void on_command(command_type const cmd) {
@@ -1635,9 +1665,12 @@ private:
     font_libary font_lib_;
     font_face   font_face_;
 
+    timer       timers_;
+
     message_map messages_;
 
     transitory_text_layout last_message_;
+    int                    last_message_fade_ = 5;
 
     tile_sheet sheet_;
 
@@ -1646,6 +1679,8 @@ private:
     std::vector<level> levels_;
     level* cur_level_    = nullptr;
     int    level_number_ = 0;
+
+    uint64_t turn_ = 0;
 
     player player_;
 

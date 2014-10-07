@@ -165,6 +165,9 @@ public:
 
     void update_texture(texture& tex, void* data, int pitch, int x, int y, int w, int h);
 
+    void set_color_mod(texture& tex, uint8_t r, uint8_t g, uint8_t b);
+    void set_alpha_mod(texture& tex, uint8_t a);
+
     ////////////////////////////////////////////////////////////////////////////
 
     void set_translation_x(scalar dx);
