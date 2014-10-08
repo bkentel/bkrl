@@ -461,6 +461,10 @@ application_impl::do_all_events() {
 ////////////////////////////////////////////////////////////////////////////////
 class renderer_impl : public renderer_base {
 public:
+    static SDL_Texture* get_texture(texture& t) {
+        return t.handle().as<SDL_Texture*>();
+    }
+
     renderer_impl(application const& app);
 
     handle_t handle() const;
@@ -477,6 +481,24 @@ public:
     void delete_texture(texture& tex);
 
     void update_texture(texture& tex, void* data, int pitch, int x, int y, int w, int h);
+
+    void set_color_mod(texture& tex, uint8_t r, uint8_t g, uint8_t b) {
+        auto const t = get_texture(tex);
+        
+        auto const result = SDL_SetTextureColorMod(t, r, g, b);
+        if (result) {
+            BK_TODO_FAIL();
+        }
+    }
+    
+    void set_alpha_mod(texture& tex, uint8_t a) {
+        auto const t = get_texture(tex);
+        
+        auto const result = SDL_SetTextureAlphaMod(t, a);
+        if (result) {
+            BK_TODO_FAIL();
+        }
+    }
 
     ////////////////////////////////////////////////////////////////////////////
 

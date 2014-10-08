@@ -616,6 +616,23 @@ public:
     }
     
     //--------------------------------------------------------------------------
+    void advance(random::generator& trivial) {
+        for (auto& mob : mobs_) {
+            auto const roll = random::uniform_range(trivial, 0, 100);
+            if (roll < 25) {
+                continue;
+            }
+
+            auto const dx = random::uniform_range(trivial, -1, 1);
+            auto const dy = random::uniform_range(trivial, -1, 1);
+
+            if (can_move_to(mob, dx, dy)) {
+                mob.move_by(dx, dy);
+            }
+        }
+    }
+
+    //--------------------------------------------------------------------------
     void render(renderer& r) {
         auto const w = grid_.width();
         auto const h = grid_.height();
@@ -770,7 +787,10 @@ private:
 
         //TODO temp; for testing only
         auto const reserve = grid_region {20, 20, 40, 40};
-        auto const params  = bsp_layout::params_t {};
+        
+        auto params = bsp_layout::params_t {};
+        params.width  = grid_.width();
+        params.height = grid_.height();
 
         layout_ = bsp_layout::generate(
             substantive
@@ -852,26 +872,19 @@ private:
                 continue;
             }
             
-            auto p     = ipoint2 {room.width() / 2, room.height() / 2};
-            auto steps = random::uniform_range(substantive, 1, 10);
+            entity mob {room.center()};
 
+            auto steps = random::uniform_range(substantive, 1, 10);
             for (; steps > 0; --steps) {
                 auto const dx = random::uniform_range(substantive, -1, 1);
                 auto const dy = random::uniform_range(substantive, -1, 1);
 
-                auto const q = p + ivec2 {dx, dy};
-
-                if (!room.is_valid(q)) {
-                    continue;
-                }
-
-                auto const type = grid_.get(attribute::tile_type, q);
-                if (type == tile_type::floor) {
-                    p = q;
+                if (can_move_to(mob, dx, dy)) {
+                    mob.move_by(dx, dy);
                 }
             }
 
-            mobs_.emplace_back(room.bounds().top_left() + p);
+            mobs_.emplace_back(std::move(mob));
         }
     }
 
@@ -1432,15 +1445,24 @@ public:
             return fade_time;
         });
 
+        auto const frame_time = std::chrono::nanoseconds {1000000000 / 60};
+        timers_.add_timer(frame_time, [&](timer::id_t, timer::duration_t) {
+            render_ = true;
+            return frame_time;
+        });
+
         ////////////////////////////////////////////////////
         while (app_.is_running()) {
             app_.do_all_events();
+            timers_.update();
             render(renderer_);
         }
     }
 
     void render(renderer& r) {
-        timers_.update(); //TODO move
+        if (!render_) {
+            return;
+        }
 
         r.clear();
 
@@ -1457,10 +1479,13 @@ public:
         }
 
         r.present();
+
+        render_ = false;
     }
 
-    void next_turn() {
+    void advance() {
         turn_++;
+        cur_level_->advance(random_trivial_);
     }
 
     void set_door_state(bool const opened) {
@@ -1474,7 +1499,7 @@ public:
             print_message(msg);
         } else {
             //ok
-            next_turn();
+            advance();
         }
 
         if (msg != message_type::direction_prompt) {
@@ -1500,7 +1525,7 @@ public:
                 print_message(result_msg);
             } else {
                 //ok
-                next_turn();
+                advance();
             }
         });        
     }
@@ -1520,7 +1545,7 @@ public:
 
         player_.move_by(dx, dy);
         view_.scroll_by_tile(dx, dy);
-        next_turn();
+        advance();
     }
 
     void do_scroll(int const dx, int const dy) {
@@ -1553,7 +1578,7 @@ public:
         }
 
         prev_level(level_number_ - 1);
-        next_turn();
+        advance();
     }
 
     void do_go_down() {
@@ -1565,7 +1590,7 @@ public:
         }
 
         next_level(level_number_ + 1);
-        next_turn();
+        advance();
     }
 
     void on_command(command_type const cmd) {
@@ -1613,6 +1638,8 @@ public:
             static_cast<float>(info.dx)
           , static_cast<float>(info.dy)
         );
+
+        render_ = true;
     }
 
     void on_mouse_button(application::mouse_button_info const& info) {
@@ -1692,6 +1719,7 @@ private:
 
     int frames_ = 0;
     float fps_ = 0.0f;
+    bool render_ = true;
 };
 
 engine_client::~engine_client() = default;

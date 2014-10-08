@@ -166,4 +166,14 @@ renderer::update_texture(texture& tex, void* data, int pitch, int x, int y, int 
     impl_->update_texture(tex, data, pitch, x, y, w, h);
 }
 
+void
+renderer::set_color_mod(texture& tex, uint8_t r, uint8_t g, uint8_t b) {
+    impl_->set_color_mod(tex, r, g, b);
+}
+
+void
+renderer::set_alpha_mod(texture & tex, uint8_t a) {
+    impl_->set_alpha_mod(tex, a);
+}
+
 ////////////////////////////////////////////////////////////////////////////////

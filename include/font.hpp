@@ -153,6 +153,9 @@ public:
        
     texture const& get_texture() const;
 
+    void set_color(uint8_t r, uint8_t g, uint8_t b);
+    void set_alpha(uint8_t a);
+
     int line_gap() const;
     int size() const;
 private:
