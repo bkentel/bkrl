@@ -344,8 +344,9 @@ public:
     explicit operator bool() const noexcept {
         return (!!glyph_)
             && (index_ != glyph_index {face::error_index})
-            && (width()  > 0)
-            && (height() > 0);
+            //&& (width()  > 0)
+            //&& (height() > 0)
+            ;
     }
 private:
     unicode::codepoint codepoint_ = unicode::codepoint {};
@@ -654,9 +655,13 @@ public:
         std::vector<uint8_t> buffer;
 
         auto const render_glyph = [&](cached_glyph const& info) {
-            auto const bmp   = bitmap_glyph {cur_face, info};
+            auto const bmp = bitmap_glyph {cur_face, info};
+            if (bmp.width() == 0 || bmp.height() == 0) {
+                BK_ASSERT_DBG(bmp.width() + bmp.height() == 0);
+                return;
+            }
+            
             auto const pitch = bmp.render(buffer);
-
             if (pitch == 0) {
                 return;
             }

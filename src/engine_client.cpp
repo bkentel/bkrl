@@ -12,8 +12,10 @@
 #include "player.hpp"
 #include "messages.hpp"
 #include "time.hpp"
+#include "spatial_map.hpp"
 
 #include <boost/container/static_vector.hpp>
+#include <boost/format.hpp>
 
 using bkrl::engine_client;
 using bkrl::command_type;
@@ -600,11 +602,21 @@ room_connector::connect(
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
+template <typename T>
+std::remove_reference_t<T> const& as_const(T&& value) {
+    return value;
+}
+
 //==============================================================================
 //! One level within the world.
 //==============================================================================
 class level {
 public:
+    struct floor_item {
+        ipoint2 position;
+        item    value;
+    };
+
     //--------------------------------------------------------------------------
     level(random::generator& substantive, random::generator& trivial
         , tile_sheet const& sheet, grid_size width, grid_size height
@@ -618,16 +630,15 @@ public:
     //--------------------------------------------------------------------------
     void advance(random::generator& trivial) {
         for (auto& mob : mobs_) {
-            auto const roll = random::uniform_range(trivial, 0, 100);
+            auto const roll = random::percent(trivial);
             if (roll < 25) {
                 continue;
             }
 
-            auto const dx = random::uniform_range(trivial, -1, 1);
-            auto const dy = random::uniform_range(trivial, -1, 1);
+            auto const v = random::direction(trivial);
 
-            if (can_move_to(mob, dx, dy)) {
-                mob.move_by(dx, dy);
+            if (can_move_by(mob, v)) {
+                mob.move_by(v);
             }
         }
     }
@@ -649,10 +660,52 @@ public:
             }
         }
 
+        for (auto const& i : items_) {
+            auto const p = i.pos;
+            sheet.render(r, 15, 0, p.x, p.y);
+        }
+
         for (auto const& mob : mobs_) {
             auto const p = mob.position();
             sheet.render(r, 2, 0, p.x, p.y);
         }
+    }
+
+    //--------------------------------------------------------------------------
+    message_type can_get_item(ipoint2 const p) const {
+        auto result = message_type::get_no_items;
+
+        items_.find(p, [&](item const&) {
+            result = (result == message_type::get_no_items)
+              ? message_type::none
+              : message_type::get_which_prompt;
+        });
+
+        return result;
+    }
+
+    item get_item(ipoint2 const p, int const index = 0) {
+        int i = 0;
+
+        item* which = nullptr;
+        items_.find(p, [&](item& itm) {
+            if (i++ == index) {
+                which = &itm;
+            }
+        });
+        BK_ASSERT(which != nullptr);
+
+        item result = std::move(*which);
+
+
+        i = 0;
+        items_.remove(p, [&](item&) {
+            return i++ == index;
+        });
+
+        items_.sort();
+
+        return result;
     }
 
     //--------------------------------------------------------------------------
@@ -714,20 +767,13 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    bool can_move_to(entity const& e, signed const dx, signed const dy) {
-        if (std::abs(dx) > 1 || std::abs(dy) > 1) {
-            BK_TODO_FAIL();
-        }
-
-        auto const to = translate(e.position(), dx, dy);
-
-        if (!grid_.is_valid(to)) {
+    bool can_move_to(entity const& e, ipoint2 const p) const {
+        if (!grid_.is_valid(p)) {
             return false;
         }
 
-        auto const type = grid_.get(attribute::tile_type, to);
+        auto const type = grid_.get(attribute::tile_type, p);
 
-        //TODO
         switch (type) {
         case tile_type::invalid : //TODO this is just for testing
 
@@ -736,12 +782,28 @@ public:
         case tile_type::stair :
             return true;
         case tile_type::door :
-            return door_data {grid_, to}.is_open();
+            return door_data {grid_, p}.is_open();
         default :
             break;
         }
 
         return false;
+    }
+
+    bool can_move_to(entity const& e, int const x, int const y) const {
+        return can_move_to(e, ipoint2 {x, y});
+    }
+
+    bool can_move_by(entity const& e, ivec2 const v) {
+        if (std::abs(v.x) > 1 || std::abs(v.y) > 1) {
+            BK_TODO_FAIL();
+        }
+
+        return can_move_to(e, e.position() + v);
+    }
+
+    bool can_move_by(entity const& e, int const dx, int const dy) {      
+        return can_move_by(e, ivec2 {dx, dy});
     }
 
     ipoint2 down_stair() const noexcept {
@@ -766,6 +828,34 @@ public:
 
     message_type close_door(ipoint2 const p) {
         return set_door_(p, false);
+    }
+
+    utf8string get_inspect_msg(ipoint2 const p)  const {
+        if (!grid_.is_valid(p)) {
+            return "";
+        }
+
+        auto const type = grid_.get(attribute::tile_type, p);
+        auto result = enum_map<tile_type>::get(type).string.to_string();
+
+        for (auto&& itm : as_const(items_)) {
+            if (itm.pos != p) {
+                continue;
+            }
+
+            result.append("; ");
+            result.append(itm.value.name);
+        }
+        
+        for (auto&& mob : as_const(mobs_)) {
+            if (mob.position() != p) {
+                continue;
+            }
+
+            result.append("; Monster");
+        }
+
+        return result;
     }
 private:
     //--------------------------------------------------------------------------
@@ -858,15 +948,46 @@ private:
     }
 
     //--------------------------------------------------------------------------
-    void place_items_(
-        random::generator& //substantive //TODO
-    ) {
+
+    //--------------------------------------------------------------------------
+    void place_items_(random::generator& substantive) {
+        static std::array<char const*, 10> const names = {
+            "Sword"
+          , "Dagger"
+          , "Axe"
+          , "Potion"
+          , "Scroll"
+          , "Bandage"
+          , "Helmet"
+          , "Gloves"
+          , "Staff"
+          , "Coins"
+        };
+        
+        for (auto const& room : rooms_) {
+            if (random::percent(substantive) < 70) {
+                continue;
+            }
+            
+            auto const type = random::uniform_range(substantive, 0, 9);
+            auto p = room.center();
+
+            auto steps = random::uniform_range(substantive, 1, 10);
+            for (; steps > 0; --steps) {
+                auto const v = random::direction(substantive);
+
+                auto const q = p + v;
+                if (grid_.get(attribute::tile_type, q) == tile_type::floor) {
+                    p = q;
+                }
+            }
+
+            items_.emplace(p, item {names[type]});
+        }
     }
 
     //--------------------------------------------------------------------------
-    void place_entities_(
-        random::generator& substantive
-    ) {
+    void place_entities_(random::generator& substantive) {
         for (auto const& room : rooms_) {
             if (random::uniform_range(substantive, 0, 100) < 70) {
                 continue;
@@ -876,11 +997,10 @@ private:
 
             auto steps = random::uniform_range(substantive, 1, 10);
             for (; steps > 0; --steps) {
-                auto const dx = random::uniform_range(substantive, -1, 1);
-                auto const dy = random::uniform_range(substantive, -1, 1);
+                auto const v = random::direction(substantive);
 
-                if (can_move_to(mob, dx, dy)) {
-                    mob.move_by(dx, dy);
+                if (can_move_by(mob, v)) {
+                    mob.move_by(v);
                 }
             }
 
@@ -1051,7 +1171,9 @@ private:
     ipoint2 stairs_up_   = ipoint2{0, 0};
     ipoint2 stairs_down_ = ipoint2{0, 0};
 
-    std::vector<entity> mobs_;
+    spatial_map<item>       items_;
+    std::vector<entity>     mobs_;
+
 };
 
 //==============================================================================
@@ -1084,6 +1206,14 @@ public:
 
         display_w_ = width;
         display_h_ = height;
+    }
+    //--------------------------------------------------------------------------
+    int width() const noexcept {
+        return static_cast<int>(display_w_);
+    }
+    //--------------------------------------------------------------------------
+    int height() const noexcept {
+        return static_cast<int>(display_h_);
     }
 
     //--------------------------------------------------------------------------
@@ -1325,11 +1455,26 @@ private:
 
 //==============================================================================
 //==============================================================================
+namespace bkrl {
+namespace gui {
+class widget;
+
+class status_bar {
+public:
+    void render(renderer& r) {
+    
+    }
+private:
+};
+
+}} //namespace bkrl::gui
+//==============================================================================
+//==============================================================================
 struct engine_client::impl_t {
 public:
     enum : int {
-        level_w   = 100
-      , level_h   = 100
+        level_w   = 50
+      , level_h   = 50
       , font_size = 20
     };
 
@@ -1422,7 +1567,7 @@ public:
       , renderer_           {app_}
       , font_lib_           {}
       , font_face_          {renderer_, font_lib_, cfg.font_name, font_size}
-      , messages_           {file_messages_jp}
+      , messages_           {file_messages_en}
       , last_message_       {}
       , sheet_              {file_texture_map, renderer_}
       , view_               {sheet_, app_.client_width(), app_.client_height()}
@@ -1478,6 +1623,8 @@ public:
             last_message_.render(r, font_face_, 1, 1);
         }
 
+        inspect_message_.render(r, font_face_, 0, view_.height() - 32);
+
         r.present();
 
         render_ = false;
@@ -1530,6 +1677,10 @@ public:
         });        
     }
 
+    ////////////////////////////////////////////////////////////////////////////
+    // Commands
+    ////////////////////////////////////////////////////////////////////////////
+
     void do_open() {
         set_door_state(true);
     }
@@ -1539,7 +1690,7 @@ public:
     }
 
     void do_move_player(int const dx, int const dy) {
-        if (!cur_level_->can_move_to(player_, dx, dy)) {
+        if (!cur_level_->can_move_by(player_, dx, dy)) {
             return;
         }
 
@@ -1593,6 +1744,32 @@ public:
         advance();
     }
 
+    void do_wait() {
+        advance();
+    }
+
+    void do_get() {
+        auto const p = player_.position();
+
+        auto const msg = cur_level_->can_get_item(p);
+        if (msg != message_type::none) {
+            print_message(msg);
+            return;
+        }
+        
+        auto item = cur_level_->get_item(p, 0);
+
+        //TODO add languages and formatting functions
+        boost::format fmt {messages_(message_type::get_ok, 0)};
+        print_message(boost::str(fmt % item.name % 2));
+
+        advance();
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Sinks
+    ////////////////////////////////////////////////////////////////////////////
+
     void on_command(command_type const cmd) {
         if (input_mode_) {
             input_mode_->on_command(cmd);
@@ -1602,10 +1779,12 @@ public:
         switch (cmd) {
         case command_type::open       : do_open(); break;
         case command_type::close      : do_close(); break;
+        case command_type::get        : do_get(); break;
         case command_type::scroll_n   : do_scroll( 0,  1); break;
         case command_type::scroll_s   : do_scroll( 0, -1); break;
         case command_type::scroll_e   : do_scroll(-1,  0); break;
         case command_type::scroll_w   : do_scroll( 1,  0); break;
+        case command_type::here       : do_wait(); break;
         case command_type::north      : do_move_player (0, -1); break;
         case command_type::south      : do_move_player( 0,  1); break;
         case command_type::east       : do_move_player( 1,  0); break;
@@ -1629,8 +1808,11 @@ public:
     }
 
     void on_mouse_move(application::mouse_move_info const& info) {
-        auto const right = (info.state & (1<<2)) != 0;
+        auto const right = (info.state & (1<<2)) != 0;      
+        
         if (!right) {
+            auto const p = view_.screen_to_grid(info.x, info.y);
+            inspect_message_ = transitory_text_layout {font_face_, cur_level_->get_inspect_msg(p), 1000, 32};
             return;
         }
 
@@ -1698,6 +1880,8 @@ private:
 
     transitory_text_layout last_message_;
     int                    last_message_fade_ = 5;
+
+    transitory_text_layout inspect_message_;
 
     tile_sheet sheet_;
 

@@ -28,6 +28,10 @@ public:
         pos_.y += dy;
     }
 
+    void move_by(ivec2 const v) {
+        move_by(v.x, v.y);
+    }
+
     void move_to(int const x, int const y) {
         pos_.x = x;
         pos_.y = y;

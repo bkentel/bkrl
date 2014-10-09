@@ -234,6 +234,10 @@
     <ClCompile Include="..\test\math.t.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\test\spatial_map.t.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\test\time.t.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -267,6 +271,7 @@
     <ClInclude Include="..\include\renderer.hpp" />
     <ClInclude Include="..\include\scancode.hpp" />
     <ClInclude Include="..\include\scope_exit.hpp" />
+    <ClInclude Include="..\include\spatial_map.hpp" />
     <ClInclude Include="..\include\texture_type.hpp" />
     <ClInclude Include="..\include\tile_sheet.hpp" />
     <ClInclude Include="..\include\tile_type.hpp" />

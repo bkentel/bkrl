@@ -42,6 +42,7 @@ enum class command_type : uint16_t {
 
   , open
   , close
+  , get
 
   , enum_size //!< last
 };

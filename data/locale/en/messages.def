@@ -13,5 +13,8 @@
       , ["stairs_no_stairs", "You see no stairs here."]
       , ["stairs_no_down",   "You can't go down here."]
       , ["stairs_no_up",     "You can't go up here."]
+      , ["get_no_items",     "You see nothing to get."]
+      , ["get_which_prompt", "Get which?"]
+      , ["get_ok",           "Got %1%"]
     ]
 }

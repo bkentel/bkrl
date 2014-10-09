@@ -19,13 +19,19 @@ enum class message_type : uint16_t {
   , welcome
   , direction_prompt
   , canceled
+
   , door_no_door
   , door_is_open
   , door_is_closed
   , door_blocked
+
   , stairs_no_stairs
   , stairs_no_down
   , stairs_no_up
+
+  , get_no_items
+  , get_which_prompt
+  , get_ok
 
   , enum_size
 };

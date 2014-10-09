@@ -11,6 +11,28 @@
 namespace bkrl {
 
 //==============================================================================
+//! as std::equal_range, but for the entire container
+//==============================================================================
+template <
+    typename Container
+  , typename Type
+  , typename Predicate = std::less<>
+>
+inline auto equal_range(
+    Container&  container
+  , Type const& value
+  , Predicate   predicate = Predicate {}
+) {
+    return std::equal_range(
+        std::begin(container)
+      , std::end(container)
+      , value
+      , predicate
+    );
+}
+
+
+//==============================================================================
 //! as std::lower_bound, but for the entire container
 //==============================================================================
 template <

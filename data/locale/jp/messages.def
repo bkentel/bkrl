@@ -13,5 +13,8 @@
       , ["stairs_no_stairs", "ここには階段がない。"]
       , ["stairs_no_down",   "ここを降りることはできない。"]
       , ["stairs_no_up",     "ここを登ることはできない。"]
+      , ["get_no_items",     "ここには拾うものがない。"]
+      , ["get_which_prompt", "どれを拾う？"]
+      , ["get_ok",           "%1%を拾った。"]
     ]
 }

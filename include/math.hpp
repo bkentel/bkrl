@@ -122,6 +122,16 @@ operator+(
 //------------------------------------------------------------------------------
 template <typename T>
 inline xy_type<T, geometry::point>
+operator+=(
+    xy_type<T, geometry::point>&       p
+  , xy_type<T, geometry::vector> const q
+) noexcept {
+    return (p = p + q);
+}
+
+//------------------------------------------------------------------------------
+template <typename T>
+inline xy_type<T, geometry::point>
 operator-(
     xy_type<T, geometry::point>  const p
   , xy_type<T, geometry::vector> const q
@@ -146,6 +156,28 @@ operator-(
     xy_type<T, geometry::vector> const p
 ) noexcept {
     return {-p.x, p.y};
+}
+
+//------------------------------------------------------------------------------
+template <typename T, geometry G>
+inline bool
+lexicographical_compare(
+    xy_type<T, G> const a
+  , xy_type<T, G> const b
+) noexcept {
+    return (a.x < b.x)
+        ? true
+        : (a.x == b.x)
+            ? (a.y < b.y)
+            : false;
+}
+
+//------------------------------------------------------------------------------
+template <typename T>
+inline auto position(
+    xy_type<T, geometry::point> const p
+) noexcept {
+    return p;
 }
 
 //==============================================================================

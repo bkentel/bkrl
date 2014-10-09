@@ -33,5 +33,6 @@
       
       , ["open",  "kb_o"]
       , ["close", "kb_c"]
+      , ["get",   "kb_g"]
     ]
 }

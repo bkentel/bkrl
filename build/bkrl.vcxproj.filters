@@ -96,6 +96,9 @@
     <ClCompile Include="..\src\time.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\test\spatial_map.t.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pch.hpp">
@@ -195,6 +198,9 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\time.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\spatial_map.hpp">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

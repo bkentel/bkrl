@@ -461,6 +461,7 @@ namespace {
 
         BK_ENUMMAP_ADD_STRING(result, command, open);
         BK_ENUMMAP_ADD_STRING(result, command, close);
+        BK_ENUMMAP_ADD_STRING(result, command, get);
 
         bkrl::sort(result, command_map_t::value_type::less_hash);
 
@@ -497,6 +498,9 @@ namespace {
         BK_ENUMMAP_ADD_STRING(result, message, stairs_no_stairs);
         BK_ENUMMAP_ADD_STRING(result, message, stairs_no_down);
         BK_ENUMMAP_ADD_STRING(result, message, stairs_no_up);
+        BK_ENUMMAP_ADD_STRING(result, message, get_no_items);
+        BK_ENUMMAP_ADD_STRING(result, message, get_which_prompt);
+        BK_ENUMMAP_ADD_STRING(result, message, get_ok);
 
         bkrl::sort(result, message_map_t::value_type::less_hash);
 
