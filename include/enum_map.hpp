@@ -124,6 +124,7 @@ public:
         auto const it = adjacent_find(string_to_value_);
 
         BK_ASSERT_SAFE(it == std::cend(string_to_value_)); //hash collision
+        BK_DO_NOTHING(it);
 
         //check for "sparse" enums
         for (size_t i = 0; !allow_sparse && i < value_to_string_.size(); ++i) {

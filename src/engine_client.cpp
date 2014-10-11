@@ -188,12 +188,16 @@ get_texture_type(
     using tt = tile_type;
 
     switch (type) {
-    case tt::empty    : return get_texture_type<tt::empty>(grid, p);
-    case tt::floor    : return get_texture_type<tt::floor>(grid, p);
-    case tt::wall     : return get_texture_type<tt::wall>(grid, p);
-    case tt::door     : return get_texture_type<tt::door>(grid, p);
-    case tt::stair    : return get_texture_type<tt::stair>(grid, p);
-    case tt::corridor : return get_texture_type<tt::corridor>(grid, p);
+    case tt::empty     : return get_texture_type<tt::empty>(grid, p);
+    case tt::floor     : return get_texture_type<tt::floor>(grid, p);
+    case tt::wall      : return get_texture_type<tt::wall>(grid, p);
+    case tt::door      : return get_texture_type<tt::door>(grid, p);
+    case tt::stair     : return get_texture_type<tt::stair>(grid, p);
+    case tt::corridor  : return get_texture_type<tt::corridor>(grid, p);
+    case tt::invalid   : //fallthrough
+    case tt::enum_size : //fallthrough
+    default:
+        break;
     }
 
     return texture_type::invalid;
@@ -618,10 +622,16 @@ public:
     };
 
     //--------------------------------------------------------------------------
-    level(random::generator& substantive, random::generator& trivial
-        , tile_sheet const& sheet, grid_size width, grid_size height
+    level(
+        random::generator& substantive
+      , random::generator& trivial
+      , player&            player
+      , tile_sheet const&  sheet
+      , grid_size const    width
+      , grid_size const    height
     )
       : tile_sheet_ {&sheet}
+      , player_ {&player}
       , grid_ {width, height}
     {
         generate_(substantive, trivial);
@@ -636,11 +646,20 @@ public:
             }
 
             auto const v = random::direction(trivial);
-
-            if (can_move_by(mob, v)) {
-                mob.move_by(v);
+            if (!can_move_by(mob, v)) {
+                continue;
             }
+
+            auto const p   = mob.position() + v;
+            auto const ent = entity_at(p);
+            if (ent) {
+                continue;
+            }
+
+            mob.move_by(v);
         }
+
+        mobs_.sort();
     }
 
     //--------------------------------------------------------------------------
@@ -656,12 +675,19 @@ public:
                 auto const tx = texture % sheet.tiles_x(); //TODO
                 auto const ty = texture / sheet.tiles_x();
 
-                sheet.render(r, tx, ty, x, y);
+                if (grid_.get(attribute::tile_type, x, y) == tile_type::corridor) {
+                    //TODO just a test
+                    r.set_color_mod(sheet.get_texture(), 100, 150, 100);
+                    sheet.render(r, tx, ty, x, y);
+                    r.set_color_mod(sheet.get_texture(), 255, 255, 255);
+                } else {
+                    sheet.render(r, tx, ty, x, y);
+                }
             }
         }
 
         for (auto const& i : items_) {
-            auto const p = i.pos;
+            auto const p = i.first;
             sheet.render(r, 15, 0, p.x, p.y);
         }
 
@@ -767,6 +793,52 @@ public:
     }
 
     //--------------------------------------------------------------------------
+    optional<entity const&> entity_at(ipoint2 const p) const {
+        optional<entity const&> result {};
+
+        if (player_->position() == p) {
+            result = *player_;
+            return result;
+        }
+
+        mobs_.find(p, [&](entity const& e) {
+            result = e;
+        });
+
+        return result;
+    }
+
+    optional<entity&> entity_at(ipoint2 const p) {
+        optional<entity&> result {};
+
+        if (player_->position() == p) {
+            result = static_cast<entity&>(*player_);
+            return result;
+        }
+
+        mobs_.find(p, [&](entity& e) {
+            result = e;
+        });
+
+        return result;
+    }
+    //--------------------------------------------------------------------------
+    message_type attack(random::generator& trivial, entity& subject, entity& object) {
+        auto const p = object.position();
+        BK_ASSERT_DBG(!!entity_at(p));
+
+        mobs_.remove(p);
+
+        auto const count = random::uniform_range(trivial, 1, 5);
+        for (int i = 0; i < count; ++i) {
+            items_.emplace(p, generate_mob_item_(trivial));
+        }
+
+        items_.sort();
+
+        return message_type::none;
+    }
+    //--------------------------------------------------------------------------
     bool can_move_to(entity const& e, ipoint2 const p) const {
         if (!grid_.is_valid(p)) {
             return false;
@@ -839,12 +911,12 @@ public:
         auto result = enum_map<tile_type>::get(type).string.to_string();
 
         for (auto&& itm : as_const(items_)) {
-            if (itm.pos != p) {
+            if (items_.get_point(itm) != p) {
                 continue;
             }
 
             result.append("; ");
-            result.append(itm.value.name);
+            result.append(items_.get_value(itm).name);
         }
         
         for (auto&& mob : as_const(mobs_)) {
@@ -861,7 +933,6 @@ private:
     //--------------------------------------------------------------------------
     void generate_rooms_(random::generator& substantive) {
         generate::simple_room room_gen   {};
-        generate::circle_room circle_gen {};
 
         auto& rooms = rooms_;
 
@@ -948,9 +1019,7 @@ private:
     }
 
     //--------------------------------------------------------------------------
-
-    //--------------------------------------------------------------------------
-    void place_items_(random::generator& substantive) {
+    item generate_level_item_(random::generator& substantive) {
         static std::array<char const*, 10> const names = {
             "Sword"
           , "Dagger"
@@ -963,13 +1032,23 @@ private:
           , "Staff"
           , "Coins"
         };
-        
+
+        auto const type = random::uniform_range(substantive, 0, 9);
+
+        return item {names[type]};
+    }
+
+    item generate_mob_item_(random::generator& substantive) {
+        return generate_level_item_(substantive);
+    }
+
+    //--------------------------------------------------------------------------
+    void place_items_(random::generator& substantive) {
         for (auto const& room : rooms_) {
             if (random::percent(substantive) < 70) {
                 continue;
             }
             
-            auto const type = random::uniform_range(substantive, 0, 9);
             auto p = room.center();
 
             auto steps = random::uniform_range(substantive, 1, 10);
@@ -982,8 +1061,10 @@ private:
                 }
             }
 
-            items_.emplace(p, item {names[type]});
+            items_.emplace(p, generate_level_item_(substantive));
         }
+
+        items_.sort();
     }
 
     //--------------------------------------------------------------------------
@@ -1004,8 +1085,10 @@ private:
                 }
             }
 
-            mobs_.emplace_back(std::move(mob));
+            mobs_.emplace(std::move(mob));
         }
+
+        mobs_.sort();
     }
 
     //--------------------------------------------------------------------------
@@ -1163,17 +1246,17 @@ private:
 
     //--------------------------------------------------------------------------
     tile_sheet const* tile_sheet_;
-    grid_storage      grid_;
+    player*           player_;
 
+    grid_storage      grid_;
     bsp_layout        layout_;
     std::vector<room> rooms_;
 
     ipoint2 stairs_up_   = ipoint2{0, 0};
     ipoint2 stairs_down_ = ipoint2{0, 0};
 
-    spatial_map<item>       items_;
-    std::vector<entity>     mobs_;
-
+    spatial_map<item, int> items_;
+    spatial_map<entity>    mobs_;
 };
 
 //==============================================================================
@@ -1533,7 +1616,7 @@ public:
         auto const size = static_cast<int>(levels_.size());
 
         if (level == size) {
-            levels_.emplace_back(random_substantive_, random_trivial_, sheet_, level_w, level_h);
+            levels_.emplace_back(random_substantive_, random_trivial_, player_, sheet_, level_w, level_h);
             cur_level_ = &levels_.back();
         } else if (level < size) {
             cur_level_ = &levels_[level];
@@ -1690,12 +1773,23 @@ public:
     }
 
     void do_move_player(int const dx, int const dy) {
-        if (!cur_level_->can_move_by(player_, dx, dy)) {
+        auto& level = *cur_level_;
+
+        if (!level.can_move_by(player_, dx, dy)) {
             return;
         }
 
-        player_.move_by(dx, dy);
-        view_.scroll_by_tile(dx, dy);
+        auto const p = player_.position() + ivec2 {dx, dy};
+
+        auto ent = level.entity_at(p);
+        if (ent) {
+            print_message("Killed entity!");
+            level.attack(random_trivial_, player_, ent.get());
+        } else {
+            player_.move_by(dx, dy);
+            view_.scroll_by_tile(dx, dy);
+        }
+
         advance();
     }
 
@@ -1760,8 +1854,8 @@ public:
         auto item = cur_level_->get_item(p, 0);
 
         //TODO add languages and formatting functions
-        boost::format fmt {messages_(message_type::get_ok, 0)};
-        print_message(boost::str(fmt % item.name % 2));
+        auto fmt = boost::format {messages_(message_type::get_ok, 0).data()};
+        print_message(boost::str(fmt % item.name));
 
         advance();
     }

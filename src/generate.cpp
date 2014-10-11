@@ -91,8 +91,8 @@ circle_room::generate(
     room result {bounds, bounds.center(), id};
 
     for_each_xy(result, [&](unsigned x, unsigned y) {
-        auto const xx = static_cast<unsigned>(x - x0);
-        auto const yy = static_cast<unsigned>(y - y0);
+        auto const xx = static_cast<int>(x) - x0;
+        auto const yy = static_cast<int>(y) - y0;
 
         if (xx*xx + yy*yy <= r2) {
 

@@ -39,10 +39,10 @@ font_face::font_face(
 font_face::~font_face() = default;
 
 //------------------------------------------------------------------------------
-int
-font_face::line_gap() const {
-    return impl_->line_gap();
-}
+int font_face::pixel_size() const { return impl_->pixel_size(); }
+int font_face::ascender()   const { return impl_->ascender(); }
+int font_face::descender()  const { return impl_->descender(); }
+int font_face::line_gap()   const { return impl_->line_gap(); }
 
 //------------------------------------------------------------------------------
 glyph_metrics
@@ -80,12 +80,12 @@ transitory_text_layout::transitory_text_layout(
   , h_ {h}
 {
     BK_ASSERT_DBG(
-        (w == 0 && h == 0)
-     || (w != 0 && h != 0)
+        (w == 0 && h == 0) || (w != 0 && h != 0)
     );
 
-    auto beg = string.data() + 0;
-    auto end = string.data() + string.size();
+    //assume 2 bytes on average per codepoint.
+    //overly pessimistic for mostly latin text
+    codepoints_.reserve(string.size() / 2);
 
     utf8::utf8to32(
         std::cbegin(string)
@@ -97,7 +97,7 @@ transitory_text_layout::transitory_text_layout(
 
     auto const line_gap = face.line_gap();
     int x = 0;
-    int y = 20;
+    int y = face.ascender();
 
     auto left = unicode::codepoint {};
     for (auto const codepoint : codepoints_) {
@@ -111,7 +111,7 @@ transitory_text_layout::transitory_text_layout(
             y += line_gap;
         }
 
-        point2d<int> const p {
+        ipoint2 const p {
             x + metrics.left
           , y - metrics.top
         };

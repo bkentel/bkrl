@@ -2,6 +2,7 @@
 #include "json.hpp"
 
 #include <vector>
+#include <boost/container/flat_map.hpp>
 
 using namespace bkrl;
 

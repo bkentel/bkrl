@@ -2,7 +2,7 @@
 
 #include <boost/predef.h>
 
-#define BK_DO_NOTHING ((void)0)
+#define BK_DO_NOTHING(x) ((void)x)
 
 #if BOOST_COMP_MSVC
 #   define BK_NORETURN __declspec(noreturn)
@@ -15,7 +15,7 @@
 #if BOOST_COMP_MSVC
 #   define BK_DEBUG_BREAK() __debugbreak()
 #else
-#   define BK_DEBUG_BREAK() BK_DO_NOTHING
+#   define BK_DEBUG_BREAK() BK_DO_NOTHING(0)
 #endif
 
 #define BK_TODO_FAIL() BK_DEBUG_BREAK(); std::terminate()

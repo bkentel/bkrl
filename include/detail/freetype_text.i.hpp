@@ -5,6 +5,7 @@
 #include FT_GLYPH_H
 
 #include <deque>
+#include <boost/container/flat_map.hpp>
 
 #include "utf8.h"
 
@@ -212,13 +213,18 @@ public:
     
     //--------------------------------------------------------------------------
     //!
-    //--------------------------------------------------------------------------
-    FT_Pos line_gap() const noexcept {
-        FT_Face const face = *this;
-        return face->size->metrics.height >> 6;
-    }
+    //--------------------------------------------------------------------------  
+    FT_Pos pixel_size() const noexcept { return metrics_().x_ppem        ; }
+    FT_Pos ascender()   const noexcept { return metrics_().ascender  >> 6; }
+    FT_Pos descender()  const noexcept { return metrics_().descender >> 6; }
+    FT_Pos line_gap()   const noexcept { return metrics_().height    >> 6; }
 private:
     face(FT_Library lib, string_ref const filename, unsigned size);
+
+    FT_Size_Metrics const& metrics_() const noexcept {
+        FT_Face const face = *this;
+        return face->size->metrics;
+    }
 
     void load_glyph_(glyph_index const index);
 
@@ -610,8 +616,8 @@ public:
 
         static auto const max = std::numeric_limits<type>::max();
 
-        BK_ASSERT_SAFE(w > 0 && w <= max);
-        BK_ASSERT_SAFE(h > 0 && h <= max);
+        BK_ASSERT(w > 0 && w <= max);
+        BK_ASSERT(h > 0 && h <= max);
 
         auto const tw = static_cast<type>(w);
         auto const th = static_cast<type>(h);
@@ -699,12 +705,12 @@ public:
     //!
     //--------------------------------------------------------------------------
     explicit glyph_cache(renderer& cur_renderer, face& cur_face)
-      : renderer_ {cur_renderer}
-      , face_     {cur_face}
+      : renderer_  {cur_renderer}
+      , face_      {cur_face}
+      , cell_size_ {cur_face.pixel_size()}
     {
-        constexpr auto tex_w     = 1024;
-        constexpr auto tex_h     = 1024;
-        constexpr auto cell_size = 20;
+        constexpr auto tex_w = 1024;
+        constexpr auto tex_h = 1024;
 
         static_.add_block(cur_face, unicode::basic_latin    {});
         static_.add_block(cur_face, unicode::basic_japanese {});
@@ -712,8 +718,11 @@ public:
         auto const p = static_.update_texture_coords(tex_w, tex_h);
         tex_offset_ = p;
 
-        auto const cells = (tex_w / cell_size) * ((tex_h - p.y) / cell_size);
-        BK_ASSERT_SAFE(cells > 0);
+        cells_x_ = (tex_w)       / cell_size_;
+        cells_y_ = (tex_h - p.y) / cell_size_;
+
+        auto const cells = cells_x_ * cells_y_;
+        BK_ASSERT(cells > 0);
 
         limit_ = static_cast<size_t>(cells);
 
@@ -840,11 +849,9 @@ private:
         map_.erase(old_cp);
         map_.emplace(cp, i);
 
-        auto const gw = 1024 / 20;
-        auto const gh = 1024 / 20;
-
-        auto const x = (i % gw) * 20;
-        auto const y = tex_offset_.y + (i / gw) * 20;
+        auto const result = std::div(i, cells_x_);
+        auto const x = result.rem;
+        auto const y = result.quot;
 
         cached = load_value(cp, x, y);
 
@@ -853,6 +860,10 @@ private:
 
     renderer& renderer_;
     face&     face_;
+
+    int cell_size_;
+    int cells_x_;
+    int cells_y_;
 
     size_t                    limit_;  //!< cache size
     static_glyph_cache        static_; //!< statically cached values
@@ -902,7 +913,10 @@ public:
 
     texture const& get_texture() const;
 
-    int line_gap() const { return face_.line_gap(); }
+    int pixel_size() const noexcept { return face_.pixel_size(); }
+    int ascender()   const noexcept { return face_.ascender(); }
+    int descender()  const noexcept { return face_.descender(); }
+    int line_gap()   const noexcept { return face_.line_gap(); }
 private:   
     renderer&         renderer_;
     font::face        face_;

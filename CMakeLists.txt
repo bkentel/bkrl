@@ -33,6 +33,11 @@ set(SOURCE_FILES
     include/tile_type.hpp
     include/types.hpp
     include/util.hpp
+    include/iterable.hpp
+    include/messages.hpp
+    include/scope_exit.hpp
+    include/spatial_map.hpp
+    include/time.hpp
     lib/catch/catch.hpp
     lib/json11/json11.cpp
     lib/json11/json11.hpp
@@ -60,6 +65,8 @@ set(SOURCE_FILES
     src/tile_sheet.cpp
     src/util.cpp
     src/math.cpp
+    src/messages.cpp
+    src/time.cpp
 #    test/algorithm.t.cpp
 #    test/bsp_layout.t.cpp
 #    test/engine_client.t.cpp

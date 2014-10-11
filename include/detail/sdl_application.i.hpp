@@ -594,7 +594,7 @@ renderer_impl::create_texture_(SDL_Surface* const surface) {
     }
 
     auto const handle = texture::handle_t {result};
-    auto const id     = textures_.size();
+    auto const id     = static_cast<unsigned>(textures_.size());
 
     textures_.emplace_back(
         sdl_unique<SDL_Texture> {result}
@@ -635,7 +635,7 @@ renderer_impl::create_texture(int width, int height) {
     SDL_SetTextureBlendMode(result, SDL_BLENDMODE_BLEND);
 
     auto const handle = texture::handle_t {result};
-    auto const id     = textures_.size();
+    auto const id     = static_cast<unsigned>(textures_.size());
 
     textures_.emplace_back(
         sdl_unique<SDL_Texture> {result}

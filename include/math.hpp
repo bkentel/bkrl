@@ -173,12 +173,12 @@ lexicographical_compare(
 }
 
 //------------------------------------------------------------------------------
-template <typename T>
-inline auto position(
-    xy_type<T, geometry::point> const p
-) noexcept {
-    return p;
-}
+//template <typename T>
+//inline auto position(
+//    xy_type<T, geometry::point> const p
+//) noexcept {
+//    return p;
+//}
 
 //==============================================================================
 //! range

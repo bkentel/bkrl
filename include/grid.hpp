@@ -310,9 +310,6 @@ constexpr int x_off5[5] = {     0
 
 template <typename Function>
 void for_each_edge(grid_region region, Function&& function) {
-    auto const w = region.width();
-    auto const h = region.height();
-
     auto const l = region.left;
     auto const t = region.top;
     auto const r = region.right;

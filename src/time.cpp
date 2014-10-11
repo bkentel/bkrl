@@ -16,7 +16,7 @@ public:
     struct record_t {
         time_point_t start;
         time_point_t deadline;
-        unsigned     index;
+        size_t       index;
         id_t         id; //TODO this "could" wrap around.
     };
 
@@ -38,7 +38,7 @@ private:
     }
 
     time_point_t last_;
-    unsigned     next_id_ = 0;
+    id_t::type   next_id_ = 0;
 
     std::vector<callback_t> callbacks_;
     std::vector<record_t>   deadlines_;
@@ -88,13 +88,13 @@ void timer::impl_t::update() {
 
 timer::id_t timer::impl_t::add_timer(duration_t const period, callback_t&& callback) {
     auto const id = id_t {++next_id_};
-        
-    callbacks_.emplace_back(std::move(callback));        
+
+    callbacks_.emplace_back(std::move(callback));
     deadlines_.emplace_back(record_t {
         last_
-        , last_ + period
-        , callbacks_.size() - 1
-        , id
+      , last_ + period
+      , callbacks_.size() - 1
+      , id
     });
 
     sort_();

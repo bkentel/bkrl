@@ -156,8 +156,10 @@ public:
     void set_color(uint8_t r, uint8_t g, uint8_t b);
     void set_alpha(uint8_t a);
 
-    int line_gap() const;
-    int size() const;
+    int pixel_size() const;
+    int ascender()   const;
+    int descender()  const;
+    int line_gap()   const;
 private:
     std::unique_ptr<detail::font_face_impl> impl_;
 };

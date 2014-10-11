@@ -104,6 +104,11 @@ public:
     tile_map const& map() const {
         return tile_map_;
     }
+
+    texture& get_texture() const {
+        //TODO just for testing
+        return const_cast<tile_sheet*>(this)->tile_texture_;
+    }
 private:
     tile_map tile_map_;
     texture  tile_texture_;
