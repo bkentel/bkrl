@@ -127,6 +127,68 @@ inline size_t string_len(T const (&)[N]) {
 }
 ////////////////////////////////////////////////////////////////////////////////
 
+//==============================================================================
+//==============================================================================
+struct string_id {
+    BK_DEFMOVE(string_id);
+    BK_DEFCOPY(string_id);
+
+    string_id(utf8string str, hash_t const hash)
+      : string (std::move(str))
+      , hash   {hash}
+    {
+    }
+    
+    string_id(utf8string str)
+      : string (std::move(str))
+      , hash   {slash_hash32(string)} 
+    {
+    }
+
+    string_id(string_ref const ref)
+      : string (ref.to_string())
+      , hash   {slash_hash32(string)}
+    {
+    }
+
+    template <size_t N>
+    string_id(char const (&str)[N])
+      : string_id {string_ref(str, N - 1)}
+    {
+    }
+
+    string_id()
+      : string {}
+      , hash   {}
+    {
+    }
+
+    bool operator<(string_id const& rhs) const noexcept {
+        return hash < rhs.hash;
+    }
+
+    bool operator==(string_id const& rhs) const {
+        if (hash != rhs.hash) {
+            return false;
+        }
+        
+        BK_ASSERT_DBG(string == rhs.string);
+
+        return true;
+    }
+
+    bool operator!=(string_id const& rhs) const {
+        return !(*this == rhs);
+    }
+
+    operator hash_t() const noexcept {
+        return hash;
+    }
+
+    utf8string string;
+    hash_t     hash;
+};
+
 template <size_t Bytes> struct unsigned_int {
     static_assert(Bytes >= 1, "");
     static_assert(Bytes <= 9, "");

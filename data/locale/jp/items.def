@@ -1,45 +1,45 @@
 { "file_type":   "LOCALE"
 , "string_type": "ITEM"
-, "language":    "en"
+, "language":    "jp"
 , "definitions": [
     { "id":   "WEAPON_SWORD_SHORT"
-    , "name": "short sword"
+    , "name": "短剣"
     , "text": "A short sword suitable for, well, slashing."
     }
   , { "id":   "WEAPON_LONG_SWORD"
-    , "name": "long sword"
+    , "name": "長剣"
     , "text": "A long sword suitable for, well, slashing."
     }
   , { "id":   "WEAPON_HAMMER"
-    , "name": "hammer"
+    , "name": "金鎚"
     , "text": "A blunt weapon suitable for, well, bashing."
     }
   , { "id":   "WEAPON_STAFF"
-    , "name": "staff"
+    , "name": "杖"
     , "text": "For walking -and- bashing foes."
     }
   , { "id":   "WEAPON_SHORT_BOW"
-    , "name": "short bow"
+    , "name": "短弓"
     , "text": "A bow. It's short."
     }
   , { "id":   "WEAPON_DAGGER"
-    , "name": "dagger"
+    , "name": "ダガ－"
     , "text": "A small short blade good for stabbing."
     }
-  , { "id":  　"WEAPON_AXE"
-    , "name": "axe"
+  , { "id":   "WEAPON_AXE"
+    , "name": "斧"
     , "text": "Chop. Chop."
     }
   , { "id":   "POTION_HEALTH_MINOR"
-    , "name": "potion of minor health"
+    , "name": "回復のポ－ション（小）"
     , "text": "Drink to restore a little health"
     }
   , { "id":   "POTION_HEALTH_MEDIUM"
-    , "name": "potion of health"
+    , "name": "回復のポ－ション（中）"
     , "text": "Drink to restore some health."
     }
   , { "id":   "POTION_HEALTH_MAJOR"
-    , "name": "potion of major health"
+    , "name": "回復のポ－ション（大）"
     , "text": "Drink to restore a lot of health."
     }
   ]

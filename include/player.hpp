@@ -3,6 +3,8 @@
 #include "math.hpp"
 #include "types.hpp"
 
+#include "item.hpp" //TODO temp
+
 namespace bkrl {
 
 //==============================================================================
@@ -42,8 +44,13 @@ public:
     void move_to(point_t const p) {
         move_to(p.x, p.y);
     }
+
+    void add_item(item&& itm) {
+        items_.emplace_back(std::move(itm));
+    }
 private:
     point_t pos_;
+    std::vector<item> items_;
 };
 
 //==============================================================================

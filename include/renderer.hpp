@@ -116,8 +116,8 @@ public:
 
     texture(handle_t handle, unsigned id, int width, int height)
       : handle_ {handle}
-      , id_ {id}
-      , width_ {width}
+      , id_     {id}
+      , width_  {width}
       , height_ {height}
     {
     }
@@ -126,7 +126,7 @@ public:
 
     unsigned id() const { return id_; }
 
-    int width() const { return width_; }
+    int width()  const { return width_; }
     int height() const { return height_; }
 private:
     handle_t handle_;
@@ -213,6 +213,11 @@ public:
     
     vec2 get_scale() const;
     vec2 get_translation() const;
+
+    ////////////////////////////////////////////////////////////////////////////
+
+    void set_draw_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255);
+    void draw_filled_rect(rect bounds);
 
     ////////////////////////////////////////////////////////////////////////////
 

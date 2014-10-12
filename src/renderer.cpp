@@ -176,4 +176,14 @@ renderer::set_alpha_mod(texture & tex, uint8_t a) {
     impl_->set_alpha_mod(tex, a);
 }
 
+void
+renderer::set_draw_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
+    impl_->set_draw_color(r, g, b, a);
+}
+
+void
+renderer::draw_filled_rect(rect bounds) {
+    impl_->draw_filled_rect(bounds);
+}
+
 ////////////////////////////////////////////////////////////////////////////////

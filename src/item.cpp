@@ -200,23 +200,23 @@ public:
     }
 
     void add_item() {
-        auto lang_it = result_.find(language_.hash);
-        if (lang_it == std::end(result_)) {
-            auto const result = result_.emplace(
-                language_.hash, localized_string<item_material_def>::map_t::mapped_type {}
-            );
+        //auto lang_it = result_.find(language_.hash);
+        //if (lang_it == std::end(result_)) {
+        //    auto const result = result_.emplace(
+        //        language_.hash, localized_string<item_material_def>::map_t::mapped_type {}
+        //    );
 
-            if (!result.second) {
-                BK_TODO_FAIL();
-            }
+        //    if (!result.second) {
+        //        BK_TODO_FAIL();
+        //    }
 
-            lang_it = result.first;
-        }
+        //    lang_it = result.first;
+        //}
 
-        auto const result = lang_it->second.emplace(id_.hash, std::move(locale_));
-        if (!result.second) {
-            BK_TODO_FAIL();
-        }
+        //auto const result = lang_it->second.emplace(id_.hash, std::move(locale_));
+        //if (!result.second) {
+        //    BK_TODO_FAIL();
+        //}
     }
 
     localized_string<item_material_def> to_localized_string() {
@@ -230,6 +230,104 @@ private:
     localized_string<item_material_def>::map_t result_;
 };
 
+//==============================================================================
+//==============================================================================
+class item_parser {
+public:
+    using cref = json::cref;
+
+    //--------------------------------------------------------------------------
+    explicit item_parser(string_ref const filename) {
+        auto const value = json::common::from_file(filename);
+        rule_root(value);
+    }
+
+    //--------------------------------------------------------------------------
+    void rule_root(cref value) {
+        json::require_object(value);
+        json::common::get_filetype(value, json::common::filetype_item);
+        rule_definitions(value);
+    }
+
+    //--------------------------------------------------------------------------
+    void rule_definitions(cref value) {
+        auto const definitions = json::require_array(value[json::common::field_definitions]);
+
+        for (auto&& def : definitions.array_items()) {           
+            rule_definition(def);
+        }
+    }
+
+    //--------------------------------------------------------------------------
+    void rule_definition(cref value) {
+        item_.id = json::require_string(value[json::common::field_id]);
+
+        auto const hash = item_.id.hash;
+        items_.emplace(hash, std::move(item_));
+    }
+
+    //--------------------------------------------------------------------------
+    operator item_def::definition_t::map_t&&() && {
+        return std::move(items_);
+    }
+private:
+    item_def item_;
+
+    item_def::definition_t::map_t items_;
+};
+
+//==============================================================================
+//==============================================================================
+class item_locale_parser : public json::common::locale {
+public:
+    //--------------------------------------------------------------------------
+    explicit item_locale_parser(string_ref const filename)
+      : locale {filename}
+    {
+        if (string_type != json::common::filetype_item) {
+            BK_TODO_FAIL();
+        }
+        
+        rule_root(root);
+    }
+
+    //--------------------------------------------------------------------------
+    void rule_root(cref value) {
+        rule_definitions(value);
+    }
+
+    //--------------------------------------------------------------------------
+    void rule_definitions(cref value) {
+        auto const defs = definitions(value);
+
+        for (auto&& def : defs.array_items()) {
+            rule_definition(def);
+        }
+    }
+
+    //--------------------------------------------------------------------------
+    void rule_definition(cref value) {
+        auto const id = json::require_string(value[json::common::field_id]);
+        
+        auto name = json::optional_string(value[json::common::field_name]);
+        auto text = json::optional_string(value[json::common::field_text]);
+
+        locale_.name = name.get_value_or("<undefined>").to_string();
+        locale_.text = text.get_value_or("<undefined>").to_string();
+
+        auto const hash = slash_hash32(id);
+        strings_.emplace(hash, std::move(locale_));
+    }
+
+    //--------------------------------------------------------------------------
+    operator item_def::localized_t::map_t&&() && {
+        return std::move(strings_);
+    }
+private:
+    item_def::locale             locale_;
+    item_def::localized_t::map_t strings_;
+};
+
 } //namespace
 
 item_material_def::definition_t
@@ -240,4 +338,15 @@ item_material_def::load_definitions(utf8string const& data) {
 item_material_def::localized_t
 item_material_def::load_localized_strings(utf8string const& data) {
     return item_material_locale_parser {data}.to_localized_string();
+}
+
+
+item_def::definition_t
+item_def::load_definitions(string_ref const filename) {
+    return item_def::definition_t {item_parser {filename}};
+}
+
+item_def::localized_t
+item_def::load_localized_strings(string_ref const filename) {
+    return item_def::localized_t {item_locale_parser {filename}};
 }

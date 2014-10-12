@@ -173,9 +173,15 @@ public:
     transitory_text_layout(font_face& face, string_ref string, int w = 0, int h = 0);
 
     void render(renderer& r, font_face& face, int x, int y);
+
+    int actual_width()  const noexcept { return actual_w_; }
+    int actual_height() const noexcept { return actual_h_; };
 private:
     int w_ = 0;
     int h_ = 0;
+
+    int actual_w_ = 0;
+    int actual_h_ = 0;
 
     std::vector<codepoint_t> codepoints_;
     std::vector<ipoint2>     positions_;

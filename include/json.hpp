@@ -246,6 +246,16 @@ inline hashed_string get_hashed_string(json::cref value, utf8string const& field
 namespace common {
 
 extern utf8string const field_filetype;
+extern utf8string const field_stringtype;
+extern utf8string const field_language;
+extern utf8string const field_definitions;
+extern utf8string const field_id;
+extern utf8string const field_name;
+extern utf8string const field_text;
+//------------------------------------------------------------
+extern string_ref const filetype_locale;
+extern string_ref const filetype_item;
+//------------------------------------------------------------
 
 inline string_ref get_filetype(cref value) {
     require_object(value);
@@ -276,6 +286,39 @@ inline json11::Json from_file(string_ref filename) {
     auto const data = read_file(filename);
     return from_memory(data);
 }
+
+struct locale {
+    using cref = json::cref;
+
+    explicit locale(string_ref const filename)
+      : root {from_file(filename)}
+    {
+        rule_file_type(root);
+        rule_string_type(root);
+        rule_language(root);
+    }
+
+    void rule_file_type(cref value) {
+        get_filetype(value, filetype_locale);
+    }
+
+    void rule_string_type(cref value) {
+        string_type = require_string(value[field_stringtype]);
+    }
+
+    void rule_language(cref value) {
+        language = require_string(value[field_language]);
+    }
+
+    cref definitions(cref value) {
+        return require_array(value[field_definitions]);
+    }
+
+    json11::Json root;
+
+    string_ref string_type;
+    string_ref language;
+};
 
 } //namespace common
 

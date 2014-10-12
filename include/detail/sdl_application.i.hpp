@@ -513,6 +513,23 @@ public:
 
     ////////////////////////////////////////////////////////////////////////////
 
+    void set_draw_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
+        auto const result = SDL_SetRenderDrawColor(renderer_.get(), r, g, b, a);
+        if (result) {
+            BK_TODO_FAIL();
+        }
+    }
+
+    void draw_filled_rect(rect const bounds) {
+        auto const dst = make_sdl_rect(bounds);
+        auto const result = SDL_RenderFillRect(renderer_.get(), &dst);
+        if (result) {
+            BK_TODO_FAIL();
+        }
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+
     void draw_texture(texture const& tex, scalar x, scalar y);
     void draw_texture(texture const& tex, rect src, rect dst);
 private:

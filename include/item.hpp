@@ -25,67 +25,6 @@ struct color_ref {
 
 //==============================================================================
 //==============================================================================
-struct string_id {
-    BK_DEFMOVE(string_id);
-    BK_DEFCOPY(string_id);
-
-    string_id(hash_t const hash, utf8string str)
-      : hash   {hash}
-      , string (std::move(str))
-    {
-    }
-    
-    string_id(utf8string str)
-      : hash   {slash_hash32(str)}
-      , string (std::move(str))
-    {
-    }
-
-    string_id(string_ref const ref)
-      : string_id {ref.to_string()}
-    {
-    }
-
-
-    template <size_t N>
-    string_id(char const (&str)[N])
-      : string_id {string_ref(str, N - 1)}
-    {
-    }
-
-    string_id()
-      : string_id {utf8string{""}}
-    {
-    }
-
-    bool operator<(string_id const& rhs) const noexcept {
-        return hash < rhs.hash;
-    }
-
-    bool operator==(string_id const& rhs) const {
-        if (hash != rhs.hash) {
-            return false;
-        }
-        
-        BK_ASSERT_DBG(string == rhs.string);
-
-        return true;
-    }
-
-    bool operator!=(string_id const& rhs) const {
-        return !(*this == rhs);
-    }
-
-    operator hash_t() const noexcept {
-        return hash;
-    }
-
-    hash_t     hash;
-    utf8string string;
-};
-
-//==============================================================================
-//==============================================================================
 template <typename T>
 class localized_string {
 public:
@@ -93,10 +32,12 @@ public:
     BK_DEFMOVE(localized_string);
 
     using locale_t = typename T::locale;
-    using map_t = boost::container::flat_map<
-        hash_t
-      , boost::container::flat_map<hash_t, locale_t>
-    >;
+    //using map_t = boost::container::flat_map<
+    //    hash_t
+    //  , boost::container::flat_map<hash_t, locale_t>
+    //>;
+
+    using map_t = boost::container::flat_map<hash_t, locale_t>;
 
     localized_string() = default;
 
@@ -105,25 +46,19 @@ public:
     {
     }
 
-    explicit localized_string(string_ref const filename)
-      : localized_string(bkrl::read_file(filename))
-    {
-    }
-    
-    explicit localized_string(utf8string const& data)
-      : data_ {std::move(T::load_localized_strings(data).data_)}
-    {
-    }
+    //explicit localized_string(string_ref const filename)
+    //  : localized_string(bkrl::read_file(filename))
+    //{
+    //}
+    //
+    //explicit localized_string(utf8string const& data)
+    //  : data_ {std::move(T::load_localized_strings(data).data_)}
+    //{
+    //}
 
-    locale_t const& operator()(hash_t const lang, hash_t const key) const {
-        auto const lang_it = data_.find(lang);
-        if (lang_it == std::cend(data_)) {
-            BK_TODO_FAIL();
-        }
-
-        auto const& strings = lang_it->second;
-        auto const it = strings.find(key);
-        if (it == std::cend(strings)) {
+    locale_t const& operator()(hash_t const key, hash_t const lang) const {
+        auto const it = data_.find(key);
+        if (it == std::cend(data_)) {
             BK_TODO_FAIL();
         }
 
@@ -150,15 +85,15 @@ public:
     {
     }
 
-    explicit definition(string_ref const filename)
-      : definition(bkrl::read_file(filename))
-    {
-    }
-    
-    explicit definition(utf8string const& data)
-      : data_ {std::move(T::load_definitions(data).data_)}
-    {
-    }
+    //explicit definition(string_ref const filename)
+    //  : definition(bkrl::read_file(filename))
+    //{
+    //}
+    //
+    //explicit definition(utf8string const& data)
+    //  : data_ {std::move(T::load_definitions(data).data_)}
+    //{
+    //}
 
     T const& operator[](hash_t const key) const {
         auto const it = data_.find(key);
@@ -167,6 +102,17 @@ public:
             BK_TODO_FAIL();
         }
 
+        return it->second;
+    }
+
+    size_t size() const noexcept {
+        return data_.size();
+    }
+
+    //TODO temp for testing
+    T const& at_index(size_t index) const {
+        auto it = data_.cbegin();
+        std::advance(it, index);
         return it->second;
     }
 private:
@@ -221,12 +167,17 @@ public:
 
 //==============================================================================
 //==============================================================================
-class item_def {
+class item_def : public definition_base<item_def> {
 public:
     struct locale {
         utf8string name;
         utf8string text;
     };
+
+    static definition_t load_definitions(utf8string const& data);
+    static definition_t load_definitions(string_ref filename);
+    static localized_t  load_localized_strings(utf8string const& data);
+    static localized_t  load_localized_strings(string_ref filename);
 
     string_id id;
     string_id type;
@@ -237,7 +188,7 @@ public:
 //==============================================================================
 class item {
 public:
-    utf8string name;
+    string_id id;
 };
 
 } //namespace bkrl

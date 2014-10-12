@@ -24,12 +24,13 @@ using bkrl::string_ref;
 namespace random = bkrl::random;
 
 namespace {
-    static string_ref const file_key_map           {R"(./data/key_map.json)"};
-    static string_ref const file_texture_map       {R"(./data/texture_map.json)"};
-    static string_ref const file_materials         {R"(./data/materials.def)"};
-    static string_ref const file_materials_strings {R"(./data/locale/en/materials.def)"};
-    static string_ref const file_messages_en       {R"(./data/locale/en/messages.def)"}; //TODO
-    static string_ref const file_messages_jp       {R"(./data/locale/jp/messages.def)"}; //TODO
+    static string_ref const file_key_map     {R"(./data/key_map.json)"};
+    static string_ref const file_texture_map {R"(./data/texture_map.json)"};
+    static string_ref const file_messages_en {R"(./data/locale/en/messages.def)"}; //TODO
+    static string_ref const file_messages_jp {R"(./data/locale/jp/messages.def)"}; //TODO
+    static string_ref const file_items       {R"(./data/items.def)"};
+    static string_ref const file_items_en    {R"(./data/locale/en/items.def)"};
+    static string_ref const file_items_jp    {R"(./data/locale/jp/items.def)"};
 }
 
 namespace bkrl {
@@ -611,28 +612,45 @@ std::remove_reference_t<T> const& as_const(T&& value) {
     return value;
 }
 
+struct data_definitions {
+    BK_NOCOPY(data_definitions);
+    
+    data_definitions()
+      : items           {item_def::load_definitions(file_items)}
+      , items_locale_en {item_def::load_localized_strings(file_items_en)}
+      , items_locale_jp {item_def::load_localized_strings(file_items_jp)}
+      , messages_en     {file_messages_en}
+      , messages_jp     {file_messages_jp}
+    {
+    }
+
+    item_def::definition_t items;
+    item_def::localized_t  items_locale_en;
+    item_def::localized_t  items_locale_jp;
+
+    message_map messages_en;
+    message_map messages_jp;
+};
+
 //==============================================================================
 //! One level within the world.
 //==============================================================================
 class level {
 public:
-    struct floor_item {
-        ipoint2 position;
-        item    value;
-    };
-
     //--------------------------------------------------------------------------
     level(
         random::generator& substantive
       , random::generator& trivial
+      , data_definitions const& definitions
       , player&            player
       , tile_sheet const&  sheet
       , grid_size const    width
       , grid_size const    height
     )
-      : tile_sheet_ {&sheet}
-      , player_ {&player}
-      , grid_ {width, height}
+      : definitions_ {&definitions}
+      , tile_sheet_  {&sheet}
+      , player_      {&player}
+      , grid_        {width, height}
     {
         generate_(substantive, trivial);
     }
@@ -775,23 +793,6 @@ public:
         return use_stair_(p, false);
     }
 
-    message_type use_stair_(ipoint2 const p, bool const down) const {
-        auto const type = grid_.get(attribute::tile_type, p);
-        if (type != tile_type::stair) {
-            return message_type::stairs_no_stairs;
-        }
-
-        auto const stair = stair_data {grid_, p};
-        
-        if (down && !stair.is_down()) {
-            return message_type::stairs_no_down;
-        } else if(!down && !stair.is_up()) {
-            return message_type::stairs_no_up;
-        }
-        
-        return message_type::none;
-    }
-
     //--------------------------------------------------------------------------
     optional<entity const&> entity_at(ipoint2 const p) const {
         optional<entity const&> result {};
@@ -861,11 +862,11 @@ public:
 
         return false;
     }
-
+    //--------------------------------------------------------------------------
     bool can_move_to(entity const& e, int const x, int const y) const {
         return can_move_to(e, ipoint2 {x, y});
     }
-
+    //--------------------------------------------------------------------------
     bool can_move_by(entity const& e, ivec2 const v) {
         if (std::abs(v.x) > 1 || std::abs(v.y) > 1) {
             BK_TODO_FAIL();
@@ -873,35 +874,35 @@ public:
 
         return can_move_to(e, e.position() + v);
     }
-
+    //--------------------------------------------------------------------------
     bool can_move_by(entity const& e, int const dx, int const dy) {      
         return can_move_by(e, ivec2 {dx, dy});
     }
-
+    //--------------------------------------------------------------------------
     ipoint2 down_stair() const noexcept {
         return stairs_down_;
     }
-
+    //--------------------------------------------------------------------------
     ipoint2 up_stair() const noexcept {
         return stairs_up_;
     }
-
+    //--------------------------------------------------------------------------
     message_type open_doors(ipoint2 const p) {
         return set_doors_(p, true);
     }
-
+    //--------------------------------------------------------------------------
     message_type open_door(ipoint2 const p) {
         return set_door_(p, true);
     }
-
+    //--------------------------------------------------------------------------
     message_type close_doors(ipoint2 const p) {
         return set_doors_(p, false);
     }
-
+    //--------------------------------------------------------------------------
     message_type close_door(ipoint2 const p) {
         return set_door_(p, false);
     }
-
+    //--------------------------------------------------------------------------
     utf8string get_inspect_msg(ipoint2 const p)  const {
         if (!grid_.is_valid(p)) {
             return "";
@@ -915,8 +916,12 @@ public:
                 continue;
             }
 
-            result.append("; ");
-            result.append(items_.get_value(itm).name);
+            result.append("\n");
+            
+            auto const& id = items_.get_value(itm).id;
+            auto const& name = definitions_->items_locale_jp(id, 0).name;
+
+            result.append(name);
         }
         
         for (auto&& mob : as_const(mobs_)) {
@@ -930,6 +935,24 @@ public:
         return result;
     }
 private:
+    //--------------------------------------------------------------------------
+    message_type use_stair_(ipoint2 const p, bool const down) const {
+        auto const type = grid_.get(attribute::tile_type, p);
+        if (type != tile_type::stair) {
+            return message_type::stairs_no_stairs;
+        }
+
+        auto const stair = stair_data {grid_, p};
+        
+        if (down && !stair.is_down()) {
+            return message_type::stairs_no_down;
+        } else if(!down && !stair.is_up()) {
+            return message_type::stairs_no_up;
+        }
+        
+        return message_type::none;
+    }
+
     //--------------------------------------------------------------------------
     void generate_rooms_(random::generator& substantive) {
         generate::simple_room room_gen   {};
@@ -1020,24 +1043,22 @@ private:
 
     //--------------------------------------------------------------------------
     item generate_level_item_(random::generator& substantive) {
-        static std::array<char const*, 10> const names = {
-            "Sword"
-          , "Dagger"
-          , "Axe"
-          , "Potion"
-          , "Scroll"
-          , "Bandage"
-          , "Helmet"
-          , "Gloves"
-          , "Staff"
-          , "Coins"
-        };
+        auto const& items  = definitions_->items;
+        auto const& locale = definitions_->items_locale_jp;
 
-        auto const type = random::uniform_range(substantive, 0, 9);
+        auto const size = static_cast<int>(items.size());
+        BK_ASSERT(size > 0);
 
-        return item {names[type]};
+        auto const index = random::uniform_range(substantive, 0, size - 1);
+
+        auto const& idef = items.at_index(index);
+        auto const& iloc = locale(idef.id, 0);
+        auto const& name = iloc.name;
+        
+        return item {idef.id};
     }
 
+    //--------------------------------------------------------------------------
     item generate_mob_item_(random::generator& substantive) {
         return generate_level_item_(substantive);
     }
@@ -1243,8 +1264,10 @@ private:
         BK_ASSERT_DBG(tile_sheet_);
         return tile_sheet_->map();
     }
-
+private:
     //--------------------------------------------------------------------------
+    data_definitions const* definitions_;
+
     tile_sheet const* tile_sheet_;
     player*           player_;
 
@@ -1252,8 +1275,8 @@ private:
     bsp_layout        layout_;
     std::vector<room> rooms_;
 
-    ipoint2 stairs_up_   = ipoint2{0, 0};
-    ipoint2 stairs_down_ = ipoint2{0, 0};
+    ipoint2 stairs_up_   = ipoint2 {0, 0};
+    ipoint2 stairs_down_ = ipoint2 {0, 0};
 
     spatial_map<item, int> items_;
     spatial_map<entity>    mobs_;
@@ -1540,6 +1563,7 @@ private:
 //==============================================================================
 namespace bkrl {
 namespace gui {
+
 class widget;
 
 class status_bar {
@@ -1560,6 +1584,48 @@ public:
       , level_h   = 50
       , font_size = 20
     };
+
+    explicit impl_t(config const& cfg)
+      : random_substantive_ {cfg.substantive_seed}
+      , random_trivial_     {cfg.trivial_seed}
+      , app_                {file_key_map, cfg}
+      , renderer_           {app_}
+      , font_lib_           {}
+      , font_face_          {renderer_, font_lib_, cfg.font_name, font_size}
+      , last_message_       {}
+      , sheet_              {file_texture_map, renderer_}
+      , view_               {sheet_, app_.client_width(), app_.client_height()}
+      , cur_level_          {nullptr}
+      , player_             {}
+      , input_mode_         {nullptr}
+      , imode_direction_    {[&] {input_mode_ = nullptr;}}
+    {
+        ////////////////////////////////////////////////////
+        init_sinks();
+
+        next_level(0);
+
+        print_message(message_type::welcome);
+
+        auto const fade_time = std::chrono::milliseconds {1000};
+        timers_.add_timer(fade_time, [&](timer::id_t, timer::duration_t) {
+            fade_message();
+            return fade_time;
+        });
+
+        auto const frame_time = std::chrono::nanoseconds {1000000000 / 60};
+        timers_.add_timer(frame_time, [&](timer::id_t, timer::duration_t) {
+            render_ = true;
+            return frame_time;
+        });
+
+        ////////////////////////////////////////////////////
+        while (app_.is_running()) {
+            app_.do_all_events();
+            timers_.update();
+            render(renderer_);
+        }
+    }
 
     void init_sinks() {
         app_.on_command([&](command_type const cmd) {
@@ -1595,7 +1661,7 @@ public:
 
     void print_message(string_ref const msg) {
         constexpr auto width  = 1024;
-        constexpr auto height = 100;
+        constexpr auto height = 32;
 
         last_message_ = transitory_text_layout {font_face_, msg, width, height};
 
@@ -1606,7 +1672,8 @@ public:
         if (msg == message_type::none) {
             last_message_ = transitory_text_layout {};
         } else {
-            print_message(messages_(msg, lang));
+            //TODO
+            print_message(definitions_.messages_jp(msg, lang));
         }
     }
 
@@ -1616,7 +1683,7 @@ public:
         auto const size = static_cast<int>(levels_.size());
 
         if (level == size) {
-            levels_.emplace_back(random_substantive_, random_trivial_, player_, sheet_, level_w, level_h);
+            levels_.emplace_back(random_substantive_, random_trivial_, definitions_, player_, sheet_, level_w, level_h);
             cur_level_ = &levels_.back();
         } else if (level < size) {
             cur_level_ = &levels_[level];
@@ -1643,56 +1710,16 @@ public:
         do_zoom_reset();
     }
 
-    explicit impl_t(config const& cfg)
-      : random_substantive_ {cfg.substantive_seed}
-      , random_trivial_     {cfg.trivial_seed}
-      , app_                {file_key_map, cfg}
-      , renderer_           {app_}
-      , font_lib_           {}
-      , font_face_          {renderer_, font_lib_, cfg.font_name, font_size}
-      , messages_           {file_messages_en}
-      , last_message_       {}
-      , sheet_              {file_texture_map, renderer_}
-      , view_               {sheet_, app_.client_width(), app_.client_height()}
-      , cur_level_          {nullptr}
-      , player_             {}
-      , input_mode_         {nullptr}
-      , imode_direction_    {[&] {input_mode_ = nullptr;}}
-      , materials_          {file_materials}
-      , materials_strings_  {file_materials_strings}
-    {
-        init_sinks();
-
-        next_level(0);
-
-        print_message(message_type::welcome);
-
-        auto const fade_time = std::chrono::milliseconds {1000};
-        timers_.add_timer(fade_time, [&](timer::id_t, timer::duration_t) {
-            fade_message();
-            return fade_time;
-        });
-
-        auto const frame_time = std::chrono::nanoseconds {1000000000 / 60};
-        timers_.add_timer(frame_time, [&](timer::id_t, timer::duration_t) {
-            render_ = true;
-            return frame_time;
-        });
-
-        ////////////////////////////////////////////////////
-        while (app_.is_running()) {
-            app_.do_all_events();
-            timers_.update();
-            render(renderer_);
-        }
-    }
-
     void render(renderer& r) {
         if (!render_) {
             return;
         }
 
+        r.set_draw_color(0, 0, 0);
         r.clear();
+
+        //auto const& ft = font_face_.get_texture();
+        //r.draw_texture(ft, 0, 0);
 
         r.set_translation(view_.translation());
         r.set_scale(view_.scale());
@@ -1703,10 +1730,30 @@ public:
         sheet_.render(r, 1, 0, player_pos.x, player_pos.y);
 
         if (last_message_fade_ > 0) {
-            last_message_.render(r, font_face_, 1, 1);
+            auto const x = 1;
+            auto const y = 1;
+            auto const w = last_message_.actual_width();
+            auto const h = last_message_.actual_height();
+            
+            r.set_draw_color(50, 50, 50);
+            r.draw_filled_rect(make_rect_size<float>(x, y, w, h));
+
+            last_message_.render(r, font_face_, x, y);
         }
 
-        inspect_message_.render(r, font_face_, 0, view_.height() - 32);
+        {
+            auto const line_gap = font_face_.line_gap();
+
+            auto const x = 1;
+            auto const y = view_.height() - inspect_message_.actual_height();
+            auto const w = inspect_message_.actual_width();
+            auto const h = inspect_message_.actual_height();
+
+            r.set_draw_color(50, 50, 50);
+            r.draw_filled_rect(make_rect_size<float>(x, y, w, h));
+
+            inspect_message_.render(r, font_face_, x, y);
+        }
 
         r.present();
 
@@ -1760,18 +1807,31 @@ public:
         });        
     }
 
+    void clear_inspect_message() {
+        inspect_message_ = transitory_text_layout {};
+    }
+
+    void set_inspect_message(ipoint2 const p) {
+        inspect_message_ = transitory_text_layout {
+            font_face_
+          , cur_level_->get_inspect_msg(p)
+          , 1000
+          , 32
+        };
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     // Commands
     ////////////////////////////////////////////////////////////////////////////
-
+    //--------------------------------------------------------------------------
     void do_open() {
         set_door_state(true);
     }
-
+    //--------------------------------------------------------------------------
     void do_close() {
         set_door_state(false);
     }
-
+    //--------------------------------------------------------------------------
     void do_move_player(int const dx, int const dy) {
         auto& level = *cur_level_;
 
@@ -1788,11 +1848,12 @@ public:
         } else {
             player_.move_by(dx, dy);
             view_.scroll_by_tile(dx, dy);
+            clear_inspect_message();
         }
 
         advance();
     }
-
+    //--------------------------------------------------------------------------
     void do_scroll(int const dx, int const dy) {
         constexpr auto delta = 4.0f;
 
@@ -1800,20 +1861,24 @@ public:
         auto const scroll_y = static_cast<float>(dy) * delta;
 
         view_.scroll_by(scroll_x, scroll_y);
+        clear_inspect_message();
     }
-
+    //--------------------------------------------------------------------------
     void do_zoom_in() {
         view_.zoom_to(view_.zoom() * 1.1f);
+        clear_inspect_message();
     }
-
+    //--------------------------------------------------------------------------
     void do_zoom_out() {
         view_.zoom_to(view_.zoom() * 0.9f);
+        clear_inspect_message();
     }
-
+    //--------------------------------------------------------------------------
     void do_zoom_reset() {
         view_.zoom_to(1.0f, player_.position());
+        clear_inspect_message();
     }
-
+    //--------------------------------------------------------------------------
     void do_go_up() {
         auto const msg = cur_level_->go_up(player_.position());
 
@@ -1824,8 +1889,10 @@ public:
 
         prev_level(level_number_ - 1);
         advance();
-    }
 
+        clear_inspect_message();
+    }
+    //--------------------------------------------------------------------------
     void do_go_down() {
         auto const msg = cur_level_->go_down(player_.position());
 
@@ -1836,12 +1903,14 @@ public:
 
         next_level(level_number_ + 1);
         advance();
-    }
 
+        clear_inspect_message();
+    }
+    //--------------------------------------------------------------------------
     void do_wait() {
         advance();
     }
-
+    //--------------------------------------------------------------------------
     void do_get() {
         auto const p = player_.position();
 
@@ -1852,18 +1921,21 @@ public:
         }
         
         auto item = cur_level_->get_item(p, 0);
+        auto const& name = definitions_.items_locale_jp(item.id, 0).name;
 
         //TODO add languages and formatting functions
-        auto fmt = boost::format {messages_(message_type::get_ok, 0).data()};
-        print_message(boost::str(fmt % item.name));
+        auto const msg_string = definitions_.messages_jp(message_type::get_ok, 0);
+        auto fmt = boost::format {msg_string.data()};
+        print_message(boost::str(fmt % name));
+
+        player_.add_item(std::move(item));
 
         advance();
     }
-
     ////////////////////////////////////////////////////////////////////////////
     // Sinks
     ////////////////////////////////////////////////////////////////////////////
-
+    //--------------------------------------------------------------------------
     void on_command(command_type const cmd) {
         if (input_mode_) {
             input_mode_->on_command(cmd);
@@ -1896,17 +1968,17 @@ public:
             break;
         }
     }
-
+    //--------------------------------------------------------------------------
     void on_resize(unsigned const w, unsigned const h) {
         view_.set_size(static_cast<float>(w), static_cast<float>(h));
     }
-
+    //--------------------------------------------------------------------------
     void on_mouse_move(application::mouse_move_info const& info) {
         auto const right = (info.state & (1<<2)) != 0;      
         
         if (!right) {
             auto const p = view_.screen_to_grid(info.x, info.y);
-            inspect_message_ = transitory_text_layout {font_face_, cur_level_->get_inspect_msg(p), 1000, 32};
+            set_inspect_message(p);
             return;
         }
 
@@ -1914,10 +1986,8 @@ public:
             static_cast<float>(info.dx)
           , static_cast<float>(info.dy)
         );
-
-        render_ = true;
     }
-
+    //--------------------------------------------------------------------------
     void on_mouse_button(application::mouse_button_info const& info) {
         //if (info.state != application::mouse_button_info::state_t::pressed) {
         //    return;
@@ -1970,7 +2040,7 @@ private:
 
     timer       timers_;
 
-    message_map messages_;
+    data_definitions definitions_;
 
     transitory_text_layout last_message_;
     int                    last_message_fade_ = 5;
@@ -1989,11 +2059,8 @@ private:
 
     player player_;
 
-    input_mode_base* input_mode_;
+    input_mode_base*     input_mode_;
     input_mode_direction imode_direction_;
-
-    definition<item_material_def>       materials_;
-    localized_string<item_material_def> materials_strings_;
 
     int frames_ = 0;
     float fps_ = 0.0f;

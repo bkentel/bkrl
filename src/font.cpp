@@ -103,6 +103,12 @@ transitory_text_layout::transitory_text_layout(
     for (auto const codepoint : codepoints_) {
         auto const cp = unicode::codepoint {codepoint};
 
+        //TODO
+        if (cp.value == '\n') {
+            x = 0;
+            y += line_gap;
+        }
+
         auto const metrics = face.metrics(left, cp);
         left = cp;
 
@@ -116,11 +122,17 @@ transitory_text_layout::transitory_text_layout(
           , y - metrics.top
         };
 
+        actual_w_ = std::max(actual_w_, p.x + metrics.width);
+        actual_h_ = std::max(actual_h_, p.y + metrics.height);
+
         x += metrics.advance_x;
         y -= metrics.advance_y;
 
         positions_.push_back(p);
     }
+
+    actual_w_ += 4;
+    actual_h_ += 4;
 }
 
 //------------------------------------------------------------------------------

@@ -77,8 +77,8 @@ struct cached_glyph {
 
     uint8_t width;
     uint8_t height;
-    uint8_t left;
-    uint8_t top;
+    int8_t  left;
+    int8_t  top;
 
     uint8_t advance;   
     uint8_t reserved[3];
@@ -340,8 +340,8 @@ public:
 
         result.width   = static_cast<uint8_t>(width());
         result.height  = static_cast<uint8_t>(height());
-        result.left    = static_cast<uint8_t>(left());
-        result.top     = static_cast<uint8_t>(top());
+        result.left    = static_cast<int8_t>(left());
+        result.top     = static_cast<int8_t>(top());
         result.advance = static_cast<uint8_t>(advance().x >> 16);
 
         return result;
@@ -850,8 +850,8 @@ private:
         map_.emplace(cp, i);
 
         auto const result = std::div(i, cells_x_);
-        auto const x = result.rem;
-        auto const y = result.quot;
+        auto const x = result.rem  * cell_size_ + tex_offset_.x;
+        auto const y = result.quot * cell_size_ + tex_offset_.y;
 
         cached = load_value(cp, x, y);
 
