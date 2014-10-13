@@ -1,0 +1,46 @@
+{ "file_type":   "LOCALE"
+, "string_type": "ENTITY"
+, "language":    "en"
+, "definitions": [
+    { "id":   "SKELETON"
+    , "name": "skeleton"
+    , "text": "An unremarkable skeleton."
+    }
+  , { "id":   "SKELETON_WARRIOR"
+    , "name": "skeleton warrior"
+    , "text": "A skeleton trained in the art of war."
+    }
+  , { "id":   "SKELETON_ARCHER"
+    , "name": "skeleton archer"
+    , "text": "A skeleton fond of fighting from afar."
+    }
+  , { "id":   "SKELETON_MAGE"
+    , "name": "skeleton mage"
+    , "text": "A once skilled mage now undead."
+    }
+  , { "id":   "RAT_BROWN"
+    , "name": "brown rat"
+    , "text": "A rat. It's brown."
+    }
+  , { "id":   "RAT_GREY"
+    , "name": "grey rat"
+    , "text": "A rat. It's grey."
+    }
+  , { "id":   "WASP_YELLOW"
+    , "name": "yellow wasp"
+    , "text": "A wasp. It's yellow."
+    }
+  , { "id":   "WASP_ORANGE"
+    , "name": "orange wasp"
+    , "text": "A wasp. It's orange."
+    }
+  , { "id":   "DRUDGE_YOUNG"
+    , "name": "young drudge"
+    , "text": "A drudge who has not quite matured."
+    }
+  , { "id":   "DRUDGE_APPRENICE"
+    , "name": "drudge apprentice"
+    , "text": "A drudge still in training."
+    }
+  ]
+}

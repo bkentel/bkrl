@@ -24,7 +24,6 @@ public:
     int tile_h() const noexcept { return tile_height_; }
     string_ref filename() const { return filename_; }
 
-
     ////////////////////////////////////////////////////////////////////////////
     void rule_root(cref value);
     void rule_file_type(cref value);
@@ -90,19 +89,18 @@ tile_map::impl_t::rule_root(cref value) {
 
 //------------------------------------------------------------------------------
 void tile_map::impl_t::rule_file_type(cref value) {
-    static utf8string const expected {"texture_map"};
-    json::common::get_filetype(value, expected);
+    json::common::get_filetype(value, json::common::filetype_texture_map);
 }
 
 //------------------------------------------------------------------------------
 void tile_map::impl_t::rule_file_name(cref value) {
-    static utf8string const field {"file_name"};
+    auto const& field = json::common::field_filename;
     filename_ = json::require_string(value[field]).to_string();
 }
 
 //------------------------------------------------------------------------------
 void tile_map::impl_t::rule_tile_size(cref value) {
-    static utf8string const field {"tile_size"};
+    auto const& field = json::common::field_tile_size;
 
     cref size = json::require_array(value[field], 2, 2);
 
@@ -123,7 +121,7 @@ void tile_map::impl_t::rule_tile_size(cref value) {
 
 //------------------------------------------------------------------------------
 void tile_map::impl_t::rule_mappings(cref value) {
-    static utf8string const field {"mappings"};
+    auto const& field = json::common::field_mappings;
 
     cref mappings = json::require_array(value[field]);
 

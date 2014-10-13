@@ -1,8 +1,9 @@
 {
-    "file_type": "keymap"
+    "file_type": "KEYMAP"
   , "mappings": [
         ["cancel", "kb_escape"]
       , ["accept", "kb_return"]
+      , ["accept", "kb_kp_enter"]
 
       , ["here",  "kb_kp_5"]
       , ["north", "kb_up"]

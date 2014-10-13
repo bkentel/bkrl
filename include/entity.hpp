@@ -2,10 +2,28 @@
 
 #include "math.hpp"
 #include "types.hpp"
+#include "locale.hpp"
 
 #include "item.hpp" //TODO temp
 
 namespace bkrl {
+
+class entity_def : public definition_base<entity_def> {
+public:
+    struct locale {
+        utf8string name;
+        utf8string text;
+    };
+
+    static definition_t load_definitions(utf8string const& data);
+    static definition_t load_definitions(string_ref filename);
+    static localized_t  load_localized_strings(utf8string const& data);
+    static localized_t  load_localized_strings(string_ref filename);
+
+    string_id  id;
+    range<int> items;
+};
+
 
 //==============================================================================
 //==============================================================================
@@ -13,13 +31,14 @@ class entity {
 public:
     using point_t = ipoint2;
 
-    entity(point_t const pos)
-      : pos_ (pos)
+    explicit entity(point_t const pos, string_id const id)
+      : id_ {id}
+      , pos_ (pos)
     {
     }
 
     entity()
-      : entity {point_t{0, 0}}
+      : pos_ (point_t{0, 0})
     {
     }
 
@@ -56,7 +75,10 @@ public:
     auto items_end() const {
         return std::cend(items_);
     }
+
+    string_id id() const { return id_; }
 private:
+    string_id id_;
     point_t pos_;
     std::vector<item> items_;
 };

@@ -16,5 +16,6 @@
       , ["get_no_items",     "You see nothing to get."]
       , ["get_which_prompt", "Get which?"]
       , ["get_ok",           "Got %1%"]
+      , ["kill_regular",     "You killed the %1%"]
     ]
 }

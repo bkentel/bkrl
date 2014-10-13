@@ -9,7 +9,7 @@
 #include "generate.hpp"
 #include "bsp_layout.hpp"
 #include "tile_sheet.hpp"
-#include "player.hpp"
+#include "entity.hpp"
 #include "messages.hpp"
 #include "time.hpp"
 #include "spatial_map.hpp"
@@ -24,13 +24,17 @@ using bkrl::string_ref;
 namespace random = bkrl::random;
 
 namespace {
-    static string_ref const file_key_map     {R"(./data/key_map.json)"};
-    static string_ref const file_texture_map {R"(./data/texture_map.json)"};
+    static string_ref const file_key_map     {R"(./data/keymap.def)"};
+    static string_ref const file_texture_map {R"(./data/texture_map.def)"};
     static string_ref const file_messages_en {R"(./data/locale/en/messages.def)"}; //TODO
     static string_ref const file_messages_jp {R"(./data/locale/jp/messages.def)"}; //TODO
     static string_ref const file_items       {R"(./data/items.def)"};
     static string_ref const file_items_en    {R"(./data/locale/en/items.def)"};
     static string_ref const file_items_jp    {R"(./data/locale/jp/items.def)"};
+    static string_ref const file_entities    {R"(./data/entities.def)"};
+    static string_ref const file_entities_en {R"(./data/locale/en/entities.def)"};
+    static string_ref const file_entities_jp {R"(./data/locale/jp/entities.def)"};
+
 }
 
 namespace bkrl {
@@ -270,347 +274,7 @@ merge_walls(
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-//==============================================================================
-//
-//==============================================================================
-class room_connector {
-public:
-    //--------------------------------------------------------------------------
-    //! attempt to connect @p src_room to @p dst_room with the route constrained
-    //! to the region given by @p bounds.
-    //--------------------------------------------------------------------------
-    bool connect(
-        random::generator& gen
-      , grid_storage&      grid
-      , grid_region const& bounds
-      , room        const& src_room
-      , room        const& dst_room
-    );
 
-    //--------------------------------------------------------------------------
-    // decide whether the tile at @p can be transformed into a corridor.
-    //--------------------------------------------------------------------------
-    bool can_gen_corridor(
-        grid_storage const& grid
-      , grid_region         bounds
-      , grid_point          p
-    ) const;
-private:
-    enum class corridor_result {
-        failed
-      , ok
-      , ok_done
-    };
-
-    //--------------------------------------------------------------------------
-    // add the positions at each cardinal direction from @p p ordered accoring
-    // @p delta as candidates if the staisfy can_gen_corridor();
-    //--------------------------------------------------------------------------
-    void add_candidates_(
-        random::generator&  gen
-      , grid_storage&       grid
-      , grid_region         bounds
-      , grid_point          p
-      , vector2d<int>       delta
-    );
-
-    //--------------------------------------------------------------------------
-    // transform the tile at @p p to a corridor.
-    //--------------------------------------------------------------------------
-    void generate_at_(
-        grid_storage& grid
-      , grid_point    p
-    ) const;
-
-    //--------------------------------------------------------------------------
-    //! generate a corridor segment of length @p len starting at @p start.
-    //--------------------------------------------------------------------------
-    std::pair<grid_point, corridor_result> generate_segment_(
-        grid_storage& grid
-      , grid_region   bounds
-      , grid_point    start
-      , vector2d<int> dir
-      , grid_size     len
-      , room_id       src_id
-      , room_id       dst_id
-    ) const;
-
-    std::vector<grid_point> closed_;
-    std::vector<grid_point> open_;
-};
-
-//------------------------------------------------------------------------------
-bool
-room_connector::can_gen_corridor(
-    grid_storage const& grid
-  , grid_region  const  bounds
-  , grid_point   const  p
-) const {
-    if (!intersects(p, bounds)) {
-        return false;
-    }
-
-    auto const type = grid.get(attribute::tile_type, p);
-
-    switch (type) {
-    case tile_type::invalid :
-    case tile_type::empty :
-    case tile_type::floor :
-    case tile_type::door :
-    case tile_type::stair :
-    case tile_type::corridor :
-        return true;
-    case tile_type::wall :
-        break;
-    default :
-        BK_TODO_FAIL();
-    }
-
-    BK_ASSERT(type == tile_type::wall);
-
-    auto const doors = check_grid_block5(grid, p.x, p.y, attribute::tile_type, tile_type::door);
-    if (doors) {
-        return false;
-    }
-
-    auto const walls = check_grid_block9(grid, p.x, p.y, attribute::tile_type, tile_type::wall);
-
-    constexpr auto i_NW = (1<<0);
-    constexpr auto i_Nx = (1<<1);
-    constexpr auto i_NE = (1<<2);
-    constexpr auto i_xW = (1<<3);
-    constexpr auto i_xE = (1<<4);
-    constexpr auto i_SW = (1<<5);
-    constexpr auto i_Sx = (1<<6);
-    constexpr auto i_SE = (1<<7);
-
-    auto const c0 = (walls & (i_Nx|i_NE|i_xE)) == (i_Nx|i_xE);
-    auto const c1 = (walls & (i_Sx|i_SW|i_xW)) == (i_Sx|i_xW);
-    auto const c2 = (walls & (i_Nx|i_NW|i_xW)) == (i_Nx|i_xW);
-    auto const c3 = (walls & (i_Sx|i_SE|i_xE)) == (i_Sx|i_xE);
-
-    auto const c4 = (walls & ~(i_SW|i_Sx|i_SE)) == (i_Nx|i_xW|i_xE);
-    auto const c5 = (walls & ~(i_NE|i_xE|i_SE)) == (i_Nx|i_xW|i_Sx);
-    auto const c6 = (walls & ~(i_NW|i_Nx|i_NE)) == (i_xW|i_xE|i_Sx);
-    auto const c7 = (walls & ~(i_NW|i_xW|i_SW)) == (i_Nx|i_xE|i_Sx);
-
-    auto const c8 = walls == (i_Nx|i_xW|i_xE|i_Sx);
-
-    if (c0 || c1 || c2 || c3 || c4 || c5 || c6 || c7 || c8) {
-        return false;
-    }
-
-    return true;
-}
-
-//------------------------------------------------------------------------------
-void
-room_connector::generate_at_(
-    grid_storage&      grid
-  , grid_point   const p
-) const {
-    auto const type = grid.get(attribute::tile_type, p);
-
-    switch (type) {
-    case tile_type::invalid :
-    case tile_type::empty :
-        grid.set(attribute::tile_type, p, tile_type::corridor);
-        break;
-    case tile_type::floor :
-    case tile_type::door :
-    case tile_type::stair :
-    case tile_type::corridor :
-        break;
-    case tile_type::wall :
-        grid.set(attribute::tile_type, p, tile_type::door);
-        break;
-    default :
-        BK_TODO_FAIL();
-    }
-}
-
-//------------------------------------------------------------------------------
-std::pair<grid_point, room_connector::corridor_result>
-room_connector::generate_segment_(
-    grid_storage&       grid
-  , grid_region   const bounds
-  , grid_point    const start
-  , vector2d<int> const dir
-  , grid_size     const len
-  , room_id       const src_id
-  , room_id       const dst_id
-) const {
-    BK_ASSERT_DBG(len > 0);
-    BK_ASSERT_DBG(intersects(bounds, start));
-    //BK_ASSERT_DBG((dir.x || dir.y) && !(dir.x && dir.y)); TODO
-    BK_ASSERT_DBG(src_id && dst_id && src_id != dst_id);
-    BK_ASSERT_DBG(can_gen_corridor(grid, bounds, start));
-
-    auto const step = (dir.x ? dir.x : dir.y) > 0 ? 1 : -1;
-
-    auto  result = std::make_pair(start, corridor_result::ok);
-    auto& cur    = result.first;
-    auto& ok     = result.second;
-    auto& p      = dir.x ? cur.x : cur.y;
-
-    for (int i = 0; i < len; ++i) {
-        p += step;
-
-        ok = can_gen_corridor(grid, bounds, cur)
-          ? corridor_result::ok
-          : corridor_result::failed;
-
-        if (ok == corridor_result::failed) {
-            p -= step; //back up
-            break;
-        }
-
-        generate_at_(grid, cur);
-
-        auto const id = grid.get(attribute::room_id, cur);
-        if (id == dst_id) {
-            ok = corridor_result::ok_done;
-            break;
-        }
-    }
-
-    BK_ASSERT(can_gen_corridor(grid, bounds, cur));
-    return result;
-}
-
-//------------------------------------------------------------------------------
-void
-room_connector::add_candidates_(
-    random::generator&  gen
-  , grid_storage&       grid
-  , grid_region   const bounds
-  , grid_point    const p
-  , vector2d<int> const delta
-) {
-    constexpr auto weight = 1.1f;
-
-    constexpr auto iN = 0u;
-    constexpr auto iS = 1u;
-    constexpr auto iW = 2u;
-    constexpr auto iE = 3u;
-
-    std::array<grid_point, 4> dirs {
-        grid_point {p.x + 0, p.y - 1} //north
-      , grid_point {p.x + 0, p.y + 1} //south
-      , grid_point {p.x - 1, p.y + 0} //west
-      , grid_point {p.x + 1, p.y + 0} //east
-    };
-
-    auto const mag_x = static_cast<float>(std::abs(delta.x));
-    auto const mag_y = static_cast<float>(std::abs(delta.y));
-
-    auto beg = 0u;
-    auto end = 4u;
-
-    if (mag_x > weight*mag_y) {
-        if (delta.x >= 0) {
-            std::swap(dirs[0], dirs[iE]);
-        } else {
-            std::swap(dirs[0], dirs[iW]);
-        }
-
-        beg++;
-    } else if (mag_y > weight*mag_x) {
-        if (delta.y >= 0) {
-            std::swap(dirs[0], dirs[iS]);
-        } else {
-            std::swap(dirs[0], dirs[iN]);
-        }
-
-        beg++;
-    }
-
-    std::shuffle(dirs.data() + beg, dirs.data() + end, gen);
-
-    std::copy_if(
-        std::crbegin(dirs), std::crend(dirs), std::back_inserter(open_)
-      , [&](grid_point const gp) {
-            auto const it = std::find_if(
-                std::cbegin(closed_), std::cend(closed_)
-              , [&](grid_point const q) {
-                    return gp == q;
-                }
-            );
-
-            if (it != std::cend(closed_)) {
-                return false;
-            }
-
-            return can_gen_corridor(grid, bounds, gp);
-        }
-    );
-}
-
-//------------------------------------------------------------------------------
-bool
-room_connector::connect(
-    random::generator& gen
-  , grid_storage&      grid
-  , grid_region const& bounds
-  , room        const& src_room
-  , room        const& dst_room
-) {
-    open_.clear();
-    closed_.clear();
-
-    auto const beg = src_room.center();
-    auto const end = dst_room.center();
-    auto       cur = beg;
-
-    auto const src_id = src_room.id();
-    auto const dst_id = dst_room.id();
-
-    BK_ASSERT_DBG(intersects(bounds, beg));
-    BK_ASSERT_DBG(intersects(bounds, end));
-
-    //TODO
-    BK_ASSERT_DBG(grid.get(attribute::tile_type, beg) != tile_type::wall);
-    BK_ASSERT_DBG(grid.get(attribute::tile_type, end) != tile_type::wall);
-
-    add_candidates_(gen, grid, bounds, cur, end - cur);
-
-    for (int failures = 0; failures < 5;) {
-        if (open_.empty()) {
-            return false;
-        }
-
-        auto const p = open_.back();
-        open_.pop_back();
-        closed_.push_back(p);
-
-        if (p == cur) {
-            continue;
-        }
-
-        auto const dir    = p - cur;
-        auto const len    = random::uniform_range(gen, 1, 10);
-        auto const result = generate_segment_(grid, bounds, cur, dir, len, src_id, dst_id);
-
-        if (result.second == corridor_result::failed) {
-            failures++;
-        } else if (result.second == corridor_result::ok_done) {
-            return true;
-        }
-
-        cur = result.first;
-        add_candidates_(gen, grid, bounds, cur, end - cur);
-    }
-
-    return false;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-
-template <typename T>
-std::remove_reference_t<T> const& as_const(T&& value) {
-    return value;
-}
 
 struct data_definitions {
     BK_NOCOPY(data_definitions);
@@ -619,6 +283,11 @@ struct data_definitions {
       : items           {item_def::load_definitions(file_items)}
       , items_locale_en {item_def::load_localized_strings(file_items_en)}
       , items_locale_jp {item_def::load_localized_strings(file_items_jp)}
+
+      , entities           {entity_def::load_definitions(file_entities)}
+      , entities_locale_en {entity_def::load_localized_strings(file_entities_en)}
+      , entities_locale_jp {entity_def::load_localized_strings(file_entities_jp)}
+
       , messages_en     {file_messages_en}
       , messages_jp     {file_messages_jp}
     {
@@ -627,6 +296,10 @@ struct data_definitions {
     item_def::definition_t items;
     item_def::localized_t  items_locale_en;
     item_def::localized_t  items_locale_jp;
+
+    entity_def::definition_t entities;
+    entity_def::localized_t  entities_locale_en;
+    entity_def::localized_t  entities_locale_jp;
 
     message_map messages_en;
     message_map messages_jp;
@@ -638,8 +311,6 @@ namespace gui {
 //==============================================================================
 class item_list {
 public:
-    item_list() = default;
-
     item_list(font_face& face, data_definitions const& definitions)
       : face_        {&face}
       , definitions_ {&definitions}
@@ -647,21 +318,20 @@ public:
     }
 
     template <typename It>
-    item_list(It begin, It end, font_face& face, data_definitions const& definitions)
-      : face_        {&face}
-      , definitions_ {&definitions}
-    {
+    void add_items(It begin, It end) {
+        BK_ASSERT(face_ && definitions_);
+
         auto const size = std::distance(begin, end);
         items_.reserve(size);
 
         using type = decltype(*begin);
-
         std::for_each(begin, end, [&](type itm) {
             add_item(itm);
         });
     }
 
-    void add_item(item const* itm) {
+    void add_item(item const* const itm) {
+        BK_ASSERT_DBG(itm);
         add_item(*itm);
     }
 
@@ -669,69 +339,82 @@ public:
         auto const& def  = definitions_->items_locale_jp(itm.id, 0);
         auto const& name = def.name;
 
-        utf8string string;
-        string.reserve(2 + name.size());
+        name_buffer_.clear();
+        name_buffer_.reserve(2 + name.size());
 
-        string.push_back(prefix_);
-        string.push_back('\t');
-        string.append(name);
+        name_buffer_.push_back(prefix_);
+        name_buffer_.push_back('\t');
+        name_buffer_.append(name.data(), name.size());
 
-        items_.emplace_back(*face_, string, 500, 32);
+        items_.emplace_back(*face_, name_buffer_, 500, 32);
 
         auto const& back = items_.back();
 
         width_  =  std::max(width_, back.actual_width());
         height_ += back.actual_height();
 
-        prefix_++;        
+        prefix_++;
     }
 
-    void render(renderer& r, int x, int y) {
+    void render(renderer& r, int const x, int const y) {
+        auto cur_y = y;
+
+        //draw the background
         r.set_draw_color(50, 50, 50);
         r.draw_filled_rect(make_rect_size<float>(x, y, width_, height_));
 
         int i = 0;
         for (auto const& itm : items_) {
             if (i == selection_) {
+                //draw the selection highlight
                 r.set_draw_color(0, 0, 100);
-                r.draw_filled_rect(make_rect_size<float>(x, y, width_, itm.actual_height()));
+                r.draw_filled_rect(make_rect_size<float>(x, cur_y, width_, itm.actual_height()));
                 r.set_draw_color(50, 50, 50);
             }
 
-            itm.render(r, *face_, x, y);
-            y += itm.actual_height();
+            itm.render(r, *face_, x, cur_y);
+            cur_y += itm.actual_height();
             ++i;
         }
     }
 
+    int size() const noexcept {
+        return static_cast<int>(items_.size());
+    }
+
     void clear() {
         items_.clear();
-        width_  = 0;
-        height_ = 0;
-        prefix_ = 'a';
+        selection_ = 0;
+        width_     = 0;
+        height_    = 0;
+        prefix_   = 'a';
     }
 
     void select_next() {
         auto const size = items_.size();
-
         selection_ = (selection_ + 1) % size;
     }
 
     void select_prev() {
         auto const size = items_.size();
-
-        selection_ = (selection_ == 0) ? (size - 1) : (selection_ - 1);
+        selection_ = (selection_ == 0)
+          ? (size - 1)
+          : (selection_ - 1);
     }
 
+    int get_selection() const noexcept {
+        return selection_;
+    }
 private:
-    font_face* face_;
-    data_definitions const* definitions_;
+    font_face*              face_        = nullptr;
+    data_definitions const* definitions_ = nullptr;
 
     int  selection_ = 0;
-    int  width_  = 0;
-    int  height_ = 0;
-    char prefix_ = 'a';
+    int  width_     = 0;
+    int  height_    = 0;
+    char prefix_    = 'a';
 
+    utf8string name_buffer_;
     std::vector<transitory_text_layout> items_;
 };
 
@@ -1031,7 +714,7 @@ public:
                 continue;
             }
 
-            result.append("\n");
+            result.push_back('\n');
             
             auto const& id = items_.get_value(itm).id;
             auto const& name = definitions_->items_locale_jp(id, 0).name;
@@ -1044,7 +727,11 @@ public:
                 continue;
             }
 
-            result.append("; Monster");
+            auto const& id = mob.id();
+            auto const& name = definitions_->entities_locale_jp(id, 0).name;
+
+            result.push_back('\n');
+            result.append(name.data(), name.size());
         }
 
         return result;
@@ -1115,7 +802,7 @@ private:
     void connect_rooms_(random::generator& substantive) {
         auto& rooms = rooms_;
 
-        room_connector connector;
+        bsp_connector connector;
 
         layout_.connect(substantive, [&](grid_region const& bounds, unsigned const id0, unsigned const id1) {
             auto const connected = connector.connect(
@@ -1210,7 +897,15 @@ private:
                 continue;
             }
             
-            entity mob {room.center()};
+            auto const& entities = definitions_->entities;
+            auto const  size     = entities.size();
+
+            BK_ASSERT(size > 0);
+            auto const i = random::uniform_range(substantive, 0u, size - 1);
+
+            auto const& id = entities.at_index(i).id;
+
+            entity mob {room.center(), id};
 
             auto steps = random::uniform_range(substantive, 1, 10);
             for (; steps > 0; --steps) {
@@ -1686,7 +1381,7 @@ public:
     using input_mode_base::input_mode_base;
 
     enum class result_t {
-        ok, cancel, next, prev
+        ok_select, ok_index, cancel, next, prev
     };
 
     using completion_handler = std::function<void (result_t result, int index)>;
@@ -1707,22 +1402,28 @@ public:
 
     //--------------------------------------------------------------------------
     void on_char(char c) override {
-        if (c < 'a' || c > 'z') {
+        constexpr auto first = 'a';
+        constexpr auto last  = 'z';
+
+        if (c < first || c > last) {
             return;
         }
 
-        auto const i = c - 'a';
+        auto const i = c - first;
         if (i > max_) {
             return;
         }
 
         index_ = i;
-        exit_mode(result_t::ok);
+        exit_mode(result_t::ok_index);
     }
     //--------------------------------------------------------------------------
     bool on_command(command_type cmd) override {
         switch (cmd) {
         default:
+            break;
+        case command_type::accept :
+            exit_mode(result_t::ok_select);
             break;
         case command_type::cancel :
             index_ = 0;           
@@ -1780,6 +1481,7 @@ public:
       , cur_level_          {nullptr}
       , player_             {}
       , input_mode_         {nullptr}
+      , item_list_          {font_face_, definitions_}
       , imode_direction_    {[&] {input_mode_ = nullptr;}}
       , imode_selection_    {[&] {input_mode_ = nullptr;}}
     {
@@ -2032,7 +1734,15 @@ public:
 
         auto ent = level.entity_at(p);
         if (ent) {
-            print_message("Killed entity!");
+            auto const& target = ent.get();
+            auto const& target_id = target.id();
+            auto const& target_name = definitions_.entities_locale_jp(target_id, 0).name;
+
+            //TODO add languages and formatting functions
+            auto const msg_string = definitions_.messages_jp(message_type::kill_regular, 0);
+            auto fmt = boost::format {msg_string.data()};
+            print_message(boost::str(fmt % target_name));
+
             level.attack(random_trivial_, player_, ent.get());
         } else {
             player_.move_by(dx, dy);
@@ -2103,22 +1813,23 @@ public:
     void get_item_selection_(ipoint2 const p) {
         auto const items = cur_level_->get_item_list(p);
 
-        auto const beg = std::cbegin(items);
-        auto const end = std::cend(items);
-        auto const size = std::distance(beg, end);
+        item_list_.clear();
+        item_list_.add_items(std::cbegin(items), std::cend(items));
 
-        item_list_ = gui::item_list {beg, end, font_face_, definitions_};
+        auto const size = item_list_.size();
 
         using result_t = input_mode_selection::result_t;
+
         input_mode_ = imode_selection_.enter_mode(size, [this, p](result_t const result, int const index) {
             switch (result) {
-            case result_t::ok :
+            case result_t::ok_select :
+                get_item(p, item_list_.get_selection());
+                break;
+            case result_t::ok_index :
                 get_item(p, index);
-                item_list_.clear();
-                return;
+                break;
             case result_t::cancel :
-                item_list_.clear();
-                return;
+                break;
             case result_t::next :
                 item_list_.select_next();
                 return;
@@ -2126,6 +1837,8 @@ public:
                 item_list_.select_prev();
                 return;
             }
+
+            item_list_.clear();
         });
     }
     

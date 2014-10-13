@@ -1,0 +1,46 @@
+{ "file_type":   "LOCALE"
+, "string_type": "ENTITY"
+, "language":    "jp"
+, "definitions": [
+    { "id":   "SKELETON"
+    , "name": "スケルトン"
+    , "text": "ありふれた特徴のないスケルトン。"
+    }
+  , { "id":   "SKELETON_WARRIOR"
+    , "name": "スケルトンの戦士"
+    , "text": "戦術に長けたスケルトン。"
+    }
+  , { "id":   "SKELETON_ARCHER"
+    , "name": "スケルトンの射手"
+    , "text": "距離を置いて戦うのを好むスケルトン。"
+    }
+  , { "id":   "SKELETON_MAGE"
+    , "name": "スケルトンの魔術師"
+    , "text": "かつて生きていたときに偉大な力を持った魔法使い。"
+    }
+  , { "id":   "RAT_BROWN"
+    , "name": "茶色の鼠"
+    , "text": "言うまでもないだろうが、茶色い鼠です。"
+    }
+  , { "id":   "RAT_GREY"
+    , "name": "灰色の鼠"
+    , "text": "言うまでもないだろうが、灰色の鼠です。"
+    }
+  , { "id":   "WASP_YELLOW"
+    , "name": "黄色の雀蜂"
+    , "text": "黄色い縞のついたスズメバチ。"
+    }
+  , { "id":   "WASP_ORANGE"
+    , "name": "橙色の雀蜂"
+    , "text": "オレンジ色の縞のついたスズメバチ。"
+    }
+  , { "id":   "DRUDGE_YOUNG"
+    , "name": "ドラッジの若者"
+    , "text": "いまだ成長しきっていないドラッジ。"
+    }
+  , { "id":   "DRUDGE_APPRENICE"
+    , "name": "ドラッジの見習"
+    , "text": "修行中のドラッジ。"
+    }
+  ]
+}

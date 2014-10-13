@@ -16,5 +16,6 @@
       , ["get_no_items",     "ここには拾うものがない。"]
       , ["get_which_prompt", "どれを拾う？"]
       , ["get_ok",           "%1%を拾った。"]
+      , ["kill_regular",     "%1%を斃した。"]
     ]
 }

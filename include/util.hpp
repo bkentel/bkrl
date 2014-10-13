@@ -14,6 +14,11 @@
 
 namespace bkrl {
 ////////////////////////////////////////////////////////////////////////////////
+template <typename T>
+inline std::remove_reference_t<T> const& as_const(T&& value) noexcept {
+    return value;
+}
+////////////////////////////////////////////////////////////////////////////////
 template <typename T, typename Tag>
 struct tagged_type {
     using type = T;
@@ -186,6 +191,11 @@ struct string_id {
     }
 
     utf8string string;
+    hash_t     hash;
+};
+
+struct identifier {
+    string_ref string;
     hash_t     hash;
 };
 

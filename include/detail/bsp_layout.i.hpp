@@ -525,4 +525,338 @@ bsp_layout_impl::connect(
     return range_t {lhs.lo, rhs.hi};
 }
 
+//==============================================================================
+//! Implementation for bkrl::bsp_layout
+//==============================================================================
+class bsp_connector_impl {
+public:
+    //--------------------------------------------------------------------------
+    //! attempt to connect @p src_room to @p dst_room with the route constrained
+    //! to the region given by @p bounds.
+    //--------------------------------------------------------------------------
+    bool connect(
+        random::generator& gen
+      , grid_storage&      grid
+      , grid_region const& bounds
+      , room        const& src_room
+      , room        const& dst_room
+    );
+
+    //--------------------------------------------------------------------------
+    // decide whether the tile at @p can be transformed into a corridor.
+    //--------------------------------------------------------------------------
+    bool can_gen_corridor(
+        grid_storage const& grid
+      , grid_region         bounds
+      , grid_point          p
+    ) const;
+private:
+    enum class corridor_result {
+        failed
+      , ok
+      , ok_done
+    };
+
+    //--------------------------------------------------------------------------
+    // add the positions at each cardinal direction from @p p ordered accoring
+    // @p delta as candidates if the staisfy can_gen_corridor();
+    //--------------------------------------------------------------------------
+    void add_candidates_(
+        random::generator& gen
+      , grid_storage&      grid
+      , grid_region        bounds
+      , grid_point         p
+      , ivec2              delta
+    );
+
+    //--------------------------------------------------------------------------
+    // transform the tile at @p p to a corridor.
+    //--------------------------------------------------------------------------
+    void generate_at_(
+        grid_storage& grid
+      , grid_point    p
+    ) const;
+
+    //--------------------------------------------------------------------------
+    //! generate a corridor segment of length @p len starting at @p start.
+    //--------------------------------------------------------------------------
+    std::pair<grid_point, corridor_result> generate_segment_(
+        grid_storage& grid
+      , grid_region   bounds
+      , grid_point    start
+      , ivec2         dir
+      , grid_size     len
+      , room_id       src_id
+      , room_id       dst_id
+    ) const;
+
+    std::vector<grid_point> closed_;
+    std::vector<grid_point> open_;
+};
+
+//------------------------------------------------------------------------------
+bool
+bsp_connector_impl::can_gen_corridor(
+    grid_storage const& grid
+  , grid_region  const  bounds
+  , grid_point   const  p
+) const {
+    if (!intersects(p, bounds)) {
+        return false;
+    }
+
+    auto const type = grid.get(attribute::tile_type, p);
+
+    switch (type) {
+    case tile_type::invalid :
+    case tile_type::empty :
+    case tile_type::floor :
+    case tile_type::door :
+    case tile_type::stair :
+    case tile_type::corridor :
+        return true;
+    case tile_type::wall :
+        break;
+    default :
+        BK_TODO_FAIL();
+    }
+
+    BK_ASSERT(type == tile_type::wall);
+
+    auto const doors = check_grid_block5(grid, p.x, p.y, attribute::tile_type, tile_type::door);
+    if (doors) {
+        return false;
+    }
+
+    auto const walls = check_grid_block9(grid, p.x, p.y, attribute::tile_type, tile_type::wall);
+
+    constexpr auto i_NW = (1<<0);
+    constexpr auto i_Nx = (1<<1);
+    constexpr auto i_NE = (1<<2);
+    constexpr auto i_xW = (1<<3);
+    constexpr auto i_xE = (1<<4);
+    constexpr auto i_SW = (1<<5);
+    constexpr auto i_Sx = (1<<6);
+    constexpr auto i_SE = (1<<7);
+
+    auto const c0 = (walls & (i_Nx|i_NE|i_xE)) == (i_Nx|i_xE);
+    auto const c1 = (walls & (i_Sx|i_SW|i_xW)) == (i_Sx|i_xW);
+    auto const c2 = (walls & (i_Nx|i_NW|i_xW)) == (i_Nx|i_xW);
+    auto const c3 = (walls & (i_Sx|i_SE|i_xE)) == (i_Sx|i_xE);
+
+    auto const c4 = (walls & ~(i_SW|i_Sx|i_SE)) == (i_Nx|i_xW|i_xE);
+    auto const c5 = (walls & ~(i_NE|i_xE|i_SE)) == (i_Nx|i_xW|i_Sx);
+    auto const c6 = (walls & ~(i_NW|i_Nx|i_NE)) == (i_xW|i_xE|i_Sx);
+    auto const c7 = (walls & ~(i_NW|i_xW|i_SW)) == (i_Nx|i_xE|i_Sx);
+
+    auto const c8 = walls == (i_Nx|i_xW|i_xE|i_Sx);
+
+    if (c0 || c1 || c2 || c3 || c4 || c5 || c6 || c7 || c8) {
+        return false;
+    }
+
+    return true;
+}
+
+//------------------------------------------------------------------------------
+void
+bsp_connector_impl::generate_at_(
+    grid_storage&      grid
+  , grid_point   const p
+) const {
+    auto const type = grid.get(attribute::tile_type, p);
+
+    switch (type) {
+    case tile_type::invalid :
+    case tile_type::empty :
+        grid.set(attribute::tile_type, p, tile_type::corridor);
+        break;
+    case tile_type::floor :
+    case tile_type::door :
+    case tile_type::stair :
+    case tile_type::corridor :
+        break;
+    case tile_type::wall :
+        grid.set(attribute::tile_type, p, tile_type::door);
+        break;
+    default :
+        BK_TODO_FAIL();
+    }
+}
+
+//------------------------------------------------------------------------------
+std::pair<grid_point, bsp_connector_impl::corridor_result>
+bsp_connector_impl::generate_segment_(
+    grid_storage&       grid
+  , grid_region   const bounds
+  , grid_point    const start
+  , ivec2         const dir
+  , grid_size     const len
+  , room_id       const src_id
+  , room_id       const dst_id
+) const {
+    BK_ASSERT_DBG(len > 0);
+    BK_ASSERT_DBG(intersects(bounds, start));
+    //BK_ASSERT_DBG((dir.x || dir.y) && !(dir.x && dir.y)); TODO
+    BK_ASSERT_DBG(src_id && dst_id && src_id != dst_id);
+    BK_ASSERT_DBG(can_gen_corridor(grid, bounds, start));
+
+    auto const step = (dir.x ? dir.x : dir.y) > 0 ? 1 : -1;
+
+    auto  result = std::make_pair(start, corridor_result::ok);
+    auto& cur    = result.first;
+    auto& ok     = result.second;
+    auto& p      = dir.x ? cur.x : cur.y;
+
+    for (int i = 0; i < len; ++i) {
+        p += step;
+
+        ok = can_gen_corridor(grid, bounds, cur)
+          ? corridor_result::ok
+          : corridor_result::failed;
+
+        if (ok == corridor_result::failed) {
+            p -= step; //back up
+            break;
+        }
+
+        generate_at_(grid, cur);
+
+        auto const id = grid.get(attribute::room_id, cur);
+        if (id == dst_id) {
+            ok = corridor_result::ok_done;
+            break;
+        }
+    }
+
+    BK_ASSERT(can_gen_corridor(grid, bounds, cur));
+    return result;
+}
+
+//------------------------------------------------------------------------------
+void
+bsp_connector_impl::add_candidates_(
+    random::generator&  gen
+  , grid_storage&       grid
+  , grid_region   const bounds
+  , grid_point    const p
+  , ivec2         const delta
+) {
+    constexpr auto weight = 1.1f;
+
+    constexpr auto iN = 0u;
+    constexpr auto iS = 1u;
+    constexpr auto iW = 2u;
+    constexpr auto iE = 3u;
+
+    std::array<grid_point, 4> dirs {
+        grid_point {p.x + 0, p.y - 1} //north
+      , grid_point {p.x + 0, p.y + 1} //south
+      , grid_point {p.x - 1, p.y + 0} //west
+      , grid_point {p.x + 1, p.y + 0} //east
+    };
+
+    auto const mag_x = static_cast<float>(std::abs(delta.x));
+    auto const mag_y = static_cast<float>(std::abs(delta.y));
+
+    auto beg = 0u;
+    auto end = 4u;
+
+    if (mag_x > weight*mag_y) {
+        if (delta.x >= 0) {
+            std::swap(dirs[0], dirs[iE]);
+        } else {
+            std::swap(dirs[0], dirs[iW]);
+        }
+
+        beg++;
+    } else if (mag_y > weight*mag_x) {
+        if (delta.y >= 0) {
+            std::swap(dirs[0], dirs[iS]);
+        } else {
+            std::swap(dirs[0], dirs[iN]);
+        }
+
+        beg++;
+    }
+
+    std::shuffle(dirs.data() + beg, dirs.data() + end, gen);
+
+    std::copy_if(
+        std::crbegin(dirs), std::crend(dirs), std::back_inserter(open_)
+      , [&](grid_point const gp) {
+            auto const it = std::find_if(
+                std::cbegin(closed_), std::cend(closed_)
+              , [&](grid_point const q) {
+                    return gp == q;
+                }
+            );
+
+            if (it != std::cend(closed_)) {
+                return false;
+            }
+
+            return can_gen_corridor(grid, bounds, gp);
+        }
+    );
+}
+
+//------------------------------------------------------------------------------
+bool
+bsp_connector_impl::connect(
+    random::generator& gen
+  , grid_storage&      grid
+  , grid_region const& bounds
+  , room        const& src_room
+  , room        const& dst_room
+) {
+    open_.clear();
+    closed_.clear();
+
+    auto const beg = src_room.center();
+    auto const end = dst_room.center();
+    auto       cur = beg;
+
+    auto const src_id = src_room.id();
+    auto const dst_id = dst_room.id();
+
+    BK_ASSERT_DBG(intersects(bounds, beg));
+    BK_ASSERT_DBG(intersects(bounds, end));
+
+    //TODO
+    BK_ASSERT_DBG(grid.get(attribute::tile_type, beg) != tile_type::wall);
+    BK_ASSERT_DBG(grid.get(attribute::tile_type, end) != tile_type::wall);
+
+    add_candidates_(gen, grid, bounds, cur, end - cur);
+
+    for (int failures = 0; failures < 5;) {
+        if (open_.empty()) {
+            return false;
+        }
+
+        auto const p = open_.back();
+        open_.pop_back();
+        closed_.push_back(p);
+
+        if (p == cur) {
+            continue;
+        }
+
+        auto const dir    = p - cur;
+        auto const len    = random::uniform_range(gen, 1, 10);
+        auto const result = generate_segment_(grid, bounds, cur, dir, len, src_id, dst_id);
+
+        if (result.second == corridor_result::failed) {
+            failures++;
+        } else if (result.second == corridor_result::ok_done) {
+            return true;
+        }
+
+        cur = result.first;
+        add_candidates_(gen, grid, bounds, cur, end - cur);
+    }
+
+    return false;
+}
+
 }} //namespace bkrl::detail

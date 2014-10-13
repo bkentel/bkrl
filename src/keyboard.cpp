@@ -63,12 +63,11 @@ void keymap::impl_t::rule_root(cref value) {
 }
 
 void keymap::impl_t::rule_file_type(cref value) {
-    static utf8string const expected {"keymap"};
-    json::common::get_filetype(value, expected);
+    json::common::get_filetype(value, json::common::filetype_keymap);
 }
 
 void keymap::impl_t::rule_mappings(cref value) {
-    static utf8string const field {"mappings"};
+    auto const& field = json::common::field_mappings;
     
     cref mappings = json::require_array(value[field]);
 

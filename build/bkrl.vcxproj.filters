@@ -99,6 +99,9 @@
     <ClCompile Include="..\test\spatial_map.t.cpp">
       <Filter>test</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\entity.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pch.hpp">
@@ -179,9 +182,6 @@
     <ClInclude Include="..\include\json.hpp">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\player.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\config.hpp">
       <Filter>include</Filter>
     </ClInclude>
@@ -201,6 +201,12 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\spatial_map.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\entity.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\locale.hpp">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

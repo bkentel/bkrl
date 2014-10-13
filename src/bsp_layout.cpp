@@ -3,18 +3,12 @@
 
 using namespace bkrl;
 
+////////////////////////////////////////////////////////////////////////////////
+// bsp_layout
+////////////////////////////////////////////////////////////////////////////////
 bsp_layout::~bsp_layout() = default;
-
-bsp_layout::bsp_layout(bsp_layout&& other)
-  : impl_ {std::move(other.impl_)}
-{
-}
-
-bsp_layout& bsp_layout::operator=(bsp_layout&& rhs) {
-    std::swap(impl_, rhs.impl_);
-    return *this;
-}
-
+bsp_layout::bsp_layout(bsp_layout&& other) = default;
+bsp_layout& bsp_layout::operator=(bsp_layout&& rhs) = default;
 bsp_layout::bsp_layout() = default;
 
 bsp_layout::bsp_layout(
@@ -42,4 +36,27 @@ bsp_layout bsp_layout::generate(
 
 void bsp_layout::connect(random::generator& gen, connect_callback on_connect) {
     impl_->connect(gen, on_connect);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// bsp_connector
+////////////////////////////////////////////////////////////////////////////////
+bsp_connector::~bsp_connector() = default;
+bsp_connector::bsp_connector(bsp_connector&&) = default;
+bsp_connector& bsp_connector::operator=(bsp_connector&&) = default;
+
+bsp_connector::bsp_connector()
+  : impl_ {std::make_unique<detail::bsp_connector_impl>()}
+{
+}
+
+bool
+bsp_connector::connect(
+    random::generator& gen
+  , grid_storage&      grid
+  , grid_region const& bounds
+  , room        const& src_room
+  , room        const& dst_room
+) {
+    return impl_->connect(gen, grid, bounds, src_room, dst_room);
 }

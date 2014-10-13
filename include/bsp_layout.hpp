@@ -13,8 +13,12 @@
 
 namespace bkrl {
 
+class grid_storage;
+class room;
+
 namespace random { class generator; }
 namespace detail { class bsp_layout_impl; }
+namespace detail { class bsp_connector_impl; }
 
 namespace detail {
 struct bsp_layout_base {
@@ -89,8 +93,6 @@ public:
     );
 
     bsp_layout();
-    //bsp_layout(bsp_layout const&) = delete;
-    //bsp_layout& operator=(bsp_layout const&) = delete;
     bsp_layout(bsp_layout&& other);
     bsp_layout& operator=(bsp_layout&&);
     ~bsp_layout();
@@ -112,6 +114,33 @@ private:
     );
 
     std::unique_ptr<detail::bsp_layout_impl> impl_;
+};
+
+//==============================================================================
+// A connection algorithm for bsp_layout. 
+//==============================================================================
+class bsp_connector {
+public:
+    BK_NOCOPY(bsp_connector);
+
+    bsp_connector();
+    bsp_connector(bsp_connector&&);
+    bsp_connector& operator=(bsp_connector&&);
+    ~bsp_connector();
+
+    //--------------------------------------------------------------------------
+    //! attempt to connect @p src_room to @p dst_room with the route constrained
+    //! to the region given by @p bounds.
+    //--------------------------------------------------------------------------
+    bool connect(
+        random::generator& gen
+      , grid_storage&      grid
+      , grid_region const& bounds
+      , room        const& src_room
+      , room        const& dst_room
+    );
+private:
+    std::unique_ptr<detail::bsp_connector_impl> impl_;
 };
 
 } //namespace bkrl

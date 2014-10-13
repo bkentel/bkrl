@@ -1,5 +1,5 @@
 {
-    "file_type": "texture_map"
+    "file_type": "TEXTURE_MAP"
   , "file_name": "./data/tiles.bmp"
   , "tile_size": [18, 18]
   , "mappings": [

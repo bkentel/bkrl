@@ -252,9 +252,15 @@ extern utf8string const field_definitions;
 extern utf8string const field_id;
 extern utf8string const field_name;
 extern utf8string const field_text;
+extern utf8string const field_mappings;
+extern utf8string const field_filename;
+extern utf8string const field_tile_size;
 //------------------------------------------------------------
 extern string_ref const filetype_locale;
 extern string_ref const filetype_item;
+extern string_ref const filetype_entity;
+extern string_ref const filetype_texture_map;
+extern string_ref const filetype_keymap;
 //------------------------------------------------------------
 
 inline string_ref get_filetype(cref value) {

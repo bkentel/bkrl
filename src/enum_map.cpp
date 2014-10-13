@@ -501,6 +501,7 @@ namespace {
         BK_ENUMMAP_ADD_STRING(result, message, get_no_items);
         BK_ENUMMAP_ADD_STRING(result, message, get_which_prompt);
         BK_ENUMMAP_ADD_STRING(result, message, get_ok);
+        BK_ENUMMAP_ADD_STRING(result, message, kill_regular);
 
         bkrl::sort(result, message_map_t::value_type::less_hash);
 
