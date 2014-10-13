@@ -172,7 +172,7 @@ public:
     transitory_text_layout() = default;
     transitory_text_layout(font_face& face, string_ref string, int w = 0, int h = 0);
 
-    void render(renderer& r, font_face& face, int x, int y);
+    void render(renderer& r, font_face& face, int x, int y) const;
 
     int actual_width()  const noexcept { return actual_w_; }
     int actual_height() const noexcept { return actual_h_; };

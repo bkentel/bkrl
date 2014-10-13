@@ -107,6 +107,10 @@ transitory_text_layout::transitory_text_layout(
         if (cp.value == '\n') {
             x = 0;
             y += line_gap;
+        } else if(cp.value == '\t') {
+            auto const rem = x % 20;
+            auto const tab = 20 - rem;
+            x += tab;
         }
 
         auto const metrics = face.metrics(left, cp);
@@ -161,7 +165,7 @@ transitory_text_layout::render(
   , font_face& face
   , int const  x
   , int const  y
-) {
+) const {
     auto const scale = r.get_scale();
     auto const trans = r.get_translation();
 

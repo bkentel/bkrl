@@ -48,6 +48,14 @@ public:
     void add_item(item&& itm) {
         items_.emplace_back(std::move(itm));
     }
+
+    auto items_begin() const {
+        return std::cbegin(items_);
+    }
+
+    auto items_end() const {
+        return std::cend(items_);
+    }
 private:
     point_t pos_;
     std::vector<item> items_;

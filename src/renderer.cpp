@@ -48,6 +48,11 @@ application::do_all_events() {
 }
 
 void
+application::on_char(char_sink sink) {
+    impl_->on_command(sink);
+}
+
+void
 application::on_command(command_sink sink) {
     impl_->on_command(sink);
 }

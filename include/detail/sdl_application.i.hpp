@@ -6,6 +6,7 @@
 #include "tile_sheet.hpp"
 #include "keyboard.hpp"
 #include "config.hpp"
+#include "util.hpp"
 
 namespace bkrl { namespace detail {
 
@@ -108,6 +109,7 @@ public:
     void do_one_event();
     void do_all_events();
 
+    void on_command(char_sink sink)              { on_char_         = sink; }
     void on_command(command_sink sink)           { on_command_      = sink; }
     void on_close(close_sink sink)               { on_close_        = sink; }
     void on_resize(resize_sink sink)             { on_resize_       = sink; }
@@ -133,6 +135,7 @@ private:
     sdl_state state_; //must be first
     sdl_unique<SDL_Window> window_;
 
+    char_sink         on_char_;
     command_sink      on_command_;
     close_sink        on_close_;
     resize_sink       on_resize_;
@@ -183,7 +186,8 @@ application_impl::application_impl(
   , key_map_ {keymap}
   , running_ {true}
 {
-    on_command_      = [](command_type) {};
+    on_char_         = [](char) {};
+    on_command_      = [](command_type) { return true; };
     on_close_        = []() {};
     on_resize_       = [](unsigned, unsigned) {};
     on_mouse_move_   = [](mouse_move_info const&) {};
@@ -400,7 +404,14 @@ application_impl::handle_event_kb(SDL_KeyboardEvent const& event) {
     };
 
     auto const command = key_map_[key];
-    on_command_(command);
+    if (!on_command_(command)) {
+        return;
+    }
+
+    auto const keycode = event.keysym.sym;
+    if (keycode == (keycode & 0x7F)) {
+        on_char_(static_cast<char>(keycode));
+    }
 }
 
 //------------------------------------------------------------------------------

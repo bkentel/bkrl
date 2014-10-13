@@ -632,6 +632,111 @@ struct data_definitions {
     message_map messages_jp;
 };
 
+namespace gui {
+
+//==============================================================================
+//==============================================================================
+class item_list {
+public:
+    item_list() = default;
+
+    item_list(font_face& face, data_definitions const& definitions)
+      : face_        {&face}
+      , definitions_ {&definitions}
+    {
+    }
+
+    template <typename It>
+    item_list(It begin, It end, font_face& face, data_definitions const& definitions)
+      : face_        {&face}
+      , definitions_ {&definitions}
+    {
+        auto const size = std::distance(begin, end);
+        items_.reserve(size);
+
+        using type = decltype(*begin);
+
+        std::for_each(begin, end, [&](type itm) {
+            add_item(itm);
+        });
+    }
+
+    void add_item(item const* itm) {
+        add_item(*itm);
+    }
+
+    void add_item(item const& itm) {
+        auto const& def  = definitions_->items_locale_jp(itm.id, 0);
+        auto const& name = def.name;
+
+        utf8string string;
+        string.reserve(2 + name.size());
+
+        string.push_back(prefix_);
+        string.push_back('\t');
+        string.append(name);
+
+        items_.emplace_back(*face_, string, 500, 32);
+
+        auto const& back = items_.back();
+
+        width_  =  std::max(width_, back.actual_width());
+        height_ += back.actual_height();
+
+        prefix_++;        
+    }
+
+    void render(renderer& r, int x, int y) {
+        r.set_draw_color(50, 50, 50);
+        r.draw_filled_rect(make_rect_size<float>(x, y, width_, height_));
+
+        int i = 0;
+        for (auto const& itm : items_) {
+            if (i == selection_) {
+                r.set_draw_color(0, 0, 100);
+                r.draw_filled_rect(make_rect_size<float>(x, y, width_, itm.actual_height()));
+                r.set_draw_color(50, 50, 50);
+            }
+
+            itm.render(r, *face_, x, y);
+            y += itm.actual_height();
+            ++i;
+        }
+    }
+
+    void clear() {
+        items_.clear();
+        width_  = 0;
+        height_ = 0;
+        prefix_ = 'a';
+    }
+
+    void select_next() {
+        auto const size = items_.size();
+
+        selection_ = (selection_ + 1) % size;
+    }
+
+    void select_prev() {
+        auto const size = items_.size();
+
+        selection_ = (selection_ == 0) ? (size - 1) : (selection_ - 1);
+    }
+
+private:
+    font_face* face_;
+    data_definitions const* definitions_;
+
+    int  selection_ = 0;
+    int  width_  = 0;
+    int  height_ = 0;
+    char prefix_ = 'a';
+
+    std::vector<transitory_text_layout> items_;
+};
+
+}
+
 //==============================================================================
 //! One level within the world.
 //==============================================================================
@@ -748,6 +853,16 @@ public:
         });
 
         items_.sort();
+
+        return result;
+    }
+
+    std::vector<item const*> get_item_list(ipoint2 const p) const {
+        std::vector<item const*> result;
+
+        items_.find(p, [&](item const& itm) {
+            result.push_back(&itm);
+        });
 
         return result;
     }
@@ -1481,7 +1596,8 @@ public:
     {
     }
 
-    virtual void on_command(command_type const cmd) = 0;
+    virtual void on_char(char c) = 0;
+    virtual bool on_command(command_type cmd) = 0;
     virtual void on_mouse_move(mouse_move_info const& info) = 0;
     virtual void on_mouse_button(mouse_button_info const& info) = 0;
 protected:
@@ -1511,7 +1627,10 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    void on_command(command_type const cmd) override {
+    void on_char(char) override {
+    }
+    //--------------------------------------------------------------------------
+    bool on_command(command_type cmd) override {
         bool done = true;
         
         switch (cmd) {
@@ -1542,6 +1661,8 @@ public:
             handler_(!ok_, dir_);
             do_on_exit_();
         }
+
+        return false;
     }
     
     //--------------------------------------------------------------------------
@@ -1557,24 +1678,85 @@ private:
     bool  ok_  = false;
 };
 
-} //namespace bkrl
-
 //==============================================================================
+//! List selection input mode.
 //==============================================================================
-namespace bkrl {
-namespace gui {
-
-class widget;
-
-class status_bar {
+class input_mode_selection final : public input_mode_base {
 public:
-    void render(renderer& r) {
+    using input_mode_base::input_mode_base;
+
+    enum class result_t {
+        ok, cancel, next, prev
+    };
+
+    using completion_handler = std::function<void (result_t result, int index)>;
+
+    //--------------------------------------------------------------------------
+    input_mode_base* enter_mode(int max, completion_handler handler) {
+        handler_ = std::move(handler);
+        max_     = max;
+        index_   = 0;
+
+        return this;
+    }
+
+    void exit_mode(result_t const result) {
+        handler_(result, index_);
+        do_on_exit_();
+    }
+
+    //--------------------------------------------------------------------------
+    void on_char(char c) override {
+        if (c < 'a' || c > 'z') {
+            return;
+        }
+
+        auto const i = c - 'a';
+        if (i > max_) {
+            return;
+        }
+
+        index_ = i;
+        exit_mode(result_t::ok);
+    }
+    //--------------------------------------------------------------------------
+    bool on_command(command_type cmd) override {
+        switch (cmd) {
+        default:
+            break;
+        case command_type::cancel :
+            index_ = 0;           
+            exit_mode(result_t::cancel);
+            break;
+        case command_type::north :
+            handler_(result_t::prev, index_);
+            break;
+        case command_type::south :
+            handler_(result_t::next, index_);
+            break;
+        }
+
+        return true;
+    }
     
+    //--------------------------------------------------------------------------
+    void on_mouse_move(mouse_move_info const& info) override {
+    }
+    
+    //--------------------------------------------------------------------------
+    void on_mouse_button(mouse_button_info const& info) override {
     }
 private:
+    completion_handler handler_;
+
+    int max_   = 0;
+    int index_ = 0;
 };
 
-}} //namespace bkrl::gui
+
+} //namespace bkrl
+
+
 //==============================================================================
 //==============================================================================
 struct engine_client::impl_t {
@@ -1599,6 +1781,7 @@ public:
       , player_             {}
       , input_mode_         {nullptr}
       , imode_direction_    {[&] {input_mode_ = nullptr;}}
+      , imode_selection_    {[&] {input_mode_ = nullptr;}}
     {
         ////////////////////////////////////////////////////
         init_sinks();
@@ -1628,8 +1811,12 @@ public:
     }
 
     void init_sinks() {
+        app_.on_char([&](char const c) {
+            on_char(c);
+        });
+
         app_.on_command([&](command_type const cmd) {
-            on_command(cmd);
+            return on_command(cmd);
         });
 
         app_.on_resize([&](unsigned const w, unsigned const h) {
@@ -1754,6 +1941,8 @@ public:
 
             inspect_message_.render(r, font_face_, x, y);
         }
+
+        item_list_.render(r, 10, 10);
 
         r.present();
 
@@ -1911,16 +2100,37 @@ public:
         advance();
     }
     //--------------------------------------------------------------------------
-    void do_get() {
-        auto const p = player_.position();
+    void get_item_selection_(ipoint2 const p) {
+        auto const items = cur_level_->get_item_list(p);
 
-        auto const msg = cur_level_->can_get_item(p);
-        if (msg != message_type::none) {
-            print_message(msg);
-            return;
-        }
-        
-        auto item = cur_level_->get_item(p, 0);
+        auto const beg = std::cbegin(items);
+        auto const end = std::cend(items);
+        auto const size = std::distance(beg, end);
+
+        item_list_ = gui::item_list {beg, end, font_face_, definitions_};
+
+        using result_t = input_mode_selection::result_t;
+        input_mode_ = imode_selection_.enter_mode(size, [this, p](result_t const result, int const index) {
+            switch (result) {
+            case result_t::ok :
+                get_item(p, index);
+                item_list_.clear();
+                return;
+            case result_t::cancel :
+                item_list_.clear();
+                return;
+            case result_t::next :
+                item_list_.select_next();
+                return;
+            case result_t::prev :
+                item_list_.select_prev();
+                return;
+            }
+        });
+    }
+    
+    void get_item(ipoint2 const p, int const index) {
+        auto item = cur_level_->get_item(p, index);
         auto const& name = definitions_.items_locale_jp(item.id, 0).name;
 
         //TODO add languages and formatting functions
@@ -1932,14 +2142,33 @@ public:
 
         advance();
     }
+
+    void do_get() {
+        auto const p = player_.position();
+
+        auto const msg = cur_level_->can_get_item(p);
+        if (msg == message_type::get_which_prompt) {
+            get_item_selection_(p);
+        } else if (msg != message_type::none) {
+            print_message(msg);
+        } else {
+            get_item(p, 0);
+        }
+    }
     ////////////////////////////////////////////////////////////////////////////
     // Sinks
     ////////////////////////////////////////////////////////////////////////////
     //--------------------------------------------------------------------------
-    void on_command(command_type const cmd) {
+    void on_char(char const c) {
         if (input_mode_) {
-            input_mode_->on_command(cmd);
+            input_mode_->on_char(c);
             return;
+        }
+    }
+    //--------------------------------------------------------------------------
+    bool on_command(command_type const cmd) {
+        if (input_mode_) {
+            return input_mode_->on_command(cmd);
         }
 
         switch (cmd) {
@@ -1967,6 +2196,8 @@ public:
         default:
             break;
         }
+
+        return false;
     }
     //--------------------------------------------------------------------------
     void on_resize(unsigned const w, unsigned const h) {
@@ -2061,6 +2292,9 @@ private:
 
     input_mode_base*     input_mode_;
     input_mode_direction imode_direction_;
+    input_mode_selection imode_selection_;
+
+    gui::item_list item_list_;
 
     int frames_ = 0;
     float fps_ = 0.0f;

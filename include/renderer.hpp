@@ -52,7 +52,8 @@ struct application_base {
         int dx, dy;
     };
 
-    using command_sink      = std::function<void (command_type)>;
+    using char_sink         = std::function<void (char)>;
+    using command_sink      = std::function<bool (command_type)>;
     using close_sink        = std::function<void ()>;
     using resize_sink       = std::function<void (unsigned w, unsigned h)>;
     using mouse_move_sink   = std::function<void (mouse_move_info const&)>;
@@ -81,6 +82,7 @@ public:
     void do_one_event();
     void do_all_events();
 
+    void on_char(char_sink sink);
     void on_command(command_sink sink);
     void on_close(close_sink sink);
     void on_resize(resize_sink sink);
