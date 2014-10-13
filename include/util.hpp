@@ -195,8 +195,25 @@ struct string_id {
 };
 
 struct identifier {
+    identifier()
+      : string {}, hash {}
+    {
+    }
+
+    identifier(string_id const& id)
+      : string {id.string}, hash {id.hash}
+    {
+    }
+
+    identifier(string_ref const s, hash_t const h)
+      : string {s}, hash {h}
+    {
+    }
+
     string_ref string;
     hash_t     hash;
+
+    operator hash_t() const noexcept { return hash; }
 };
 
 template <size_t Bytes> struct unsigned_int {

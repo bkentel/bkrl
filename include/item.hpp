@@ -73,13 +73,40 @@ public:
     string_id id;
     string_id type;
     string_id material;
+    int       stack;
 };
 
 //==============================================================================
 //==============================================================================
 class item {
 public:
-    string_id id;
+    explicit item(identifier id)
+      : id {id}
+    {
+    }
+
+    bool operator<(item const& other) const {
+        return id.hash < other.id.hash;
+    }
+
+    bool operator==(item const& other) const {
+        return id.hash == other.id.hash;
+    }
+
+    bool operator!=(item const& other) const {
+        return !(*this == other);
+    }
+
+    bool can_stack(item_def::definition_t const& defs) const {
+        return defs[id].stack > 1;
+    }
+
+    string_ref name(item_def::localized_t const& locale) const {
+        return locale(id, 0).name;
+    }
+
+    identifier id;
+    int        count = 1;
 };
 
 } //namespace bkrl

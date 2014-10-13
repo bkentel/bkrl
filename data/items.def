@@ -15,10 +15,13 @@
   , { "id": "WEAPON_AXE"
     }
   , { "id": "POTION_HEALTH_MINOR"
+    , "stack": 25
     }
   , { "id": "POTION_HEALTH_MEDIUM"
+    , "stack": 25
     }
   , { "id": "POTION_HEALTH_MAJOR"
+    , "stack": 25
     }
   ]
 }

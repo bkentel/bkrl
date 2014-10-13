@@ -260,10 +260,18 @@ public:
 
     //--------------------------------------------------------------------------
     void rule_definition(cref value) {
+        rule_stack(value);
         item_.id = json::require_string(value[json::common::field_id]);
 
         auto const hash = item_.id.hash;
         items_.emplace(hash, std::move(item_));
+    }
+
+    //--------------------------------------------------------------------------
+    void rule_stack(cref value) {
+        static utf8string const field {"stack"};
+
+        item_.stack = json::optional_int(value[field]).get_value_or(1);
     }
 
     //--------------------------------------------------------------------------

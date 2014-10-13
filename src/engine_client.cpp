@@ -274,8 +274,6 @@ merge_walls(
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-
-
 struct data_definitions {
     BK_NOCOPY(data_definitions);
     
@@ -336,14 +334,21 @@ public:
     }
 
     void add_item(item const& itm) {
-        auto const& def  = definitions_->items_locale_jp(itm.id, 0);
-        auto const& name = def.name;
+        auto const& def   = definitions_->items_locale_jp(itm.id, 0);
+        auto const& name  = def.name;
+        auto const  count = itm.count;
 
         name_buffer_.clear();
         name_buffer_.reserve(2 + name.size());
 
         name_buffer_.push_back(prefix_);
         name_buffer_.push_back('\t');
+
+        if (count > 1) {
+            name_buffer_.append(std::to_string(count));
+        }
+        name_buffer_.push_back('\t');
+
         name_buffer_.append(name.data(), name.size());
 
         items_.emplace_back(*face_, name_buffer_, 500, 32);
@@ -626,14 +631,16 @@ public:
         auto const p = object.position();
         BK_ASSERT_DBG(!!entity_at(p));
 
-        mobs_.remove(p);
+        auto const range = definitions_->entities[object.id()].items;
 
-        auto const count = random::uniform_range(trivial, 1, 5);
+        auto const count = random::uniform_range(trivial, range);
         for (int i = 0; i < count; ++i) {
             items_.emplace(p, generate_mob_item_(trivial));
         }
 
         items_.sort();
+
+        mobs_.remove(p);
 
         return message_type::none;
     }
@@ -1844,14 +1851,14 @@ public:
     
     void get_item(ipoint2 const p, int const index) {
         auto item = cur_level_->get_item(p, index);
-        auto const& name = definitions_.items_locale_jp(item.id, 0).name;
+        auto const name = item.name(definitions_.items_locale_jp);
 
         //TODO add languages and formatting functions
         auto const msg_string = definitions_.messages_jp(message_type::get_ok, 0);
         auto fmt = boost::format {msg_string.data()};
         print_message(boost::str(fmt % name));
 
-        player_.add_item(std::move(item));
+        player_.add_item(std::move(item), definitions_.items);
 
         advance();
     }
@@ -1867,6 +1874,14 @@ public:
         } else {
             get_item(p, 0);
         }
+    }
+    //--------------------------------------------------------------------------
+    void do_inventory() {
+        auto const beg = player_.items_begin();
+        auto const end = player_.items_end();
+
+        item_list_.clear();
+        item_list_.add_items(beg, end);
     }
     ////////////////////////////////////////////////////////////////////////////
     // Sinks
@@ -1885,6 +1900,7 @@ public:
         }
 
         switch (cmd) {
+        case command_type::inventory  : do_inventory(); break;
         case command_type::open       : do_open(); break;
         case command_type::close      : do_close(); break;
         case command_type::get        : do_get(); break;

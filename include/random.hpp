@@ -47,6 +47,11 @@ inline T uniform_range(generator& gen, T const lo, T const hi) {
     return uniform_int{}.generate(gen, lo, hi);
 }
 
+template <typename T>
+inline T uniform_range(generator& gen, range<T> const r) {
+    return uniform_range(gen, r.lo, r.hi);
+}
+
 template <typename T = int>
 inline vector2d<T> direction(generator& gen) {
     constexpr auto min = T {-1};

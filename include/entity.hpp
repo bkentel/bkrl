@@ -3,7 +3,7 @@
 #include "math.hpp"
 #include "types.hpp"
 #include "locale.hpp"
-
+#include "algorithm.hpp"
 #include "item.hpp" //TODO temp
 
 namespace bkrl {
@@ -64,8 +64,32 @@ public:
         move_to(p.x, p.y);
     }
 
-    void add_item(item&& itm) {
+    void add_item(item&& itm, item_def::definition_t const& defs) {
+        auto const can_stack = itm.can_stack(defs);
+
         items_.emplace_back(std::move(itm));
+        bkrl::sort(items_);
+
+        if (!can_stack) {
+            return;
+        }
+
+        auto const end   = std::end(items_);
+        auto const first = std::adjacent_find(std::begin(items_), end);
+        
+        if (first == end) {
+            return;
+        }
+        
+        auto last = first;
+        while (last != end && *first == *(last + 1)) {
+            ++last;
+        }
+        
+        auto const n = std::distance(first, last);
+        last->count += n;
+
+        items_.erase(first, last);
     }
 
     auto items_begin() const {
@@ -76,9 +100,9 @@ public:
         return std::cend(items_);
     }
 
-    string_id id() const { return id_; }
+    identifier id() const { return id_; }
 private:
-    string_id id_;
+    identifier id_;
     point_t pos_;
     std::vector<item> items_;
 };

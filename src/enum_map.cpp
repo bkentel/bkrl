@@ -462,6 +462,7 @@ namespace {
         BK_ENUMMAP_ADD_STRING(result, command, open);
         BK_ENUMMAP_ADD_STRING(result, command, close);
         BK_ENUMMAP_ADD_STRING(result, command, get);
+        BK_ENUMMAP_ADD_STRING(result, command, inventory);
 
         bkrl::sort(result, command_map_t::value_type::less_hash);
 
