@@ -99,8 +99,19 @@ namespace detail {
 //==============================================================================
 struct renderer_base {
     using handle_t = opaque_handle<renderer>;
-    using scalar = float;
-    using rect   = axis_aligned_rect<scalar>;
+
+    using trans_t = int;
+    using scale_t = float;
+    using size_t  = int;
+    using pos_t   = int;
+
+    using rect_t  = axis_aligned_rect<pos_t>;
+
+    using trans_vec = vector2d<trans_t>;
+    using scale_vec = vector2d<scale_t>;
+
+    using color3b = color3<uint8_t>;
+    using color4b = color4<uint8_t>;
 };
 
 } //namesapce detail
@@ -109,7 +120,6 @@ struct renderer_base {
 class texture {
 public:
     using handle_t = opaque_handle<texture>;
-    using rect = detail::renderer_base::rect;
 
     texture()
       : texture {handle_t {nullptr}, 0, 0, 0}
@@ -139,29 +149,102 @@ private:
 };
 
 //==============================================================================
-//!
-//==============================================================================
-template <typename T>
-struct color3 {
-    T r, g, b;
-};
-
-template <typename T>
-struct color4 {
-    T a, r, g, b;
-};
-
-//==============================================================================
 //! renderer
 //==============================================================================
 class renderer : public detail::renderer_base {
 public:
+    struct restore_view_t {
+        BK_NOCOPY(restore_view_t);
+
+        restore_view_t(renderer& r, scale_vec const scale, trans_vec const trans)
+          : r_ {&r}
+          , old_scale_(r.get_scale())
+          , old_trans_(r.get_translation())
+        {
+            r.set_scale(scale);
+            r.set_translation(trans);
+        }
+
+        restore_view_t(restore_view_t&& other) noexcept
+          : r_ {other.r_}
+          , old_scale_(other.old_scale_)
+          , old_trans_(other.old_trans_)
+        { 
+            other.r_ = nullptr;
+        }
+
+        restore_view_t& operator=(restore_view_t&& rhs) noexcept {
+            if (this == &rhs) {
+                return *this;
+            }
+
+            using std::swap;
+
+            swap(r_, rhs.r_);
+            swap(old_scale_, rhs.old_scale_);
+            swap(old_trans_, rhs.old_trans_);
+
+            rhs.r_ = nullptr;
+
+            return *this;
+        }
+
+        ~restore_view_t() {
+            if (!r_) {
+                return;
+            }
+
+            r_->set_scale(old_scale_);
+            r_->set_translation(old_trans_);
+        }
+
+        renderer* r_;
+        scale_vec old_scale_;
+        trans_vec old_trans_;
+    };
+
+    restore_view_t restore_view() {
+        return restore_view_t {*this, scale_vec {1.0f, 1.0f}, trans_vec {0, 0}};
+    }
+
     renderer(application const& app);
     ~renderer();
 
     handle_t handle() const;
     ////////////////////////////////////////////////////////////////////////////
 
+    //--------------------------------------------------------------------------
+    void set_translation_x(trans_t dx);
+    void set_translation_y(trans_t dy);
+
+    void set_translation(trans_t const dx, trans_t const dy) {
+        set_translation_x(dx);
+        set_translation_y(dy);
+    }
+
+    void set_translation(trans_vec const trans) {
+        set_translation(trans.x, trans.y);
+    }
+
+    //--------------------------------------------------------------------------
+    void set_scale_x(scale_t sx);
+    void set_scale_y(scale_t sy);
+
+    void set_scale(scale_t sx, scale_t sy);
+
+    void set_scale(scale_t const scale) {
+        set_scale(scale, scale);
+    }
+
+    void set_scale(scale_vec const scale) {
+        set_scale(scale.x, scale.y);
+    }
+    
+    //--------------------------------------------------------------------------
+    scale_vec get_scale() const;
+    trans_vec get_translation() const;
+
+    ////////////////////////////////////////////////////////////////////////////
     void clear();
     void present();
 
@@ -169,62 +252,41 @@ public:
 
     texture create_texture(string_ref filename);
     
-    texture create_texture(uint8_t* buffer, int width, int height);
+    texture create_texture(uint8_t const* buffer, size_t width, size_t height);
     
-    texture create_texture(int width, int height);
+    texture create_texture(size_t width, size_t height);
+    
     texture create_texture(ipoint2 const size) {
         return create_texture(size.x, size.y);
     }
 
     void delete_texture(texture& tex);
 
-    void update_texture(texture& tex, void* data, int pitch, int x, int y, int w, int h);
+    void update_texture(texture& tex, void const* data, int pitch, int x, int y, int w, int h);
+    
+    void update_texture(texture& tex, void const* const data, int const pitch, rect_t const rect) {
+        update_texture(tex, data, pitch, rect.left, rect.top, rect.width(), rect.height());
+    }
 
-    void set_color_mod(texture& tex, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255);
+    void set_color_mod(texture& tex);
+    void set_color_mod(texture& tex, color4b color);
+    void set_color_mod(texture& tex, color3b color);
+    
     void set_alpha_mod(texture& tex, uint8_t a = 255);
 
+    void draw_texture(texture const& tex, pos_t x, pos_t y);
+    void draw_texture(texture const& tex, rect_t src, rect_t dst);
     ////////////////////////////////////////////////////////////////////////////
-
-    void set_translation_x(scalar dx);
-    void set_translation_y(scalar dy);
-
-    void set_scale_x(scalar sx);
-    void set_scale_y(scalar sy);
-
-    void set_translation(scalar const dx, scalar const dy) {
-        set_translation_x(dx);
-        set_translation_y(dy);
-    }
-
-    void set_translation(vec2 const trans) {
-        set_translation(trans.x, trans.y);
-    }
-
-    void set_scale(scalar const sx, scalar const sy) {
-        set_scale_x(sx);
-        set_scale_y(sy);
-    }
-
-    void set_scale(scalar const scale) {
-        set_scale(scale, scale);
-    }
-
-    void set_scale(vec2 const scale) {
-        set_scale(scale.x, scale.y);
-    }
+    void set_draw_color();
+    void set_draw_color(color4b color);
+    void set_draw_color(color3b color);
     
-    vec2 get_scale() const;
-    vec2 get_translation() const;
+    void set_draw_alpha(uint8_t a = 255);
+
+    void draw_filled_rect(rect_t bounds);
 
     ////////////////////////////////////////////////////////////////////////////
 
-    void set_draw_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255);
-    void draw_filled_rect(rect bounds);
-
-    ////////////////////////////////////////////////////////////////////////////
-
-    void draw_texture(texture const& tex, scalar x, scalar y);
-    void draw_texture(texture const& tex, rect src, rect dst);
 private:
     std::unique_ptr<detail::renderer_impl> impl_;
 };

@@ -13,6 +13,7 @@
 #include "messages.hpp"
 #include "time.hpp"
 #include "spatial_map.hpp"
+#include "scope_exit.hpp"
 
 #include <boost/container/static_vector.hpp>
 #include <boost/format.hpp>
@@ -364,23 +365,28 @@ public:
     void render(renderer& r, int const x, int const y) {
         constexpr auto border = 8;
         
+        static auto color_background = make_color(50,  50,  50);
+        static auto color_highlight  = make_color(150, 150, 50);
+
         auto cur_x = x + border;
         auto cur_y = y + border;
 
         auto const w = width_  + border * 2;
         auto const h = height_ + border * 2;
 
+        auto const restore = r.restore_view();
+
         //draw the background
-        r.set_draw_color(50, 50, 50);
-        r.draw_filled_rect(make_rect_size<float>(x, y, w, h));
+        r.set_draw_color(color_background);
+        r.draw_filled_rect(make_rect_size(x, y, w, h));
 
         int i = 0;
         for (auto const& itm : items_) {
             if (i == selection_) {
                 //draw the selection highlight
-                r.set_draw_color(150, 150, 50);
-                r.draw_filled_rect(make_rect_size<float>(cur_x, cur_y, w - border * 2, itm.actual_height()));
-                r.set_draw_color(50, 50, 50);
+                r.set_draw_color(color_highlight);
+                r.draw_filled_rect(make_rect_size(cur_x, cur_y, w - border * 2, itm.actual_height()));
+                r.set_draw_color(color_background);
             }
 
             itm.render(r, *face_, cur_x, cur_y);
@@ -491,7 +497,7 @@ public:
         auto const& sheet = *tile_sheet_;
         auto&       tex   = sheet.get_texture();
 
-        r.set_color_mod(tex, 255, 255, 255);
+        r.set_color_mod(tex);
         for (bkrl::grid_index y = 0; y < h; ++y) {
             for (bkrl::grid_index x = 0; x < w; ++x) {
                 auto const texture = grid_.get(attribute::texture_id, x, y);
@@ -516,11 +522,11 @@ public:
             auto const tx = e.tile_x;
             auto const ty = e.tile_y;
 
-            r.set_color_mod(tex, e.r, e.g, e.b);
+            r.set_color_mod(tex, make_color(e.r, e.g, e.b));
             sheet.render(r, tx, ty, p.x, p.y);
         }
 
-        r.set_color_mod(tex, 255, 255, 255);
+        r.set_color_mod(tex);
     }
 
     //--------------------------------------------------------------------------
@@ -1227,15 +1233,18 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    ipoint2 screen_to_grid(float const x, float const y) const {
+    ipoint2 screen_to_grid(int const x, int const y) const {
+        auto const fx = static_cast<float>(x);
+        auto const fy = static_cast<float>(y);
+
         auto const px = display_x_ + scroll_x_;
         auto const py = display_y_ + scroll_y_;
 
         auto const tw = static_cast<float>(sheet_->tile_width());
         auto const th = static_cast<float>(sheet_->tile_height());
 
-        auto const ix = static_cast<int>(std::trunc((x / zoom_ - px) / tw));
-        auto const iy = static_cast<int>(std::trunc((y / zoom_ - py) / th));
+        auto const ix = static_cast<int>(std::trunc((fx / zoom_ - px) / tw));
+        auto const iy = static_cast<int>(std::trunc((fy / zoom_ - py) / th));
 
         return {ix, iy};
     }
@@ -1286,12 +1295,15 @@ public:
     float zoom() const noexcept { return zoom_; }
 
     //--------------------------------------------------------------------------
-    vec2 translation() const noexcept {
-        return {display_x_ + scroll_x_, display_y_ + scroll_y_};
+    renderer::trans_vec translation() const noexcept {
+        return {
+            static_cast<renderer::trans_t>(display_x_ + scroll_x_)
+          , static_cast<renderer::trans_t>(display_y_ + scroll_y_)
+        };
     }
 
     //--------------------------------------------------------------------------
-    vec2 scale() const noexcept {
+    renderer::scale_vec scale() const noexcept {
         return {zoom_, zoom_};
     }
 private:
@@ -1637,58 +1649,86 @@ public:
         do_zoom_reset();
     }
 
-    void render(renderer& r) {
-        if (!render_) {
+    void draw_message_log(renderer& r) {
+        static auto const color_text_background = make_color(50, 50, 50);
+
+        if (last_message_fade_ <= 0) {
             return;
         }
 
-        r.set_draw_color(0, 0, 0);
-        r.clear();
+        auto const restore = r.restore_view();
 
-        //auto const& ft = font_face_.get_texture();
-        //r.draw_texture(ft, 0, 0);
+        auto const x = 0;
+        auto const y = 0;
+        auto const w = last_message_.actual_width();
+        auto const h = last_message_.actual_height();
+            
+        r.set_draw_color(color_text_background);
+        r.draw_filled_rect(make_rect_size(x, y, w, h));
 
-        r.set_translation(view_.translation());
-        r.set_scale(view_.scale());
+        last_message_.render(r, font_face_, x, y);
+    }
 
+    void draw_inspect_msg(renderer& r) {
+        static auto const color_text_background = make_color(50, 50, 50);
+
+        auto const restore = r.restore_view();
+
+        auto const line_gap = font_face_.line_gap();
+
+        auto const msg_w = inspect_message_.actual_width();
+        auto const msg_h = inspect_message_.actual_height();
+
+        auto const x = 0;
+        auto const y = view_.height() - msg_h;
+        auto const w = msg_w;
+        auto const h = msg_h;
+
+        r.set_draw_color(color_text_background);
+        r.draw_filled_rect(make_rect_size(x, y, w, h));
+
+        inspect_message_.render(r, font_face_, x, y);
+    }
+
+    void draw_gui(renderer& r) {
+        if (!!item_list_) {
+            item_list_.render(r, 24, 128);
+        }
+    }
+
+    void draw_level(renderer& r) {
         cur_level_->render(r);
 
         auto const player_pos = player_.position();
         sheet_.render(r, 1, 0, player_pos.x, player_pos.y);
+    }
 
-        if (last_message_fade_ > 0) {
-            auto const x = 1;
-            auto const y = 1;
-            auto const w = last_message_.actual_width();
-            auto const h = last_message_.actual_height();
-            
-            r.set_draw_color(50, 50, 50);
-            r.draw_filled_rect(make_rect_size<float>(x, y, w, h));
+    void render(renderer& r) {
+        static auto const color_text_background = make_color(50, 50, 50);
 
-            last_message_.render(r, font_face_, x, y);
+        if (!render_) {
+            return;
         }
 
-        {
-            auto const line_gap = font_face_.line_gap();
+        r.set_draw_color();
+        r.clear();
 
-            auto const x = 1;
-            auto const y = view_.height() - inspect_message_.actual_height();
-            auto const w = inspect_message_.actual_width();
-            auto const h = inspect_message_.actual_height();
+        r.set_translation(view_.translation());
+        r.set_scale(view_.scale());
 
-            r.set_draw_color(50, 50, 50);
-            r.draw_filled_rect(make_rect_size<float>(x, y, w, h));
-
-            inspect_message_.render(r, font_face_, x, y);
-        }
-
-        if (!!item_list_) {
-            item_list_.render(r, 10, 10);
-        }
+        draw_level(r);
+        draw_message_log(r);
+        draw_inspect_msg(r);
+        draw_gui(r);
 
         r.present();
 
         render_ = false;
+        frames_++;
+
+        if (frames_ % 5 == 0) {
+            SDL_Delay(15);
+        }
     }
 
     void advance() {
@@ -1917,6 +1957,9 @@ public:
         item_list_.add_items(beg, end);
 
         auto const size = item_list_.size();
+        if (size <= 0) {
+            return;
+        }
 
         using result_t = input_mode_selection::result_t;
 

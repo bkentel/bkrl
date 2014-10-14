@@ -3,7 +3,7 @@
 #include <sdl/SDL.h>
 
 #include "renderer.hpp"
-#include "tile_sheet.hpp"
+//#include "tile_sheet.hpp"
 #include "keyboard.hpp"
 #include "config.hpp"
 #include "util.hpp"
@@ -476,6 +476,11 @@ public:
         return t.handle().as<SDL_Texture*>();
     }
 
+    static SDL_Texture* get_texture(texture const& t) {
+        //HACK TODO sdl is broken wrt to constness?
+        return t.handle().as<SDL_Texture*>();
+    }
+
     renderer_impl(application const& app);
 
     handle_t handle() const;
@@ -487,11 +492,11 @@ public:
     ////////////////////////////////////////////////////////////////////////////
 
     texture create_texture(string_ref filename);
-    texture create_texture(uint8_t* buffer, int width, int height);
-    texture create_texture(int width, int height);
+    texture create_texture(uint8_t const* buffer, size_t width, size_t height);
+    texture create_texture(size_t width, size_t height);
     void delete_texture(texture& tex);
 
-    void update_texture(texture& tex, void* data, int pitch, int x, int y, int w, int h);
+    void update_texture(texture& tex, void const* data, int pitch, int x, int y, int w, int h);
 
     void set_color_mod(texture& tex, uint8_t r, uint8_t g, uint8_t b) {
         auto const t = get_texture(tex);
@@ -500,6 +505,10 @@ public:
         if (result) {
             BK_TODO_FAIL();
         }
+    }
+
+    void set_color_mod(texture& tex, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
+        set_color_mod(tex, r, g, b);
     }
     
     void set_alpha_mod(texture& tex, uint8_t a) {
@@ -513,14 +522,16 @@ public:
 
     ////////////////////////////////////////////////////////////////////////////
 
-    void set_translation_x(scalar dx);
-    void set_translation_y(scalar dy);
+    void set_translation_x(trans_t dx);
+    void set_translation_y(trans_t dy);
 
-    void set_scale_x(scalar sx);
-    void set_scale_y(scalar sy);
+    void set_scale_x(scale_t sx);
+    void set_scale_y(scale_t sy);
     
-    vec2 get_scale() const;
-    vec2 get_translation() const;
+    void set_scale(scale_t sx, scale_t sy);
+
+    scale_vec get_scale() const;
+    trans_vec get_translation() const;
 
     ////////////////////////////////////////////////////////////////////////////
 
@@ -531,7 +542,11 @@ public:
         }
     }
 
-    void draw_filled_rect(rect const bounds) {
+    void set_draw_color(uint8_t r, uint8_t g, uint8_t b) {
+        set_draw_color(r, g, b, 255);
+    }
+
+    void draw_filled_rect(rect_t const bounds) {
         auto const dst = make_sdl_rect(bounds);
         auto const result = SDL_RenderFillRect(renderer_.get(), &dst);
         if (result) {
@@ -541,8 +556,8 @@ public:
 
     ////////////////////////////////////////////////////////////////////////////
 
-    void draw_texture(texture const& tex, scalar x, scalar y);
-    void draw_texture(texture const& tex, rect src, rect dst);
+    void draw_texture(texture const& tex, pos_t x, pos_t y);
+    void draw_texture(texture const& tex, rect_t src, rect_t dst);
 private:
     texture create_texture_(SDL_Surface* surface);
 
@@ -552,8 +567,8 @@ private:
 
     std::vector<sdl_unique<SDL_Texture>> textures_;
 
-    vector2d<float> translation_;
-    vector2d<float> scale_;
+    trans_vec translation_;
+    scale_vec scale_;
 };
 
 //------------------------------------------------------------------------------
@@ -578,8 +593,8 @@ renderer_impl::create_renderer_(application const& app) {
 //------------------------------------------------------------------------------
 renderer_impl::renderer_impl(application const& app)
   : renderer_    {create_renderer_(app)}
-  , translation_ (vec2 {0.0f, 0.0f})
-  , scale_       (vec2 {1.0f, 1.0f})
+  , translation_ (trans_vec {0, 0})
+  , scale_       (scale_vec {1.0f, 1.0f})
 {
 }
 
@@ -594,12 +609,10 @@ void
 renderer_impl::clear() {
     auto const r = renderer_.get();
 
-    auto const result = SDL_RenderClear(r);
+    auto result = SDL_RenderClear(r);
     if (result != 0) {
         BK_TODO_FAIL(); //TODO
     }
-
-    SDL_RenderSetScale(r, 1.0f, 1.0f);
 }
 
 //------------------------------------------------------------------------------
@@ -647,7 +660,10 @@ renderer_impl::create_texture(string_ref const filename) {
 }
 
 texture
-renderer_impl::create_texture(int width, int height) {
+renderer_impl::create_texture(
+    size_t const width
+  , size_t const height
+) {
     auto const result = SDL_CreateTexture(
         renderer_.get()
       , SDL_PIXELFORMAT_ARGB8888
@@ -675,12 +691,13 @@ renderer_impl::create_texture(int width, int height) {
 //------------------------------------------------------------------------------
 texture
 renderer_impl::create_texture(
-    uint8_t* const buffer
-  , int      const width
-  , int      const height
+    uint8_t const* const buffer
+  , size_t         const width
+  , size_t         const height
 ) {
+    //HACK TODO is SDL broken here wrt to constness?
     auto const result = SDL_CreateRGBSurfaceFrom(
-        buffer
+        const_cast<uint8_t*>(buffer)
       , width
       , height
       , 32
@@ -724,36 +741,51 @@ renderer_impl::delete_texture(texture& tex) {
 
 //------------------------------------------------------------------------------
 void
-renderer_impl::set_translation_x(scalar const dx) {
+renderer_impl::set_translation_x(trans_t const dx) {
     translation_.x = dx;
 }
 
 //------------------------------------------------------------------------------
 void
-renderer_impl::set_translation_y(scalar const dy) {
+renderer_impl::set_translation_y(trans_t const dy) {
     translation_.y = dy;
 }
 
 //------------------------------------------------------------------------------
 void
-renderer_impl::set_scale_x(scalar const sx) {
-    scale_.x = sx;
+renderer_impl::set_scale_x(scale_t const sx) {
+    set_scale(sx, scale_.y);
 }
 
-//------------------------------------------------------------------------------
 void
-renderer_impl::set_scale_y(scalar const sy) {
+renderer_impl::set_scale_y(scale_t const sy) {
+    set_scale(scale_.x, sy);
+}
+
+void
+renderer_impl::set_scale(scale_t const sx, scale_t const sy) {
+    auto const r = renderer_.get();
+
+    scale_.x = sx;
     scale_.y = sy;
+
+    auto const result = SDL_RenderSetScale(r, scale_.x, scale_.y);
+    if (result) {
+        BK_TODO_FAIL();
+    }
 }
 
 //------------------------------------------------------------------------------
-vec2
+
+
+//------------------------------------------------------------------------------
+renderer_impl::scale_vec
 renderer_impl::get_scale() const {
     return scale_;
 }
 
 //------------------------------------------------------------------------------
-vec2
+renderer_impl::trans_vec
 renderer_impl::get_translation() const {
     return translation_;
 }
@@ -762,15 +794,15 @@ renderer_impl::get_translation() const {
 void
 renderer_impl::draw_texture(
     texture const& tex
-  , scalar  const  x
-  , scalar  const  y
+  , pos_t   const  x
+  , pos_t   const  y
 ) {
     auto const sdl_tex = tex.handle().as<SDL_Texture*>();
         
     SDL_SetTextureBlendMode(sdl_tex, SDL_BLENDMODE_BLEND);
-    SDL_SetTextureColorMod(sdl_tex, 0xFF, 0, 0);
-        
-    SDL_Rect r {static_cast<int>(x), static_cast<int>(y), 0, 0};
+    SDL_SetTextureColorMod(sdl_tex, 0xFF, 0, 0); //TODO
+
+    SDL_Rect r {x, y, 0, 0};
     SDL_QueryTexture(sdl_tex, nullptr, nullptr, &r.w, &r.h);
 
     SDL_RenderCopy(renderer_.get(), sdl_tex, nullptr, &r);
@@ -780,17 +812,16 @@ renderer_impl::draw_texture(
 void
 renderer_impl::draw_texture(
     texture const& tex
-  , rect    const  src
-  , rect    const  dst
+  , rect_t  const  src
+  , rect_t  const  dst
 ) {
-    auto const sdl_tex  = tex.handle().as<SDL_Texture*>();
-    auto const src_rect = make_sdl_rect(src);
+    auto const sdl_tex = get_texture(tex);
 
-    auto dst_rect = make_sdl_rect(dst);
-    dst_rect.x = static_cast<int>(scale_.x * (dst_rect.x + translation_.x));
-    dst_rect.y = static_cast<int>(scale_.y * (dst_rect.y + translation_.y));
-    dst_rect.w = static_cast<int>(scale_.x * dst_rect.w);
-    dst_rect.h = static_cast<int>(scale_.y * dst_rect.h);
+    auto const src_rect = make_sdl_rect(src);
+    auto       dst_rect = make_sdl_rect(dst);
+    
+    dst_rect.x += translation_.x;
+    dst_rect.y += translation_.y;
 
     auto const result = SDL_RenderCopy(renderer_.get(), sdl_tex, &src_rect, &dst_rect);
     if (result) {
@@ -799,8 +830,16 @@ renderer_impl::draw_texture(
 }
 
 void
-renderer_impl::update_texture(texture& tex, void* data, int pitch, int x, int y, int w, int h) {
-    auto const sdl_tex  = tex.handle().as<SDL_Texture*>();
+renderer_impl::update_texture(
+    texture& tex
+  , void const* const data
+  , int         const pitch
+  , int         const x
+  , int         const y
+  , int         const w
+  , int         const h
+) {
+    auto const sdl_tex = get_texture(tex);
 
     SDL_Rect const rect {x, y, w, h};
 

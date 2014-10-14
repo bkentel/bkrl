@@ -13,6 +13,24 @@
 #include "assert.hpp"
 
 namespace bkrl {
+template <typename T>
+struct color3 {
+    T r, g, b;
+};
+
+template <typename T>
+struct color4 {
+    T a, r, g, b;
+};
+
+inline color4<uint8_t> make_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept {
+    return color4<uint8_t> {a, r, g, b};
+}
+
+inline color3<uint8_t> make_color(uint8_t r, uint8_t g, uint8_t b) noexcept {
+    return color3<uint8_t> {r, g, b};
+}
+
 //==============================================================================
 //! clamp the value @p n to the range [lo, hi]
 //==============================================================================

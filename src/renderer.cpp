@@ -3,8 +3,11 @@
 
 using namespace bkrl;
 
-////////////////////////////////////////////////////////////////////////////////
+using bkrl::renderer;
 
+////////////////////////////////////////////////////////////////////////////////
+// application
+////////////////////////////////////////////////////////////////////////////////
 application::application(string_ref keymap, config const& cfg)
   : impl_ {std::make_unique<detail::application_impl>(keymap, cfg)}
 {
@@ -83,7 +86,8 @@ application::on_mouse_wheel(mouse_wheel_sink sink) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-
+// renderer
+////////////////////////////////////////////////////////////////////////////////
 renderer::renderer(application const& app)
   : impl_ {std::make_unique<detail::renderer_impl>(app)}
 {
@@ -107,57 +111,62 @@ renderer::present() {
 }
 
 void
-renderer::set_translation_x(scalar const dx) {
+renderer::set_translation_x(trans_t const dx) {
     impl_->set_translation_x(dx);
 }
 
 void
-renderer::set_translation_y(scalar const dy) {
+renderer::set_translation_y(trans_t const dy) {
     impl_->set_translation_y(dy);
 }
 
 void
-renderer::set_scale_x(scalar const sx) {
+renderer::set_scale_x(scale_t const sx) {
     impl_->set_scale_x(sx);
 }
 
 void
-renderer::set_scale_y(scalar const sy) {
+renderer::set_scale_y(scale_t const sy) {
     impl_->set_scale_y(sy);
 }
 
-vec2
+void
+renderer::set_scale(scale_t const sx, scale_t const sy) {
+    impl_->set_scale(sx, sy);
+}
+
+renderer::scale_vec
 renderer::get_scale() const {
     return impl_->get_scale();
 }
 
-vec2
+renderer::trans_vec
 renderer::get_translation() const {
     return impl_->get_translation();
 }
 
 void
-renderer::draw_texture(texture const& tex, scalar x, scalar y) {
+renderer::draw_texture(texture const& tex, pos_t const x, pos_t const y) {
     impl_->draw_texture(tex, x, y);
 }
 
 void
-renderer::draw_texture(texture const& tex, rect const src, rect const dst) {
+renderer::draw_texture(texture const& tex, rect_t const src, rect_t const dst) {
     impl_->draw_texture(tex, src, dst);
 }
 
 texture
-renderer::create_texture(string_ref filename) {
+renderer::create_texture(string_ref const filename) {
     return impl_->create_texture(filename);
 }
 
 texture
-renderer::create_texture(uint8_t* buffer, int width, int height) {
+renderer::create_texture(uint8_t const* buffer, size_t const width, size_t const height) {
     return impl_->create_texture(buffer, width, height);
 }
 
 texture
-renderer::create_texture(int width, int height) {
+renderer::create_texture(size_t const width, size_t const height) {
     return impl_->create_texture(width, height);
 }
 
@@ -167,27 +176,49 @@ renderer::delete_texture(texture& tex) {
 }
 
 void
-renderer::update_texture(texture& tex, void* data, int pitch, int x, int y, int w, int h) {
+renderer::update_texture(texture& tex, void const* data, int const pitch, int const x, int const y, int const w, int const h) {
     impl_->update_texture(tex, data, pitch, x, y, w, h);
 }
 
 void
-renderer::set_color_mod(texture& tex, uint8_t r, uint8_t g, uint8_t b) {
-    impl_->set_color_mod(tex, r, g, b);
+renderer::set_color_mod(texture& tex) {
+    static auto const clear_color = make_color(255, 255, 255);
+    set_color_mod(tex, clear_color);
 }
 
 void
-renderer::set_alpha_mod(texture & tex, uint8_t a) {
+renderer::set_color_mod(texture& tex, color3b const color) {
+    impl_->set_color_mod(tex, color.r, color.g, color.b);
+}
+
+void
+renderer::set_color_mod(texture& tex, color4b const color) {
+    impl_->set_color_mod(tex, color.r, color.g, color.b, color.a);
+}
+
+void
+renderer::set_alpha_mod(texture & tex, uint8_t const a) {
     impl_->set_alpha_mod(tex, a);
 }
 
 void
-renderer::set_draw_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
-    impl_->set_draw_color(r, g, b, a);
+renderer::set_draw_color() {
+    static auto const clear_color = make_color(0, 0, 0);
+    set_draw_color(clear_color);
 }
 
 void
-renderer::draw_filled_rect(rect bounds) {
+renderer::set_draw_color(color4b const color) {
+    impl_->set_draw_color(color.r, color.g, color.b, color.a);
+}
+
+void
+renderer::set_draw_color(color3b const color) {
+    impl_->set_draw_color(color.r, color.g, color.b);
+}
+
+void
+renderer::draw_filled_rect(rect_t const bounds) {
     impl_->draw_filled_rect(bounds);
 }
 

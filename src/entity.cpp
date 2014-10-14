@@ -84,8 +84,8 @@ public:
 
         auto array = json::require_array(value[field], 2, 2);
         
-        entity_.items.lo = json::require_int(array[0]);
-        entity_.items.hi = json::require_int(array[1]);
+        entity_.items.lo = json::require_int<int16_t>(array[0]);
+        entity_.items.hi = json::require_int<int16_t>(array[1]);
 
         if (!entity_.items) {
             BK_TODO_FAIL();

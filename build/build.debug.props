@@ -3,7 +3,7 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <_PropertySheetDisplayName>Build</_PropertySheetDisplayName>
+    <_PropertySheetDisplayName>build.debug</_PropertySheetDisplayName>
     <OutDir>$(ProjectDir)\..\bin\</OutDir>
     <IntDir>$(ProjectDir)\$(Configuration)\</IntDir>
   </PropertyGroup>

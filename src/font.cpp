@@ -140,24 +140,6 @@ transitory_text_layout::transitory_text_layout(
 }
 
 //------------------------------------------------------------------------------
-namespace {
-
-template <typename T0, typename T1, typename T2, typename T3>
-inline bkrl::rect make_rect(
-    T0 const left
-  , T1 const top
-  , T2 const right
-  , T3 const bottom
-) noexcept {
-    return bkrl::rect {
-        static_cast<float>(left)
-      , static_cast<float>(top)
-      , static_cast<float>(right)
-      , static_cast<float>(bottom)
-    };
-}
-
-} //namespace
 
 void
 transitory_text_layout::render(
@@ -166,11 +148,11 @@ transitory_text_layout::render(
   , int const  x
   , int const  y
 ) const {
-    auto const scale = r.get_scale();
-    auto const trans = r.get_translation();
+    //auto const scale = r.get_scale();
+    //auto const trans = r.get_translation();
 
-    r.set_scale(1.0f);
-    r.set_translation(0.0f, 0.0f);
+    //r.set_scale(1.0f);
+    //r.set_translation(0, 0);
 
     for (auto i = 0u; i < codepoints_.size(); ++i) {
         auto const cp = unicode::codepoint {codepoints_[i]};
@@ -182,17 +164,12 @@ transitory_text_layout::render(
         auto const w = info.width;
         auto const h = info.height;
 
-        auto const left   = x + p.x;
-        auto const top    = y + p.y;
-        auto const right  = left + w;
-        auto const bottom = top  + h;
-
-        rect const dst_rect = make_rect(left, top, right, bottom);
-        rect const src_rect = make_rect(info.tex_x, info.tex_y, info.tex_x + w, info.tex_y + h);
+        auto const dst_rect = make_rect_size(x + p.x, y + p.y, w, h);
+        auto const src_rect = make_rect_size(info.tex_x, info.tex_y, w, h);
 
         r.draw_texture(tex, src_rect, dst_rect);
     }
 
-    r.set_scale(scale);
-    r.set_translation(trans);
+    //r.set_scale(scale);
+    //r.set_translation(trans);
 }

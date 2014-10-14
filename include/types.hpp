@@ -97,6 +97,10 @@ using irect   = axis_aligned_rect<int>;
 using ipoint2 = point2d<int>;
 using ivec2   = vector2d<int>;
 
+using fvec2   = vector2d<float>;
+using fpoint2 = point2d<float>;
+using frect2  = axis_aligned_rect<float>;
+
 using rect   = axis_aligned_rect<float>;
 using point2 = point2d<float>;
 using vec2   = vector2d<float>;

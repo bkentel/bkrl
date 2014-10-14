@@ -45,9 +45,11 @@ private:
 //==============================================================================
 class tile_sheet {
 public:
+    using rect_t = renderer::rect_t;
+
     tile_sheet(string_ref filename, renderer& render);
 
-    rect get_rect(int const i) const {
+    rect_t get_rect(int const i) const {
         auto const d = std::div(i, tiles_x());
         auto const x = d.rem;
         auto const y = d.quot;
@@ -55,19 +57,14 @@ public:
         return get_rect(x, y);
     }
 
-    rect get_rect(int const x, int const y) const {
+    rect_t get_rect(int const x, int const y) const {
         BK_ASSERT_SAFE(x >= 0 && x < tiles_x());
         BK_ASSERT_SAFE(y >= 0 && y < tiles_y());
 
         auto const w = tile_width();
         auto const h = tile_height();
 
-        auto const l = static_cast<float>(x * w);
-        auto const t = static_cast<float>(y * h);
-        auto const r = static_cast<float>(l + w);
-        auto const b = static_cast<float>(t + h);
-
-        return {l, t, r, b};
+        return make_rect_size(x * w, y * h, w, h);
     }
      
     int tile_width() const noexcept {
@@ -91,12 +88,7 @@ public:
         auto const h = tile_height();
 
         auto const src_r = get_rect(tile_x, tile_y);
-        auto const dst_r = rect {
-            static_cast<float>(x * w)
-          , static_cast<float>(y * h)
-          , static_cast<float>(x * w + w)
-          , static_cast<float>(y * h + h)
-        };
+        auto const dst_r = make_rect_size(x * w, y * h, w, h);
 
         render.draw_texture(tile_texture_, src_r, dst_r);
     }
