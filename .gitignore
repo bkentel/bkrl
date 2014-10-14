@@ -216,3 +216,5 @@ $RECYCLE.BIN/
 *.msm
 *.msp
 *.bmp
+*.dll
+*.exe

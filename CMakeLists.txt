@@ -24,7 +24,6 @@ set(SOURCE_FILES
     include/keyboard.hpp
     include/math.hpp
     include/pch.hpp
-    include/player.hpp
     include/random.hpp
     include/renderer.hpp
     include/scancode.hpp
@@ -38,12 +37,11 @@ set(SOURCE_FILES
     include/scope_exit.hpp
     include/spatial_map.hpp
     include/time.hpp
+    include/entity.hpp
+    include/locale.hpp
     lib/catch/catch.hpp
     lib/json11/json11.cpp
     lib/json11/json11.hpp
-    lib/json11/LICENSE.txt
-    lib/json11/Makefile
-    lib/json11/README.md
 #    lib/json11/test.cpp
     lib/utf8/checked.h
     lib/utf8/core.h
@@ -67,6 +65,7 @@ set(SOURCE_FILES
     src/math.cpp
     src/messages.cpp
     src/time.cpp
+    src/entity.cpp
 #    test/algorithm.t.cpp
 #    test/bsp_layout.t.cpp
 #    test/engine_client.t.cpp

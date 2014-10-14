@@ -20,8 +20,11 @@ public:
     static localized_t  load_localized_strings(utf8string const& data);
     static localized_t  load_localized_strings(string_ref filename);
 
-    string_id  id;
-    range<int> items;
+    string_id      id;
+    range<int16_t> items;
+    int16_t        tile_x;
+    int16_t        tile_y;
+    uint8_t        r, g, b;
 };
 
 
@@ -67,29 +70,21 @@ public:
     void add_item(item&& itm, item_def::definition_t const& defs) {
         auto const can_stack = itm.can_stack(defs);
 
+        if (can_stack) {
+            auto const end = std::end(items_);
+            auto const beg = std::begin(items_);
+            auto const it  = std::find_if(beg, end, [&](item const& other) {
+                return (itm == other) && (other.count < other.max_stack(defs));
+            });
+
+            if (it != end) {
+                it->count += itm.count;
+                return;
+            }
+        }
+
         items_.emplace_back(std::move(itm));
         bkrl::sort(items_);
-
-        if (!can_stack) {
-            return;
-        }
-
-        auto const end   = std::end(items_);
-        auto const first = std::adjacent_find(std::begin(items_), end);
-        
-        if (first == end) {
-            return;
-        }
-        
-        auto last = first;
-        while (last != end && *first == *(last + 1)) {
-            ++last;
-        }
-        
-        auto const n = std::distance(first, last);
-        last->count += n;
-
-        items_.erase(first, last);
     }
 
     auto items_begin() const {

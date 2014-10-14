@@ -62,6 +62,7 @@ class item_def : public definition_base<item_def> {
 public:
     struct locale {
         utf8string name;
+        utf8string sort;
         utf8string text;
     };
 
@@ -71,22 +72,28 @@ public:
     static localized_t  load_localized_strings(string_ref filename);
 
     string_id id;
+    int       stack;
+
     string_id type;
     string_id material;
-    int       stack;
 };
 
 //==============================================================================
 //==============================================================================
 class item {
 public:
-    explicit item(identifier id)
+    using localized_t = item_def::localized_t;
+
+    //TODO make atomic
+    static localized_t const* current_locale;
+
+    explicit item(identifier const id)
       : id {id}
     {
     }
 
     bool operator<(item const& other) const {
-        return id.hash < other.id.hash;
+        return sort_string() < other.sort_string();
     }
 
     bool operator==(item const& other) const {
@@ -98,12 +105,22 @@ public:
     }
 
     bool can_stack(item_def::definition_t const& defs) const {
-        return defs[id].stack > 1;
+        return max_stack(defs) > 1;
+    }
+
+    int max_stack(item_def::definition_t const& defs) const {
+        return defs[id].stack;
     }
 
     string_ref name(item_def::localized_t const& locale) const {
         return locale(id, 0).name;
     }
+
+    string_ref sort_string() const {
+        return (*current_locale)(id, 0).sort;
+    }
+
+    
 
     identifier id;
     int        count = 1;

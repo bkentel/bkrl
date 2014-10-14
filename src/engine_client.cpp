@@ -342,13 +342,13 @@ public:
         name_buffer_.reserve(2 + name.size());
 
         name_buffer_.push_back(prefix_);
-        name_buffer_.push_back('\t');
+        name_buffer_.append({"\t-\t"});
 
         if (count > 1) {
             name_buffer_.append(std::to_string(count));
         }
-        name_buffer_.push_back('\t');
 
+        name_buffer_.push_back('\t');
         name_buffer_.append(name.data(), name.size());
 
         items_.emplace_back(*face_, name_buffer_, 500, 32);
@@ -362,22 +362,28 @@ public:
     }
 
     void render(renderer& r, int const x, int const y) {
-        auto cur_y = y;
+        constexpr auto border = 8;
+        
+        auto cur_x = x + border;
+        auto cur_y = y + border;
+
+        auto const w = width_  + border * 2;
+        auto const h = height_ + border * 2;
 
         //draw the background
         r.set_draw_color(50, 50, 50);
-        r.draw_filled_rect(make_rect_size<float>(x, y, width_, height_));
+        r.draw_filled_rect(make_rect_size<float>(x, y, w, h));
 
         int i = 0;
         for (auto const& itm : items_) {
             if (i == selection_) {
                 //draw the selection highlight
-                r.set_draw_color(0, 0, 100);
-                r.draw_filled_rect(make_rect_size<float>(x, cur_y, width_, itm.actual_height()));
+                r.set_draw_color(150, 150, 50);
+                r.draw_filled_rect(make_rect_size<float>(cur_x, cur_y, w - border * 2, itm.actual_height()));
                 r.set_draw_color(50, 50, 50);
             }
 
-            itm.render(r, *face_, x, cur_y);
+            itm.render(r, *face_, cur_x, cur_y);
             cur_y += itm.actual_height();
             ++i;
         }
@@ -409,6 +415,10 @@ public:
 
     int get_selection() const noexcept {
         return selection_;
+    }
+
+    explicit operator bool() const noexcept {
+        return !items_.empty();
     }
 private:
     font_face*              face_        = nullptr;
@@ -479,21 +489,16 @@ public:
         auto const h = grid_.height();
 
         auto const& sheet = *tile_sheet_;
+        auto&       tex   = sheet.get_texture();
 
+        r.set_color_mod(tex, 255, 255, 255);
         for (bkrl::grid_index y = 0; y < h; ++y) {
             for (bkrl::grid_index x = 0; x < w; ++x) {
                 auto const texture = grid_.get(attribute::texture_id, x, y);
                 auto const tx = texture % sheet.tiles_x(); //TODO
                 auto const ty = texture / sheet.tiles_x();
 
-                if (grid_.get(attribute::tile_type, x, y) == tile_type::corridor) {
-                    //TODO just a test
-                    r.set_color_mod(sheet.get_texture(), 100, 150, 100);
-                    sheet.render(r, tx, ty, x, y);
-                    r.set_color_mod(sheet.get_texture(), 255, 255, 255);
-                } else {
-                    sheet.render(r, tx, ty, x, y);
-                }
+                sheet.render(r, tx, ty, x, y);
             }
         }
 
@@ -502,10 +507,20 @@ public:
             sheet.render(r, 15, 0, p.x, p.y);
         }
 
+        auto const& entities = definitions_->entities;
         for (auto const& mob : mobs_) {
             auto const p = mob.position();
-            sheet.render(r, 2, 0, p.x, p.y);
+
+            entity_def const& e = entities[mob.id()];
+
+            auto const tx = e.tile_x;
+            auto const ty = e.tile_y;
+
+            r.set_color_mod(tex, e.r, e.g, e.b);
+            sheet.render(r, tx, ty, p.x, p.y);
         }
+
+        r.set_color_mod(tex, 255, 255, 255);
     }
 
     //--------------------------------------------------------------------------
@@ -566,6 +581,9 @@ public:
 
         for (size_t i = 0; i < 9; ++i) {
             auto const q = ipoint2 {p.x + xi[i], p.y + yi[i]};
+            if (!grid_.is_valid(q)) {
+                continue;
+            }
 
             auto const value = grid_.get(attribute::tile_type, q);
             if (value == type) {
@@ -820,6 +838,16 @@ private:
               , rooms[id1-1]
             );
 
+            if (!connected) {
+                connector.connect(
+                    substantive
+                  , grid_
+                  , bounds
+                  , rooms[id1-1]
+                  , rooms[id0-1]
+                );
+            }
+
             return true;
         });
     }
@@ -905,14 +933,14 @@ private:
             }
             
             auto const& entities = definitions_->entities;
-            auto const  size     = entities.size();
+            auto const  size     = static_cast<int>(entities.size());
 
             BK_ASSERT(size > 0);
-            auto const i = random::uniform_range(substantive, 0u, size - 1);
+            auto const i = random::uniform_range(substantive, 0, size - 1);
 
             auto const& id = entities.at_index(i).id;
 
-            entity mob {room.center(), id};
+            auto mob = entity {room.center(), id};
 
             auto steps = random::uniform_range(substantive, 1, 10);
             for (; steps > 0; --steps) {
@@ -1492,6 +1520,9 @@ public:
       , imode_direction_    {[&] {input_mode_ = nullptr;}}
       , imode_selection_    {[&] {input_mode_ = nullptr;}}
     {
+        //TODO
+        item::current_locale = &definitions_.items_locale_jp;
+        
         ////////////////////////////////////////////////////
         init_sinks();
 
@@ -1651,7 +1682,9 @@ public:
             inspect_message_.render(r, font_face_, x, y);
         }
 
-        item_list_.render(r, 10, 10);
+        if (!!item_list_) {
+            item_list_.render(r, 10, 10);
+        }
 
         r.present();
 
@@ -1882,6 +1915,27 @@ public:
 
         item_list_.clear();
         item_list_.add_items(beg, end);
+
+        auto const size = item_list_.size();
+
+        using result_t = input_mode_selection::result_t;
+
+        input_mode_ = imode_selection_.enter_mode(size, [this](result_t const result, int const index) {
+            switch (result) {
+            case result_t::ok_select :
+            case result_t::ok_index :
+            case result_t::cancel :
+                break;
+            case result_t::next :
+                item_list_.select_next();
+                return;
+            case result_t::prev :
+                item_list_.select_prev();
+                return;
+            }
+
+            item_list_.clear();
+        });
     }
     ////////////////////////////////////////////////////////////////////////////
     // Sinks

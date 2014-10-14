@@ -12,6 +12,7 @@ utf8string const common::field_definitions {"definitions"};
 utf8string const common::field_id          {"id"};
 utf8string const common::field_name        {"name"};
 utf8string const common::field_text        {"text"};
+utf8string const common::field_sort        {"sort"};
 utf8string const common::field_mappings    {"mappings"};
 utf8string const common::field_filename    {"file_name"};
 utf8string const common::field_tile_size   {"tile_size"};

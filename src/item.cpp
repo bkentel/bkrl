@@ -3,6 +3,9 @@
 
 using namespace bkrl;
 
+//TODO make atomic
+bkrl::item::localized_t const* bkrl::item::current_locale = nullptr;
+
 namespace {
 
 struct common_rules {
@@ -319,9 +322,11 @@ public:
         
         auto name = json::optional_string(value[json::common::field_name]);
         auto text = json::optional_string(value[json::common::field_text]);
+        auto sort = json::optional_string(value[json::common::field_sort]);
 
         locale_.name = name.get_value_or("<undefined>").to_string();
         locale_.text = text.get_value_or("<undefined>").to_string();
+        locale_.sort = sort.get_value_or(locale_.name).to_string();
 
         auto const hash = slash_hash32(id);
         strings_.emplace(hash, std::move(locale_));

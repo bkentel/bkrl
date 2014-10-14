@@ -252,6 +252,7 @@ extern utf8string const field_definitions;
 extern utf8string const field_id;
 extern utf8string const field_name;
 extern utf8string const field_text;
+extern utf8string const field_sort;
 extern utf8string const field_mappings;
 extern utf8string const field_filename;
 extern utf8string const field_tile_size;

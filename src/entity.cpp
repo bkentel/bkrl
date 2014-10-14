@@ -36,11 +36,45 @@ public:
     //--------------------------------------------------------------------------
     void rule_definition(cref value) {
         rule_items(value);
+        rule_color(value);
+        rule_tile(value);
+
         entity_.id = json::require_string(value[json::common::field_id]);
 
         auto const hash = entity_.id.hash;
         entities_.emplace(hash, std::move(entity_));
     }
+
+    //--------------------------------------------------------------------------
+    void rule_tile(cref value) {
+        static utf8string const field {"tile"};
+
+        //TODO should be able to clean this up a bit more
+
+        auto array = json::require_array(value[field], 2, 2);
+        
+        entity_.tile_x = json::require_int<int16_t>(array[0]);
+        entity_.tile_y = json::require_int<int16_t>(array[1]);
+
+        if (entity_.tile_x < 0 || entity_.tile_y < 0) {
+            BK_TODO_FAIL();
+        }
+    }
+
+
+    //--------------------------------------------------------------------------
+    void rule_color(cref value) {
+        static utf8string const field {"color"};
+
+        //TODO should be able to clean this up a bit more
+
+        auto array = json::require_array(value[field], 3, 3);
+        
+        entity_.r = json::require_int<uint8_t>(array[0]);
+        entity_.g = json::require_int<uint8_t>(array[1]);
+        entity_.b = json::require_int<uint8_t>(array[2]);
+    }
+
 
     //--------------------------------------------------------------------------
     void rule_items(cref value) {

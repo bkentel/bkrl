@@ -727,6 +727,8 @@ bsp_connector_impl::generate_segment_(
             ok = corridor_result::ok_done;
             break;
         }
+
+        grid.set(attribute::room_id, cur, src_id);
     }
 
     BK_ASSERT(can_gen_corridor(grid, bounds, cur));
@@ -780,7 +782,11 @@ bsp_connector_impl::add_candidates_(
         beg++;
     }
 
-    std::shuffle(dirs.data() + beg, dirs.data() + end, gen);
+    //std::shuffle is no good here because it uses the std:: distributions,
+    //not boost. which means results will be inconsistant across platforms
+    std::random_shuffle(dirs.data() + beg, dirs.data() + end, [&](size_t const i) {
+        return bkrl::random::uniform_range(gen, size_t {0}, i - 1);
+    });
 
     std::copy_if(
         std::crbegin(dirs), std::crend(dirs), std::back_inserter(open_)
@@ -829,9 +835,9 @@ bsp_connector_impl::connect(
 
     add_candidates_(gen, grid, bounds, cur, end - cur);
 
-    for (int failures = 0; failures < 5;) {
+    for (int failures = 0; failures < 3;) {
         if (open_.empty()) {
-            return false;
+            break;
         }
 
         auto const p = open_.back();

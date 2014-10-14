@@ -4,22 +4,27 @@
 , "definitions": [
     { "id":   "WEAPON_SWORD_SHORT"
     , "name": "短剣"
+    , "sort": "タンケン"
     , "text": "A short sword suitable for, well, slashing."
     }
   , { "id":   "WEAPON_LONG_SWORD"
     , "name": "長剣"
+    , "sort": "チョウケン"
     , "text": "A long sword suitable for, well, slashing."
     }
   , { "id":   "WEAPON_HAMMER"
     , "name": "金鎚"
+    , "sort": "カナヅチ"
     , "text": "A blunt weapon suitable for, well, bashing."
     }
   , { "id":   "WEAPON_STAFF"
     , "name": "杖"
+    , "sort": "ツエ"
     , "text": "For walking -and- bashing foes."
     }
   , { "id":   "WEAPON_SHORT_BOW"
     , "name": "短弓"
+    , "sort": "タンキュウ"
     , "text": "A bow. It's short."
     }
   , { "id":   "WEAPON_DAGGER"
@@ -28,18 +33,22 @@
     }
   , { "id":   "WEAPON_AXE"
     , "name": "斧"
+    , "sort": "オノ"
     , "text": "Chop. Chop."
     }
   , { "id":   "POTION_HEALTH_MINOR"
     , "name": "回復のポ－ション（小）"
+    , "sort": "カイフクノポーション1"
     , "text": "Drink to restore a little health"
     }
   , { "id":   "POTION_HEALTH_MEDIUM"
     , "name": "回復のポ－ション（中）"
+    , "sort": "カイフクノポーション2"
     , "text": "Drink to restore some health."
     }
   , { "id":   "POTION_HEALTH_MAJOR"
     , "name": "回復のポ－ション（大）"
+    , "sort": "カイフクノポーション3"
     , "text": "Drink to restore a lot of health."
     }
   ]
