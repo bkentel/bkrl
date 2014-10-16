@@ -1,7 +1,7 @@
 {
     "file_type": "LOCALE"
   , "string_type": "MESSAGE"
-  , "language": "jp"
+  , "language": "ja"
   , "definitions": [
         ["welcome",          "ダンジョンへようこそ！"]
       , ["direction_prompt", "どの方向へ？"]

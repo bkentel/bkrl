@@ -12,9 +12,13 @@ class config_parser {
 public:
     using cref = json::cref;
 
-    explicit config_parser(string_ref const filename) {
-        auto const root = json::common::from_file(filename);
-        rule_root(root);
+    explicit config_parser(cref data) {
+        rule_root(data);
+    }
+
+    explicit config_parser(path_string_ref const filename)
+      : config_parser {json::common::from_file(filename)}
+    {
     }
 
     //--------------------------------------------------------------------------
@@ -31,7 +35,7 @@ public:
 
     //--------------------------------------------------------------------------
     void rule_filetype(cref value) {
-        json::common::get_filetype(value, "CONFIG");
+        json::common::get_filetype(value, json::common::filetype_config);
     }
 
     static hash_t get_seed(cref value) {
@@ -93,11 +97,12 @@ public:
     //--------------------------------------------------------------------------
     void rule_font(cref value) {
         static const utf8string field {"font"};
-        config_.font_name = json::require_string(value[field]).to_string();
+        //TODO need to widen this
+        //config_.font_name = json::require_string(value[field]).to_string();
     }
 
     //--------------------------------------------------------------------------
-    operator config&&() {
+    operator config&&() && {
         return std::move(config_);
     }
 private:
@@ -106,7 +111,6 @@ private:
 
 }
 
-config
-bkrl::load_config(string_ref const filename) {
-    return config_parser {filename};
+config bkrl::load_config(json::cref data) {
+    return config_parser {data};
 }

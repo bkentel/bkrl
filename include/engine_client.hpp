@@ -12,20 +12,15 @@
 
 namespace bkrl {
 
-class renderer;
-class config;
+class data_definitions;
 
 //==============================================================================
 //! engine_client
 //==============================================================================
 class engine_client {
 public:
-    engine_client(config const& conf);
+    engine_client(data_definitions& defs);
     ~engine_client();
-
-    void on_command(command_type const cmd);
-
-    void render(renderer& r);
 private:
     struct impl_t;
     std::unique_ptr<impl_t> impl_;

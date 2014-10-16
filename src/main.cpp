@@ -1,10 +1,9 @@
 #include "engine_client.hpp"
-#include "config.hpp"
+#include "definitions.hpp"
 
 int main(int, char**) {
-    auto const config = bkrl::load_config("./data/config.def");
-
-    bkrl::engine_client client {config};
+    bkrl::data_definitions defs;
+    bkrl::engine_client client {defs};
 
     return 0;
 }

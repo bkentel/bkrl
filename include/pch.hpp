@@ -23,13 +23,18 @@
 #include <array>
 #include <vector>
 #include <bitset>
-#include <fstream>
-
-#include <iostream>
+#include <random>
+#include <deque>
+#include <atomic>
 
 ////////////////////////////////////////////////////////////////////////////////
 // Boost
 ////////////////////////////////////////////////////////////////////////////////
+#define BOOST_FILESYSTEM_NO_DEPRECATED
+#define BOOST_FILESYSTEM_NO_LIB
+#define BOOST_SYSTEM_NO_LIB
+
+#include <boost/filesystem.hpp>
 #include <boost/predef.h>
 #include <boost/exception/all.hpp>
 #include <boost/random/mersenne_twister.hpp>
@@ -38,6 +43,7 @@
 #include <boost/optional.hpp>
 #include <boost/container/flat_map.hpp>
 #include <boost/container/static_vector.hpp>
+#include <boost/format.hpp>
 
 ////////////////////////////////////////////////////////////////////////////////
 // SDL2

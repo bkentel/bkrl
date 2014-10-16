@@ -209,6 +209,9 @@
     <ClInclude Include="..\include\locale.hpp">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\definitions.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="boost_container.natvis" />

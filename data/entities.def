@@ -4,51 +4,61 @@
     , "items": [0, 2]
     , "tile": [3, 7]
     , "color": [85, 85, 85]
+    , "health": ["dice", 3, 4]
     }
   , { "id": "SKELETON_WARRIOR"
     , "items": [1, 2]
     , "tile": [3, 7]
     , "color": [255, 85, 85]
+    , "health": ["dice", 3, 4]
     }
   , { "id": "SKELETON_ARCHER"
     , "items": [1, 2]
     , "tile": [3, 7]
     , "color": [85, 255, 85]
+    , "health": ["dice", 3, 4]
     }
   , { "id": "SKELETON_MAGE"
     , "items": [3, 5]
     , "tile": [3, 7]
     , "color": [85, 85, 255]
+    , "health": ["dice", 3, 4]
     }
   , { "id": "RAT_BROWN"
     , "items": [0, 1]
     , "tile": [2, 7]
     , "color": [170, 170, 0]
+    , "health": ["dice", 3, 4]
     }
   , { "id": "RAT_GREY"
     , "items": [0, 1]
     , "tile": [2, 7]
     , "color": [170, 170, 170]
+    , "health": ["dice", 3, 4]
     }
   , { "id": "WASP_YELLOW"
     , "items": [0, 1]
     , "tile": [7, 7]
     , "color": [255, 255, 0]
+    , "health": ["dice", 3, 4]
     }
   , { "id": "WASP_ORANGE"
     , "items": [0, 1]
     , "tile": [7, 7]
     , "color": [255, 85, 0]
+    , "health": ["dice", 3, 4]
     }
   , { "id": "DRUDGE_YOUNG"
     , "items": [0, 1]
     , "tile": [4, 4]
     , "color": [85, 170, 85]
+    , "health": ["dice", 3, 4]
     }
   , { "id": "DRUDGE_APPRENICE"
     , "items": [0, 2]
     , "tile": [4, 4]
     , "color": [170, 85, 85]
+    , "health": ["dice", 3, 4]
     }
   ]
 }

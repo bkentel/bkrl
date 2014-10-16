@@ -68,7 +68,7 @@ struct application_base {
 //==============================================================================
 class application : public detail::application_base {
 public:
-    application(string_ref keymap, config const& cfg);
+    application(path_string_ref keymap, config const& cfg);
     ~application();
 
     handle_t handle() const;
@@ -250,7 +250,7 @@ public:
 
     ////////////////////////////////////////////////////////////////////////////
 
-    texture create_texture(string_ref filename);
+    texture create_texture(path_string_ref filename);
     
     texture create_texture(uint8_t const* buffer, size_t width, size_t height);
     

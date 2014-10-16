@@ -1,7 +1,10 @@
 #include "util.hpp"
+#include "types.hpp"
 
-#include <fstream>
 #include <cstring>
+#include <cstdio>
+
+using namespace bkrl;
 
 bkrl::uint64_t bkrl::slash_hash64(char const* s, size_t const len) {
     union {
@@ -26,23 +29,70 @@ bkrl::uint32_t bkrl::slash_hash32(char const* s, size_t const len) {
     return static_cast<uint32_t>(h + (h >> 32)); //32-bit
 }
 
-std::string bkrl::read_file(string_ref const filename) {
-    std::string result;
+namespace {
 
-    std::ifstream in {filename.data()};
+struct file_deleter {
+    void operator()(FILE* const ptr) const noexcept {
+        auto const result = std::fclose(ptr);
+        if (result == EOF) {
+            BK_TODO_FAIL();
+        }
+    }
+};
 
-    if (!in.good()) {
+using unique_file = std::unique_ptr<FILE, file_deleter>;
+
+#if BOOST_COMP_MSVC
+unique_file open_file(path_string_ref const filename) {
+    FILE* ptr = nullptr;
+
+    auto const result = _wfopen_s(&ptr, filename.data(), L"rb");
+    if (result) {
         BK_TODO_FAIL();
     }
 
-    in.seekg(0, std::ios::end);
-    result.reserve(static_cast<size_t>(in.tellg()));
-    in.seekg(0, std::ios::beg);
+    return unique_file {ptr};
+}
+#else
+unique_file open_file(string_ref const filename) {
+    auto const result = std::fopen(filename.data(), "rb");
+    if (result == nullptr) {
+        BK_TODO_FAIL();
+    }
 
-    result.assign(
-        std::istreambuf_iterator<char>{in}
-      , std::istreambuf_iterator<char>{}
-    );
+    return unique_file {result};
+}
+#endif
+
+} //namespace
+
+utf8string bkrl::read_file(path_string_ref const filename) {
+    constexpr auto max_size = (1 << 20); //1 MiB
+
+    auto const file   = open_file(filename);
+    auto const handle = file.get();
+
+    if (std::fseek(handle, 0, SEEK_END)) {
+        BK_TODO_FAIL();
+    }
+
+    auto const pos = std::ftell(handle);
+    if (pos == EOF) {
+        BK_TODO_FAIL();
+    }
+
+    if (std::fseek(handle, 0, SEEK_SET)) {
+        BK_TODO_FAIL();
+    }
+
+    auto const size = static_cast<size_t>(pos);
+    if (size > max_size) {
+        BK_TODO_FAIL();
+    }
+
+    //HACK TODO safe?
+    auto result = utf8string(size, 0);
+    auto const read = std::fread(const_cast<char*>(result.data()), 1, size, handle);
 
     return result;
 }

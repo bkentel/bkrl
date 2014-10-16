@@ -26,10 +26,10 @@ font_libary::handle() const {
 // font_face
 ////////////////////////////////////////////////////////////////////////////////
 font_face::font_face(
-    renderer&    r
-  , font_libary& lib
-  , string_ref   const filename
-  , unsigned     const size
+    renderer&             r
+  , font_libary&          lib
+  , path_string_ref const filename
+  , unsigned        const size
 )
   : impl_ {std::make_unique<detail::font_face_impl>(r, lib, filename, size)}
 {

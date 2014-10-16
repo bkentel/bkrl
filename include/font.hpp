@@ -140,10 +140,10 @@ public:
     BK_NOCOPY(font_face);
 
     font_face(
-        renderer&    render
-      , font_libary& lib
-      , string_ref   filename
-      , unsigned     size
+        renderer&       render
+      , font_libary&    lib
+      , path_string_ref filename
+      , unsigned        size
     );
 
     ~font_face();

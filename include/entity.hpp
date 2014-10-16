@@ -15,11 +15,6 @@ public:
         utf8string text;
     };
 
-    static definition_t load_definitions(utf8string const& data);
-    static definition_t load_definitions(string_ref filename);
-    static localized_t  load_localized_strings(utf8string const& data);
-    static localized_t  load_localized_strings(string_ref filename);
-
     string_id      id;
     range<int16_t> items;
     int16_t        tile_x;
@@ -27,6 +22,8 @@ public:
     uint8_t        r, g, b;
 };
 
+entity_def::definition_t load_entities(json::cref data);
+entity_def::localized_t  load_entities_locale(json::cref data);
 
 //==============================================================================
 //==============================================================================

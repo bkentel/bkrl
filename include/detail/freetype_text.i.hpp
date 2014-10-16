@@ -118,9 +118,9 @@ public:
     //! 
     //--------------------------------------------------------------------------
     face(
-        library&         lib
-      , string_ref const filename
-      , unsigned   const size = default_size
+        library&              lib
+      , path_string_ref const filename
+      , unsigned        const size = default_size
     )
       : face {static_cast<FT_Library>(lib), filename, size}
     {
@@ -130,9 +130,9 @@ public:
     //!
     //--------------------------------------------------------------------------
     face(
-        font_libary&     lib
-      , string_ref const filename
-      , unsigned   const size = default_size
+        font_libary&          lib
+      , path_string_ref const filename
+      , unsigned        const size = default_size
     )
       : face {lib.handle().as<FT_Library>(), filename, size}
     {
@@ -219,7 +219,7 @@ public:
     FT_Pos descender()  const noexcept { return metrics_().descender >> 6; }
     FT_Pos line_gap()   const noexcept { return metrics_().height    >> 6; }
 private:
-    face(FT_Library lib, string_ref const filename, unsigned size);
+    face(FT_Library lib, path_string_ref filename, unsigned size);
 
     FT_Size_Metrics const& metrics_() const noexcept {
         FT_Face const face = *this;
@@ -388,9 +388,9 @@ library::operator FT_Library() const {
 
 //------------------------------------------------------------------------------
 face::face(
-    FT_Library const lib
-  , string_ref const //filename //TODO
-  , unsigned   const size
+    FT_Library      const lib
+  , path_string_ref const //filename //TODO
+  , unsigned        const size
 ) {
     BK_ASSERT(lib != nullptr);
 
@@ -906,7 +906,7 @@ class font_face_impl {
 public:
     BK_NOCOPY(font_face_impl);
 
-    font_face_impl(renderer& r, font_libary& lib, string_ref filename, unsigned size);
+    font_face_impl(renderer& r, font_libary& lib, path_string_ref filename, unsigned size);
 
     glyph_metrics metrics(unicode::codepoint lhs, unicode::codepoint rhs);
     glyph_metrics metrics(unicode::codepoint cp);
@@ -927,10 +927,10 @@ private:
 
 //------------------------------------------------------------------------------
 font_face_impl::font_face_impl(
-    renderer&          cur_renderer
-  , font_libary&       lib
-  , string_ref   const filename
-  , unsigned     const size
+    renderer&             cur_renderer
+  , font_libary&          lib
+  , path_string_ref const filename
+  , unsigned        const size
 )
   : renderer_  {cur_renderer}
   , face_      {lib, filename, size}

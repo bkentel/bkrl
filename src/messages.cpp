@@ -15,9 +15,8 @@ public:
     using value_t = utf8string;
     using container_t = boost::container::flat_map<key_t, value_t>;
 
-    explicit message_parser(string_ref const filename) {
-        auto const value = json::common::from_file(filename);
-        rule_root(value);
+    explicit message_parser(cref data) {
+        rule_root(data);
     }
 
     void rule_root(cref value) {
@@ -97,14 +96,16 @@ private:
 
 class message_map::impl_t {
 public:
-    impl_t(string_ref const filename)
-    {
-        message_parser parser {filename};
+    impl_t(json::cref data) {
+        reload(data);
+    }
 
+    void reload(json::cref data) {
+        message_parser parser {data};
         messages_ = std::move(parser.messages());
     }
 
-    string_ref operator()(message_type const msg, hash_t const lang) const {
+    string_ref operator[](message_type const msg) const {
         static string_ref const undefined {"<undefined message>"};
 
         auto const it = messages_.find(msg);
@@ -118,17 +119,18 @@ private:
     message_parser::container_t messages_;
 };
 
-message_map::message_map(string_ref const filename)
-  : impl_ {std::make_unique<impl_t>(filename)}
-{
-}
-
-message_map::message_map(utf8string const& data)
+message_map::message_map(json::cref data)
+  : impl_ {std::make_unique<impl_t>(data)}
 {
 }
 
 message_map::~message_map() = default;
+message_map::message_map(message_map&&) = default;
+message_map& message_map::operator=(message_map&&) = default;
 
-string_ref message_map::operator()(message_type const msg, hash_t const lang) const {
-    return (*impl_)(msg, lang);
+void message_map::reload(json::cref data) {
+}
+
+string_ref message_map::operator[](message_type const msg) const {
+    return (*impl_)[msg];
 }

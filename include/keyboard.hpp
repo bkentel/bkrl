@@ -94,7 +94,7 @@ struct key_mapping {
 class keymap {
 public:
     keymap();
-    explicit keymap(string_ref filename);
+    explicit keymap(path_string_ref filename);
     ~keymap();
 
     command_type operator[](key_combo const key);

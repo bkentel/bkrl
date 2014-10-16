@@ -13,7 +13,7 @@ class keymap::impl_t {
 public:
     using cref = json::cref;
 
-    explicit impl_t(string_ref filename);
+    explicit impl_t(path_string_ref filename);
 
     void rule_root(cref value);
     void rule_file_type(cref value);
@@ -25,7 +25,7 @@ private:
     std::vector<key_mapping> mappings_;
 };
 
-keymap::impl_t::impl_t(string_ref const filename) {
+keymap::impl_t::impl_t(path_string_ref const filename) {
     auto const json = json::common::from_file(filename);
 
     rule_root(json);
@@ -122,7 +122,7 @@ void keymap::impl_t::rule_mapping_value(cref value) {
 keymap::keymap() {
 }
 
-keymap::keymap(string_ref filename)
+keymap::keymap(path_string_ref const filename)
   : impl_ {std::make_unique<impl_t>(filename)}
 {
 }

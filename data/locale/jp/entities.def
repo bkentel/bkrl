@@ -1,6 +1,6 @@
 { "file_type":   "LOCALE"
 , "string_type": "ENTITY"
-, "language":    "jp"
+, "language":    "ja"
 , "definitions": [
     { "id":   "SKELETON"
     , "name": "スケルトン"

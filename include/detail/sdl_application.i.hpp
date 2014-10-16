@@ -3,7 +3,6 @@
 #include <sdl/SDL.h>
 
 #include "renderer.hpp"
-//#include "tile_sheet.hpp"
 #include "keyboard.hpp"
 #include "config.hpp"
 #include "util.hpp"
@@ -96,7 +95,7 @@ private:
 //==============================================================================
 class application_impl : public application_base {
 public:
-    application_impl(string_ref keymap, config const& cfg);
+    application_impl(path_string_ref keymap, config const& cfg);
 
     handle_t handle() const;
 
@@ -178,8 +177,8 @@ application_impl::create_window_(
 
 //------------------------------------------------------------------------------
 application_impl::application_impl(
-    string_ref const  keymap
-  , config     const& cfg
+    path_string_ref const  keymap
+  , config          const& cfg
 )
   : state_   {}
   , window_  {create_window_(cfg.window_w, cfg.window_h, cfg.window_x, cfg.window_y)}
@@ -317,50 +316,35 @@ void
 application_impl::handle_event_window(SDL_WindowEvent const& event) {
     switch (event.event) {
     case SDL_WINDOWEVENT_NONE :
-        std::cout << "SDL_WINDOWEVENT_NONE" << std::endl;
         break;
     case SDL_WINDOWEVENT_SHOWN :
-        std::cout << "SDL_WINDOWEVENT_SHOWN" << std::endl;
         break;
     case SDL_WINDOWEVENT_HIDDEN :
-        std::cout << "SDL_WINDOWEVENT_HIDDEN" << std::endl;
         break;
     case SDL_WINDOWEVENT_EXPOSED :
-        std::cout << "SDL_WINDOWEVENT_EXPOSED" << std::endl;
         break;
     case SDL_WINDOWEVENT_MOVED :
-        std::cout << "SDL_WINDOWEVENT_MOVED" << std::endl;
         break;
     case SDL_WINDOWEVENT_RESIZED :
-        std::cout << "SDL_WINDOWEVENT_RESIZED" << std::endl;
         break;
     case SDL_WINDOWEVENT_SIZE_CHANGED :
-        std::cout << "SDL_WINDOWEVENT_SIZE_CHANGED" << std::endl;
         on_resize_(event.data1, event.data2);
         break;
     case SDL_WINDOWEVENT_MINIMIZED :
-        std::cout << "SDL_WINDOWEVENT_MINIMIZED" << std::endl;
         break;
     case SDL_WINDOWEVENT_MAXIMIZED :
-        std::cout << "SDL_WINDOWEVENT_MAXIMIZED" << std::endl;
         break;
     case SDL_WINDOWEVENT_RESTORED :
-        std::cout << "SDL_WINDOWEVENT_RESTORED" << std::endl;
         break;
     case SDL_WINDOWEVENT_ENTER :
-        std::cout << "SDL_WINDOWEVENT_ENTER" << std::endl;
         break;
     case SDL_WINDOWEVENT_LEAVE :
-        std::cout << "SDL_WINDOWEVENT_LEAVE" << std::endl;
         break;
     case SDL_WINDOWEVENT_FOCUS_GAINED :
-        std::cout << "SDL_WINDOWEVENT_FOCUS_GAINED" << std::endl;
         break;
     case SDL_WINDOWEVENT_FOCUS_LOST :
-        std::cout << "SDL_WINDOWEVENT_FOCUS_LOST" << std::endl;
         break;
     case SDL_WINDOWEVENT_CLOSE :
-        std::cout << "SDL_WINDOWEVENT_CLOSE" << std::endl;
         break;
     default :
         break;
@@ -491,7 +475,7 @@ public:
 
     ////////////////////////////////////////////////////////////////////////////
 
-    texture create_texture(string_ref filename);
+    texture create_texture(path_string_ref filename);
     texture create_texture(uint8_t const* buffer, size_t width, size_t height);
     texture create_texture(size_t width, size_t height);
     void delete_texture(texture& tex);
@@ -645,10 +629,16 @@ renderer_impl::create_texture_(SDL_Surface* const surface) {
 }
 
 texture
-renderer_impl::create_texture(string_ref const filename) {
+renderer_impl::create_texture(path_string_ref const filename) {
     //TODO make this work for not just bmp.
+    
+    //TODO add a second version for bin data
+    auto const buffer = bkrl::read_file(filename);
+    auto const result = SDL_LoadBMP_RW(
+        SDL_RWFromConstMem(buffer.data(), buffer.size())
+      , 1
+    );
 
-    auto const result = SDL_LoadBMP(filename.data());
     if (result == nullptr) {
         BK_TODO_FAIL();
         //BOOST_THROW_EXCEPTION(error::make_sdl_error("SDL_LoadBMP"));

@@ -12,9 +12,8 @@ public:
     using cref = json::cref;
 
     //--------------------------------------------------------------------------
-    explicit entity_parser(string_ref const filename) {
-        auto const value = json::common::from_file(filename);
-        rule_root(value);
+    explicit entity_parser(cref data) {
+        rule_root(data);
     }
 
     //--------------------------------------------------------------------------
@@ -106,14 +105,14 @@ private:
 class entity_locale_parser : public json::common::locale {
 public:
     //--------------------------------------------------------------------------
-    explicit entity_locale_parser(string_ref const filename)
-      : locale {filename}
+    explicit entity_locale_parser(cref data)
+      : locale {data}
     {
         if (string_type != json::common::filetype_entity) {
             BK_TODO_FAIL();
         }
         
-        rule_root(root);
+        rule_root(data);
     }
 
     //--------------------------------------------------------------------------
@@ -155,13 +154,10 @@ private:
 
 } //namespace
 
-
-entity_def::definition_t
-entity_def::load_definitions(string_ref const filename) {
-    return entity_def::definition_t {entity_parser {filename}};
+entity_def::definition_t bkrl::load_entities(json::cref data) {
+    return entity_def::definition_t {entity_parser {data}};
 }
 
-entity_def::localized_t
-entity_def::load_localized_strings(string_ref const filename) {
-    return entity_def::localized_t {entity_locale_parser {filename}};
+entity_def::localized_t bkrl::load_entities_locale(json::cref data) {
+    return entity_def::localized_t {entity_locale_parser {data}};
 }

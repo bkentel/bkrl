@@ -130,7 +130,7 @@ public:
         for (size_t i = 0; !allow_sparse && i < value_to_string_.size(); ++i) {
             //TODO
             if (i != static_cast<size_t>(value_to_string_[i].value)) {
-                std::cout << "warning sparse enum\n";
+                //std::cout << "warning sparse enum\n";
             }
         }
 

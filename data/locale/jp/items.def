@@ -1,6 +1,6 @@
 { "file_type":   "LOCALE"
 , "string_type": "ITEM"
-, "language":    "jp"
+, "language":    "ja"
 , "definitions": [
     { "id":   "WEAPON_SWORD_SHORT"
     , "name": "短剣"

@@ -42,12 +42,17 @@ extern template class enum_map<message_type>;
 
 class message_map {
 public:
-    message_map(string_ref filename);
-    message_map(utf8string const& data);
+    BK_NOCOPY(message_map);
 
+    message_map(message_map&&);
+    message_map& operator=(message_map&&);
     ~message_map();
 
-    string_ref operator()(message_type msg, hash_t lang) const;
+    explicit message_map(json::cref data);
+
+    void reload(json::cref data);
+
+    string_ref operator[](message_type msg) const;
 private:
     class impl_t;
     std::unique_ptr<impl_t> impl_;

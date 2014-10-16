@@ -114,10 +114,10 @@ inline uint32_t slash_hash32(string_ref const ref) {
 }
 ////////////////////////////////////////////////////////////////////////////////
 
-std::string read_file(string_ref filename);
+utf8string read_file(path_string_ref filename);
 
-inline std::string read_file(std::string const& filename) {
-    return read_file(string_ref{filename});
+inline utf8string read_file(path_string const& filename) {
+    return read_file(path_string_ref {filename});
 }
 ////////////////////////////////////////////////////////////////////////////////
 

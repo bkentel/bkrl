@@ -17,8 +17,11 @@ utf8string const common::field_mappings    {"mappings"};
 utf8string const common::field_filename    {"file_name"};
 utf8string const common::field_tile_size   {"tile_size"};
 
-string_ref const common::filetype_locale      {"LOCALE"};
-string_ref const common::filetype_item        {"ITEM"};
-string_ref const common::filetype_entity      {"ENTITY"};
-string_ref const common::filetype_texture_map {"TEXTURE_MAP"};
-string_ref const common::filetype_keymap      {"KEYMAP"};
+string_ref const common::filetype_config  {"CONFIG"};
+string_ref const common::filetype_locale  {"LOCALE"};
+string_ref const common::filetype_item    {"ITEM"};
+string_ref const common::filetype_entity  {"ENTITY"};
+string_ref const common::filetype_tilemap {"TILEMAP"};
+string_ref const common::filetype_keymap  {"KEYMAP"};
+
+string_ref const common::stringtype_messages  {"MESSAGE"};

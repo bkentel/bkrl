@@ -8,7 +8,7 @@ using bkrl::renderer;
 ////////////////////////////////////////////////////////////////////////////////
 // application
 ////////////////////////////////////////////////////////////////////////////////
-application::application(string_ref keymap, config const& cfg)
+application::application(path_string_ref const keymap, config const& cfg)
   : impl_ {std::make_unique<detail::application_impl>(keymap, cfg)}
 {
 }
@@ -156,7 +156,7 @@ renderer::draw_texture(texture const& tex, rect_t const src, rect_t const dst) {
 }
 
 texture
-renderer::create_texture(string_ref const filename) {
+renderer::create_texture(path_string_ref const filename) {
     return impl_->create_texture(filename);
 }
 

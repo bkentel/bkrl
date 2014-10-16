@@ -14,6 +14,7 @@
 #include "time.hpp"
 #include "spatial_map.hpp"
 #include "scope_exit.hpp"
+#include "definitions.hpp"
 
 #include <boost/container/static_vector.hpp>
 #include <boost/format.hpp>
@@ -21,11 +22,12 @@
 using bkrl::engine_client;
 using bkrl::command_type;
 using bkrl::string_ref;
+using bkrl::path_string_ref;
 
 namespace random = bkrl::random;
 
 namespace {
-    static string_ref const file_key_map     {R"(./data/keymap.def)"};
+    static path_string_ref const file_key_map     {BK_PATH_LITERAL("./data/keymap.def")};
     static string_ref const file_texture_map {R"(./data/texture_map.def)"};
     static string_ref const file_messages_en {R"(./data/locale/en/messages.def)"}; //TODO
     static string_ref const file_messages_jp {R"(./data/locale/jp/messages.def)"}; //TODO
@@ -275,34 +277,7 @@ merge_walls(
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-struct data_definitions {
-    BK_NOCOPY(data_definitions);
-    
-    data_definitions()
-      : items           {item_def::load_definitions(file_items)}
-      , items_locale_en {item_def::load_localized_strings(file_items_en)}
-      , items_locale_jp {item_def::load_localized_strings(file_items_jp)}
 
-      , entities           {entity_def::load_definitions(file_entities)}
-      , entities_locale_en {entity_def::load_localized_strings(file_entities_en)}
-      , entities_locale_jp {entity_def::load_localized_strings(file_entities_jp)}
-
-      , messages_en     {file_messages_en}
-      , messages_jp     {file_messages_jp}
-    {
-    }
-
-    item_def::definition_t items;
-    item_def::localized_t  items_locale_en;
-    item_def::localized_t  items_locale_jp;
-
-    entity_def::definition_t entities;
-    entity_def::localized_t  entities_locale_en;
-    entity_def::localized_t  entities_locale_jp;
-
-    message_map messages_en;
-    message_map messages_jp;
-};
 
 namespace gui {
 
@@ -335,9 +310,8 @@ public:
     }
 
     void add_item(item const& itm) {
-        auto const& def   = definitions_->items_locale_jp(itm.id, 0);
+        auto const& def   = definitions_->get_items_loc()[itm.id];
         auto const& name  = def.name;
-        auto const  count = itm.count;
 
         name_buffer_.clear();
         name_buffer_.reserve(2 + name.size());
@@ -345,12 +319,24 @@ public:
         name_buffer_.push_back(prefix_);
         name_buffer_.append({"\t-\t"});
 
-        if (count > 1) {
-            name_buffer_.append(std::to_string(count));
+        if (itm.count > 1) {
+            name_buffer_.append(std::to_string(itm.count));
         }
 
         name_buffer_.push_back('\t');
         name_buffer_.append(name.data(), name.size());
+
+        if (itm.damage_min) {
+            BK_ASSERT_DBG(itm.damage_max);
+
+            name_buffer_.append({" ["});
+            name_buffer_.append(std::to_string(itm.damage_min));
+            name_buffer_.append({" - "});
+            name_buffer_.append(std::to_string(itm.damage_max));
+            name_buffer_.append({"]"});
+        }
+
+        ////////
 
         items_.emplace_back(*face_, name_buffer_, 500, 32);
 
@@ -513,7 +499,7 @@ public:
             sheet.render(r, 15, 0, p.x, p.y);
         }
 
-        auto const& entities = definitions_->entities;
+        auto const& entities = definitions_->get_entities();
         for (auto const& mob : mobs_) {
             auto const p = mob.position();
 
@@ -655,7 +641,7 @@ public:
         auto const p = object.position();
         BK_ASSERT_DBG(!!entity_at(p));
 
-        auto const range = definitions_->entities[object.id()].items;
+        auto const range = definitions_->get_entities()[object.id()].items;
 
         auto const count = random::uniform_range(trivial, range);
         for (int i = 0; i < count; ++i) {
@@ -748,7 +734,7 @@ public:
             result.push_back('\n');
             
             auto const& id = items_.get_value(itm).id;
-            auto const& name = definitions_->items_locale_jp(id, 0).name;
+            auto const& name = definitions_->get_items_loc()[id].name;
 
             result.append(name);
         }
@@ -759,7 +745,7 @@ public:
             }
 
             auto const& id = mob.id();
-            auto const& name = definitions_->entities_locale_jp(id, 0).name;
+            auto const& name = definitions_->get_entities_loc()[id].name;
 
             result.push_back('\n');
             result.append(name.data(), name.size());
@@ -886,8 +872,8 @@ private:
 
     //--------------------------------------------------------------------------
     item generate_level_item_(random::generator& substantive) {
-        auto const& items  = definitions_->items;
-        auto const& locale = definitions_->items_locale_jp;
+        auto const& items  = definitions_->get_items();
+        auto const& locale = definitions_->get_items_loc();
 
         auto const size = static_cast<int>(items.size());
         BK_ASSERT(size > 0);
@@ -895,10 +881,10 @@ private:
         auto const index = random::uniform_range(substantive, 0, size - 1);
 
         auto const& idef = items.at_index(index);
-        auto const& iloc = locale(idef.id, 0);
-        auto const& name = iloc.name;
+        //auto const& iloc = locale[idef.id];
+        //auto const& name = iloc.name;
         
-        return item {idef.id};
+        return item {substantive, items, idef.id};
     }
 
     //--------------------------------------------------------------------------
@@ -938,7 +924,7 @@ private:
                 continue;
             }
             
-            auto const& entities = definitions_->entities;
+            auto const& entities = definitions_->get_entities();
             auto const  size     = static_cast<int>(entities.size());
 
             BK_ASSERT(size > 0);
@@ -1019,7 +1005,7 @@ private:
     //! update the texture id for the tile at @p p using the mappings in @p map.
     //------------------------------------------------------------------------------
     void update_texture_id_(grid_point const p) {
-        tile_map const& map = get_tile_map_();
+        auto const& map = get_tile_map_();
 
         auto const type = grid_.get(attribute::texture_type, p);
         auto const id   = map[type];
@@ -1111,7 +1097,7 @@ private:
     }
 
     //--------------------------------------------------------------------------
-    tile_map const& get_tile_map_() const {
+    tilemap const& get_tile_map_() const {
         BK_ASSERT_DBG(tile_sheet_);
         return tile_sheet_->map();
     }
@@ -1515,25 +1501,29 @@ public:
       , font_size = 20
     };
 
-    explicit impl_t(config const& cfg)
-      : random_substantive_ {cfg.substantive_seed}
-      , random_trivial_     {cfg.trivial_seed}
-      , app_                {file_key_map, cfg}
+    explicit impl_t(data_definitions& defs)
+      : definitions_        {&defs}
+      , config_             {&defs.get_config()}
+      , random_substantive_ {config_->substantive_seed}
+      , random_trivial_     {config_->trivial_seed}
+      , app_                {file_key_map, *config_}
       , renderer_           {app_}
       , font_lib_           {}
-      , font_face_          {renderer_, font_lib_, cfg.font_name, font_size}
+      , font_face_          {renderer_, font_lib_, config_->font_name, font_size}
       , last_message_       {}
-      , sheet_              {file_texture_map, renderer_}
+      , sheet_              {defs.get_tilemap(), renderer_}
       , view_               {sheet_, app_.client_width(), app_.client_height()}
       , cur_level_          {nullptr}
       , player_             {}
       , input_mode_         {nullptr}
-      , item_list_          {font_face_, definitions_}
+      , item_list_          {font_face_, *definitions_}
       , imode_direction_    {[&] {input_mode_ = nullptr;}}
       , imode_selection_    {[&] {input_mode_ = nullptr;}}
     {
+        definitions_->set_language(BK_MAKE_LANG_CODE2('e','n'));
+
         //TODO
-        item::current_locale = &definitions_.items_locale_jp;
+        item::current_locale = &definitions_->get_items_loc();;
         
         ////////////////////////////////////////////////////
         init_sinks();
@@ -1607,12 +1597,12 @@ public:
         last_message_fade_ = 5;
     }
 
-    void print_message(message_type const msg, hash_t lang = 0) {
+    void print_message(message_type const msg) {
         if (msg == message_type::none) {
             last_message_ = transitory_text_layout {};
         } else {
             //TODO
-            print_message(definitions_.messages_jp(msg, lang));
+            print_message(definitions_->get_messages()[msg]);
         }
     }
 
@@ -1622,7 +1612,7 @@ public:
         auto const size = static_cast<int>(levels_.size());
 
         if (level == size) {
-            levels_.emplace_back(random_substantive_, random_trivial_, definitions_, player_, sheet_, level_w, level_h);
+            levels_.emplace_back(random_substantive_, random_trivial_, *definitions_, player_, sheet_, level_w, level_h);
             cur_level_ = &levels_.back();
         } else if (level < size) {
             cur_level_ = &levels_[level];
@@ -1816,10 +1806,9 @@ public:
         if (ent) {
             auto const& target = ent.get();
             auto const& target_id = target.id();
-            auto const& target_name = definitions_.entities_locale_jp(target_id, 0).name;
+            auto const& target_name = definitions_->get_entities_loc()[target_id].name;
 
-            //TODO add languages and formatting functions
-            auto const msg_string = definitions_.messages_jp(message_type::kill_regular, 0);
+            auto const msg_string = definitions_->get_messages()[message_type::kill_regular];
             auto fmt = boost::format {msg_string.data()};
             print_message(boost::str(fmt % target_name));
 
@@ -1924,14 +1913,13 @@ public:
     
     void get_item(ipoint2 const p, int const index) {
         auto item = cur_level_->get_item(p, index);
-        auto const name = item.name(definitions_.items_locale_jp);
+        auto const name = item.name(definitions_->get_items_loc());
 
-        //TODO add languages and formatting functions
-        auto const msg_string = definitions_.messages_jp(message_type::get_ok, 0);
+        auto const msg_string = definitions_->get_messages()[message_type::get_ok];
         auto fmt = boost::format {msg_string.data()};
         print_message(boost::str(fmt % name));
 
-        player_.add_item(std::move(item), definitions_.items);
+        player_.add_item(std::move(item), definitions_->get_items());
 
         advance();
     }
@@ -2086,6 +2074,9 @@ public:
         //std::cout << std::endl;
     }
 private:
+    data_definitions* definitions_;
+    config const*     config_;
+
     random::generator random_substantive_;
     random::generator random_trivial_;
 
@@ -2096,8 +2087,6 @@ private:
     font_face   font_face_;
 
     timer       timers_;
-
-    data_definitions definitions_;
 
     transitory_text_layout last_message_;
     int                    last_message_fade_ = 5;
@@ -2129,15 +2118,7 @@ private:
 
 engine_client::~engine_client() = default;
 
-engine_client::engine_client(bkrl::config const& conf)
-  : impl_ {std::make_unique<impl_t>(conf)}
+engine_client::engine_client(bkrl::data_definitions& defs)
+  : impl_ {std::make_unique<impl_t>(defs)}
 {
-}
-
-void engine_client::on_command(bkrl::command_type const cmd) {
-    impl_->on_command(cmd);
-}
-
-void engine_client::render(bkrl::renderer& r) {
-    impl_->render(r);
 }

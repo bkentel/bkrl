@@ -14,31 +14,60 @@ namespace bkrl {
 class renderer;
 class texture;
 
+template <typename Key, typename Value>
+class mapping {
+public:
+    using map_t   = boost::container::flat_map<Key, Value>;
+    using value_t = Value;
+    using key_t   = Key;
+
+    static_assert(std::is_scalar<Key>::value, "");
+
+    BK_NOCOPY(mapping);
+    BK_DEFMOVE(mapping);
+
+    mapping()  = default;
+    ~mapping() = default;
+
+    void reset(map_t&& data) {
+        data_ = std::move(data);
+    }
+
+    value_t const& operator[](key_t const k) const {
+        auto const it = data_.find(k);
+        if (it == std::end(data_)) {
+            BK_TODO_FAIL();
+        }
+
+        return it->second;
+    }
+
+    size_t size() const {
+        return data_.size();
+    }
+
+    bool empty() const {
+        return data_.empty();
+    }
+private:
+    map_t data_;
+};
+
 //==============================================================================
-//! tile_map
+//! tilemap
 //! map texture_type -> texture_id
 //==============================================================================
-class tile_map {
+class tilemap : public mapping<texture_type, texture_id> {
 public:
-    BK_NOCOPY(tile_map);
+    using mapping<texture_type, texture_id>::mapping;
 
-    //--------------------------------------------------------------------------
-    //! @param source The json describing the mappings.
-    //--------------------------------------------------------------------------
-    explicit tile_map(string_ref filename);
-    explicit tile_map(utf8string const& source);
-    ~tile_map();
+    int tile_w = 0;
+    int tile_h = 0;
 
-    texture_id operator[](texture_type type) const;
-
-    int tile_w() const noexcept;
-    int tile_h() const noexcept;
-
-    string_ref filename() const;
-private:
-    class impl_t;
-    std::unique_ptr<impl_t> impl_;
+    path_string filename = path_string {};
 };
+
+tilemap load_tilemap(json::cref data);
 
 //==============================================================================
 // tile_sheet
@@ -47,7 +76,7 @@ class tile_sheet {
 public:
     using rect_t = renderer::rect_t;
 
-    tile_sheet(string_ref filename, renderer& render);
+    tile_sheet(tilemap const& map, renderer& render);
 
     rect_t get_rect(int const i) const {
         auto const d = std::div(i, tiles_x());
@@ -68,11 +97,11 @@ public:
     }
      
     int tile_width() const noexcept {
-        return tile_map_.tile_w();
+        return map().tile_w;
     }
 
     int tile_height() const noexcept {
-        return tile_map_.tile_h();
+        return map().tile_h;
     }
 
     int tiles_x() const noexcept {
@@ -93,8 +122,8 @@ public:
         render.draw_texture(tile_texture_, src_r, dst_r);
     }
 
-    tile_map const& map() const {
-        return tile_map_;
+    tilemap const& map() const {
+        return *map_;
     }
 
     texture& get_texture() const {
@@ -102,8 +131,8 @@ public:
         return const_cast<tile_sheet*>(this)->tile_texture_;
     }
 private:
-    tile_map tile_map_;
-    texture  tile_texture_;
+    tilemap const* map_;
+    texture        tile_texture_;
 
     int tile_x_; //tiles per row
     int tile_y_; //rows

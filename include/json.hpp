@@ -4,6 +4,7 @@
 #include "assert.hpp"
 #include "types.hpp"
 #include "util.hpp"
+#include "random.hpp"
 
 namespace bkrl {
 namespace json {
@@ -257,11 +258,14 @@ extern utf8string const field_mappings;
 extern utf8string const field_filename;
 extern utf8string const field_tile_size;
 //------------------------------------------------------------
+extern string_ref const filetype_config;
 extern string_ref const filetype_locale;
 extern string_ref const filetype_item;
 extern string_ref const filetype_entity;
-extern string_ref const filetype_texture_map;
+extern string_ref const filetype_tilemap;
 extern string_ref const filetype_keymap;
+//------------------------------------------------------------
+extern string_ref const stringtype_messages;
 //------------------------------------------------------------
 
 inline string_ref get_filetype(cref value) {
@@ -289,7 +293,7 @@ inline json11::Json from_memory(utf8string const& data) {
     return json;
 }
 
-inline json11::Json from_file(string_ref filename) {
+inline json11::Json from_file(path_string_ref const filename) {
     auto const data = read_file(filename);
     return from_memory(data);
 }
@@ -297,12 +301,15 @@ inline json11::Json from_file(string_ref filename) {
 struct locale {
     using cref = json::cref;
 
-    explicit locale(string_ref const filename)
-      : root {from_file(filename)}
+    explicit locale(cref value) {
+        rule_file_type(value);
+        rule_string_type(value);
+        rule_language(value);
+    }
+
+    explicit locale(path_string_ref const filename)
+      : locale {from_file(filename)}
     {
-        rule_file_type(root);
-        rule_string_type(root);
-        rule_language(root);
     }
 
     void rule_file_type(cref value) {
@@ -325,6 +332,100 @@ struct locale {
 
     string_ref string_type;
     string_ref language;
+};
+
+struct random {
+    using cref   = json::cref;
+    using dist_t = bkrl::random::random_dist;
+
+    random(cref value) {
+        require_array(value, 1);
+        rule_type(value);
+    }
+
+    void rule_type(cref value) {
+        static string_ref const type_constant_str {"constant"};
+        static string_ref const type_uniform_str  {"uniform"};
+        static string_ref const type_dice_str     {"dice"};
+        static string_ref const type_normal_str   {"normal"};
+
+        static hash_t const type_constant_hash = slash_hash32(type_constant_str);
+        static hash_t const type_uniform_hash  = slash_hash32(type_uniform_str);
+        static hash_t const type_dice_hash     = slash_hash32(type_dice_str);
+        static hash_t const type_normal_hash   = slash_hash32(type_normal_str);
+
+        auto const type_str  = require_string(value[0]);
+        auto const type_hash = slash_hash32(type_str);
+
+        if (type_hash == type_constant_hash) {
+            rule_constant(value);
+        } else if (type_hash == type_uniform_hash) {
+            rule_uniform(value);
+        } else if (type_hash == type_dice_hash) {
+            rule_dice(value);
+        } else if (type_hash == type_normal_hash) {
+            rule_normal(value);
+        } else {
+            BK_TODO_FAIL();
+        }
+    }
+
+    void rule_constant(cref value) {
+        require_array(value, 2, 2);
+
+        auto const n = require_int(value[1]);
+
+        dist_.set_constant(n);
+    }
+
+    void rule_uniform(cref value) {
+        require_array(value, 3, 3);
+
+        auto const lo = require_int(value[1]);
+        auto const hi = require_int(value[2]);
+
+        if (lo > hi) {
+            BK_TODO_FAIL();
+        }
+
+        dist_.set_uniform(lo, hi);
+    }
+
+    void rule_dice(cref value) {
+        require_array(value, 3, 4);
+
+        auto const count = require_int(value[1]);
+        auto const sides = require_int(value[2]);
+        auto const mod   = default_int(value[3], 0);
+
+        if (count < 1) {
+            BK_TODO_FAIL();
+        }
+
+        if (sides < 1) {
+            BK_TODO_FAIL();
+        }
+
+        dist_.set_dice(count, sides, mod);
+    }
+
+    void rule_normal(cref value) {
+        require_array(value, 3, 5);
+
+        auto const mean  = require_float<double>(value[1]);
+        auto const sigma = require_float<double>(value[2]);
+
+        auto const min = default_int(value[3], std::numeric_limits<int>::min());
+        auto const max = default_int(value[4], std::numeric_limits<int>::max());
+
+        dist_.set_normal(mean, sigma, min, max);
+    }
+
+    operator dist_t() const {
+        return dist_;
+    }
+
+    dist_t dist_;
 };
 
 } //namespace common
