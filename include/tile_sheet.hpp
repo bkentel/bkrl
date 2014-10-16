@@ -112,14 +112,19 @@ public:
         return tile_y_;
     }
 
-    void render(renderer& render, int const tile_x, int const tile_y, int const x, int const y) const {
+    void render(renderer& r, int const tile_x, int const tile_y, int const x, int const y) const {
         auto const w = tile_width();
         auto const h = tile_height();
 
         auto const src_r = get_rect(tile_x, tile_y);
         auto const dst_r = make_rect_size(x * w, y * h, w, h);
 
-        render.draw_texture(tile_texture_, src_r, dst_r);
+        r.draw_texture(tile_texture_, src_r, dst_r);
+    }
+
+    void render(renderer& r, int const index, int const x, int const y) const {
+        auto const d = std::div(index, tile_x_);
+        render(r, d.rem, d.quot, x, y);
     }
 
     tilemap const& map() const {

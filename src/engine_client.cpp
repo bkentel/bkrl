@@ -26,20 +26,6 @@ using bkrl::path_string_ref;
 
 namespace random = bkrl::random;
 
-//namespace {
-//    static path_string_ref const file_key_map     {BK_PATH_LITERAL("./data/keymap.def")};
-//    static string_ref const file_texture_map {R"(./data/texture_map.def)"};
-//    static string_ref const file_messages_en {R"(./data/locale/en/messages.def)"}; //TODO
-//    static string_ref const file_messages_jp {R"(./data/locale/jp/messages.def)"}; //TODO
-//    static string_ref const file_items       {R"(./data/items.def)"};
-//    static string_ref const file_items_en    {R"(./data/locale/en/items.def)"};
-//    static string_ref const file_items_jp    {R"(./data/locale/jp/items.def)"};
-//    static string_ref const file_entities    {R"(./data/entities.def)"};
-//    static string_ref const file_entities_en {R"(./data/locale/en/entities.def)"};
-//    static string_ref const file_entities_jp {R"(./data/locale/jp/entities.def)"};
-//
-//}
-
 namespace bkrl {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -277,8 +263,6 @@ merge_walls(
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-
-
 namespace gui {
 
 //==============================================================================
@@ -349,6 +333,10 @@ public:
     }
 
     void render(renderer& r, int const x, int const y) {
+        if (empty()) {
+            return;
+        }
+
         constexpr auto border = 8;
         
         static auto color_background = make_color(50,  50,  50);
@@ -408,9 +396,13 @@ public:
     int get_selection() const noexcept {
         return selection_;
     }
+    
+    bool empty() const noexcept {
+        return items_.empty();
+    }
 
     explicit operator bool() const noexcept {
-        return !items_.empty();
+        return !empty();
     }
 private:
     font_face*              face_        = nullptr;
@@ -476,30 +468,30 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    void render(renderer& r) {
+    void draw_map(renderer& r) {
         auto const w = grid_.width();
         auto const h = grid_.height();
 
         auto const& sheet = *tile_sheet_;
-        auto&       tex   = sheet.get_texture();
-
-        r.set_color_mod(tex);
-        for (bkrl::grid_index y = 0; y < h; ++y) {
-            for (bkrl::grid_index x = 0; x < w; ++x) {
-                auto const texture = grid_.get(attribute::texture_id, x, y);
-                auto const tx = texture % sheet.tiles_x(); //TODO
-                auto const ty = texture / sheet.tiles_x();
-
-                sheet.render(r, tx, ty, x, y);
+        
+        //set to default color
+        r.set_color_mod(sheet.get_texture());
+        
+        for (grid_index y = 0; y < h; ++y) {
+            for (grid_index x = 0; x < w; ++x) {
+                auto const i = grid_.get(attribute::texture_id, x, y);
+                sheet.render(r, i, x, y);
             }
         }
+    }
 
-        for (auto const& i : items_) {
-            auto const p = i.first;
-            sheet.render(r, 15, 0, p.x, p.y);
-        }
+    //--------------------------------------------------------------------------
+    void draw_entities(renderer& r) {
+        auto const& sheet = *tile_sheet_;
+        auto&       tex   = sheet.get_texture();
 
         auto const& entities = definitions_->get_entities();
+
         for (auto const& mob : mobs_) {
             auto const p = mob.position();
 
@@ -508,11 +500,28 @@ public:
             auto const tx = e.tile_x;
             auto const ty = e.tile_y;
 
-            r.set_color_mod(tex, make_color(e.r, e.g, e.b));
+            auto const color = make_color(e.r, e.g, e.b);
+
+            r.set_color_mod(tex, color);
             sheet.render(r, tx, ty, p.x, p.y);
         }
+    }
 
-        r.set_color_mod(tex);
+    //--------------------------------------------------------------------------
+    void draw_items(renderer& r) {
+        auto const& sheet = *tile_sheet_;
+
+        for (auto const& i : items_) {
+            auto const p = i.first;
+            sheet.render(r, 15, 0, p.x, p.y);
+        }
+    }
+
+    //--------------------------------------------------------------------------
+    void render(renderer& r) {
+        draw_map(r);
+        draw_items(r);
+        draw_entities(r);
     }
 
     //--------------------------------------------------------------------------
@@ -1688,6 +1697,8 @@ public:
 
     void draw_level(renderer& r) {
         cur_level_->render(r);
+
+        r.set_color_mod(sheet_.get_texture(), make_color(255, 255, 255));
 
         auto const player_pos = player_.position();
         sheet_.render(r, 1, 0, player_pos.x, player_pos.y);
