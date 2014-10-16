@@ -8,8 +8,8 @@ using bkrl::renderer;
 ////////////////////////////////////////////////////////////////////////////////
 // application
 ////////////////////////////////////////////////////////////////////////////////
-application::application(path_string_ref const keymap, config const& cfg)
-  : impl_ {std::make_unique<detail::application_impl>(keymap, cfg)}
+application::application(keymap const& map, config const& cfg)
+  : impl_ {std::make_unique<detail::application_impl>(map, cfg)}
 {
 }
 

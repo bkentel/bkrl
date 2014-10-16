@@ -155,6 +155,7 @@ struct random_dist {
 
     dist_type type = none;
 
+#pragma warning( disable : 4582 )
     union union_t {
         int dummy;
 
@@ -181,6 +182,7 @@ struct random_dist {
 
         union_t() : dummy (0) {}
     } data;
+#pragma warning( default : 4582 )
 };
 
 using range_generator = std::function<unsigned (unsigned lo, unsigned hi)>;

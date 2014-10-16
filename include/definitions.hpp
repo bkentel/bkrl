@@ -7,6 +7,7 @@
 #include "entity.hpp"
 #include "messages.hpp"
 #include "tile_sheet.hpp"
+#include "keyboard.hpp"
 
 #include "json.hpp"
 
@@ -27,7 +28,7 @@ using lang_id = bkrl::tagged_type<uint32_t, struct lang_id_tag>;
 class data_definitions {
 public:
     enum class filetype {
-        invalid, config, locale, item, message, texmap, entity
+        invalid, config, locale, item, message, texmap, entity, keymap
     };
     
     static lang_id get_language(json::cref value) {
@@ -69,24 +70,13 @@ public:
         messages_current_loc_ = get_current(messages_, lang);
     }
 
-    config const& get_config() const { return config_; }
-
-    tilemap const& get_tilemap() const { return tilemap_; }
-
-    message_map const& get_messages() const { return *messages_current_loc_; }
-
-    item_def::definition_t   const& get_items()    const { return items_; }
-    entity_def::definition_t const& get_entities() const { return entities_; }
-    
-    item_def::localized_t   const& get_items_loc()    const { return *items_current_loc_; }
-    entity_def::localized_t const& get_entities_loc() const { return *entities_current_loc_; }
-
     filetype get_file_type(json::cref value) {
         static auto const hash_config  = slash_hash32(json::common::filetype_config);
         static auto const hash_locale  = slash_hash32(json::common::filetype_locale);
         static auto const hash_texmap  = slash_hash32(json::common::filetype_tilemap);
         static auto const hash_item    = slash_hash32(json::common::filetype_item);
         static auto const hash_entitiy = slash_hash32(json::common::filetype_entity);
+        static auto const hash_keymap  = slash_hash32(json::common::filetype_keymap);
 
         auto const type = json::common::get_filetype(value);
         auto const hash = slash_hash32(type);
@@ -96,6 +86,7 @@ public:
         else if (hash == hash_texmap)  { return filetype::texmap; }
         else if (hash == hash_item)    { return filetype::item; }
         else if (hash == hash_entitiy) { return filetype::entity; }
+        else if (hash == hash_keymap)  { return filetype::keymap; }
 
         return filetype::invalid;
     }
@@ -159,7 +150,8 @@ public:
         entities_ = bkrl::load_entities(value);
     }
 
-    void load_message(json::cref value) {
+    void load_keymap(json::cref value) {
+        keymap_ = keymap {value};
     }
 
     void load_files() {
@@ -173,6 +165,7 @@ public:
             case filetype::texmap  : load_texmap(value);  break;
             case filetype::item    : load_item(value);    break;
             case filetype::entity  : load_entity(value);  break;
+            case filetype::keymap  : load_keymap(value);  break;
             }
         }
     }
@@ -204,6 +197,18 @@ public:
             }
         );
     }
+
+    config  const& get_config()  const { return config_; }
+    keymap  const& get_keymap()  const { return keymap_; }
+    tilemap const& get_tilemap() const { return tilemap_; }
+
+    message_map const& get_messages() const { return *messages_current_loc_; }
+
+    item_def::definition_t   const& get_items()    const { return items_; }
+    entity_def::definition_t const& get_entities() const { return entities_; }
+    
+    item_def::localized_t   const& get_items_loc()    const { return *items_current_loc_; }
+    entity_def::localized_t const& get_entities_loc() const { return *entities_current_loc_; }
 private:
     lang_id language_ = BK_MAKE_LANG_CODE2('e','n');
 
@@ -212,8 +217,8 @@ private:
     template <typename T>
     using map_t = boost::container::flat_map<lang_id, T>;
 
-    config config_;
-
+    config  config_;
+    keymap  keymap_;
     tilemap tilemap_;
 
     item_def::definition_t       items_;

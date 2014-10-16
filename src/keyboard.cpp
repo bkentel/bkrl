@@ -13,7 +13,7 @@ class keymap::impl_t {
 public:
     using cref = json::cref;
 
-    explicit impl_t(path_string_ref filename);
+    explicit impl_t(json::cref data);
 
     void rule_root(cref value);
     void rule_file_type(cref value);
@@ -25,10 +25,8 @@ private:
     std::vector<key_mapping> mappings_;
 };
 
-keymap::impl_t::impl_t(path_string_ref const filename) {
-    auto const json = json::common::from_file(filename);
-
-    rule_root(json);
+keymap::impl_t::impl_t(json::cref data) {
+    rule_root(data);
 
     bkrl::sort(mappings_, [](auto const& lhs, auto const& rhs) {
         return lhs.keys < rhs.keys;
@@ -119,17 +117,17 @@ void keymap::impl_t::rule_mapping_value(cref value) {
 ////////////////////////////////////////////////////////////////////////////////
 // bkrl::keymap implementation
 ////////////////////////////////////////////////////////////////////////////////
-keymap::keymap() {
-}
+keymap::keymap() = default;
+keymap::keymap(keymap&&) = default;
+keymap& keymap::operator=(keymap&&) = default;
+keymap::~keymap() = default;
 
-keymap::keymap(path_string_ref const filename)
-  : impl_ {std::make_unique<impl_t>(filename)}
+keymap::keymap(json::cref data)
+  : impl_ {std::make_unique<impl_t>(data)}
 {
 }
 
-keymap::~keymap() = default;
-
 command_type
-keymap::operator[](key_combo const key) {
+keymap::operator[](key_combo const key) const {
     return (*impl_)[key];
 }

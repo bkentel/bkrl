@@ -26,19 +26,19 @@ using bkrl::path_string_ref;
 
 namespace random = bkrl::random;
 
-namespace {
-    static path_string_ref const file_key_map     {BK_PATH_LITERAL("./data/keymap.def")};
-    static string_ref const file_texture_map {R"(./data/texture_map.def)"};
-    static string_ref const file_messages_en {R"(./data/locale/en/messages.def)"}; //TODO
-    static string_ref const file_messages_jp {R"(./data/locale/jp/messages.def)"}; //TODO
-    static string_ref const file_items       {R"(./data/items.def)"};
-    static string_ref const file_items_en    {R"(./data/locale/en/items.def)"};
-    static string_ref const file_items_jp    {R"(./data/locale/jp/items.def)"};
-    static string_ref const file_entities    {R"(./data/entities.def)"};
-    static string_ref const file_entities_en {R"(./data/locale/en/entities.def)"};
-    static string_ref const file_entities_jp {R"(./data/locale/jp/entities.def)"};
-
-}
+//namespace {
+//    static path_string_ref const file_key_map     {BK_PATH_LITERAL("./data/keymap.def")};
+//    static string_ref const file_texture_map {R"(./data/texture_map.def)"};
+//    static string_ref const file_messages_en {R"(./data/locale/en/messages.def)"}; //TODO
+//    static string_ref const file_messages_jp {R"(./data/locale/jp/messages.def)"}; //TODO
+//    static string_ref const file_items       {R"(./data/items.def)"};
+//    static string_ref const file_items_en    {R"(./data/locale/en/items.def)"};
+//    static string_ref const file_items_jp    {R"(./data/locale/jp/items.def)"};
+//    static string_ref const file_entities    {R"(./data/entities.def)"};
+//    static string_ref const file_entities_en {R"(./data/locale/en/entities.def)"};
+//    static string_ref const file_entities_jp {R"(./data/locale/jp/entities.def)"};
+//
+//}
 
 namespace bkrl {
 
@@ -1506,7 +1506,7 @@ public:
       , config_             {&defs.get_config()}
       , random_substantive_ {config_->substantive_seed}
       , random_trivial_     {config_->trivial_seed}
-      , app_                {file_key_map, *config_}
+      , app_                {defs.get_keymap(), *config_}
       , renderer_           {app_}
       , font_lib_           {}
       , font_face_          {renderer_, font_lib_, config_->font_name, font_size}

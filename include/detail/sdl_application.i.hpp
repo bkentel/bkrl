@@ -95,7 +95,7 @@ private:
 //==============================================================================
 class application_impl : public application_base {
 public:
-    application_impl(path_string_ref keymap, config const& cfg);
+    application_impl(keymap const& map, config const& cfg);
 
     handle_t handle() const;
 
@@ -142,7 +142,7 @@ private:
     mouse_button_sink on_mouse_button_;
     mouse_wheel_sink  on_mouse_wheel_;
 
-    keymap key_map_;
+    keymap const* key_map_;
 
     bool running_;
 };
@@ -177,12 +177,12 @@ application_impl::create_window_(
 
 //------------------------------------------------------------------------------
 application_impl::application_impl(
-    path_string_ref const  keymap
-  , config          const& cfg
+    keymap const& map
+  , config const& cfg
 )
   : state_   {}
   , window_  {create_window_(cfg.window_w, cfg.window_h, cfg.window_x, cfg.window_y)}
-  , key_map_ {keymap}
+  , key_map_ {&map}
   , running_ {true}
 {
     on_char_         = [](char) {};
@@ -387,7 +387,7 @@ application_impl::handle_event_kb(SDL_KeyboardEvent const& event) {
       , mods
     };
 
-    auto const command = key_map_[key];
+    auto const command = (*key_map_)[key];
     if (!on_command_(command)) {
         return;
     }

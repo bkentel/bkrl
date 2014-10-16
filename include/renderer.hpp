@@ -20,6 +20,7 @@ class renderer;
 class tile_sheet;
 class texture;
 class config;
+class keymap;
 
 namespace detail { class renderer_impl; }
 namespace detail { class application_impl; }
@@ -68,7 +69,7 @@ struct application_base {
 //==============================================================================
 class application : public detail::application_base {
 public:
-    application(path_string_ref keymap, config const& cfg);
+    application(keymap const& map, config const& cfg);
     ~application();
 
     handle_t handle() const;

@@ -93,11 +93,16 @@ struct key_mapping {
 //==============================================================================
 class keymap {
 public:
+    BK_NOCOPY(keymap);
+
     keymap();
-    explicit keymap(path_string_ref filename);
+    keymap(keymap&&);
+    keymap& operator=(keymap&&);
     ~keymap();
 
-    command_type operator[](key_combo const key);
+    explicit keymap(json::cref data);
+
+    command_type operator[](key_combo const key) const;
 private:
     class impl_t;
     std::unique_ptr<impl_t> impl_;
