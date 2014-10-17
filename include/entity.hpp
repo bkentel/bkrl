@@ -29,16 +29,31 @@ entity_def::localized_t  load_entities_locale(json::cref data);
 //==============================================================================
 class entity {
 public:
-    using point_t = ipoint2;
+    BK_NOCOPY(entity);
+    //BK_DEFMOVE(entity);
+    entity() = default;
 
-    explicit entity(point_t const pos, string_id const id)
-      : id_ {id}
-      , pos_ (pos)
+    entity(entity&& other)
+      : id_  {other.id_}
+      , pos_ (other.pos_)
+      , items_ {std::move(other.items_)}
     {
     }
 
-    entity()
-      : pos_ (point_t{0, 0})
+    entity& operator=(entity&& rhs) {
+        //TODO use swap
+        id_    = rhs.id_;
+        pos_   = rhs.pos_;
+        items_ = std::move(rhs.items_);
+
+        return *this;
+    }
+
+    using point_t = ipoint2;
+
+    entity(point_t const pos, string_id const id)
+      : id_ {id}
+      , pos_ (pos)
     {
     }
 
@@ -65,38 +80,17 @@ public:
     }
 
     void add_item(item&& itm, item_def::definition_t const& defs) {
-        auto const can_stack = itm.can_stack(defs);
-
-        if (can_stack) {
-            auto const end = std::end(items_);
-            auto const beg = std::begin(items_);
-            auto const it  = std::find_if(beg, end, [&](item const& other) {
-                return (itm == other) && (other.count < other.max_stack(defs));
-            });
-
-            if (it != end) {
-                it->count += itm.count;
-                return;
-            }
-        }
-
-        items_.emplace_back(std::move(itm));
-        bkrl::sort(items_);
+        items_.insert(std::move(itm), defs);
     }
 
-    auto items_begin() const {
-        return std::cbegin(items_);
-    }
-
-    auto items_end() const {
-        return std::cend(items_);
-    }
+    item_stack&       items()       { return items_; }
+    item_stack const& items() const { return items_; }
 
     identifier id() const { return id_; }
 private:
+    point_t    pos_ = {};
     identifier id_;
-    point_t pos_;
-    std::vector<item> items_;
+    item_stack items_;
 };
 
 //==============================================================================

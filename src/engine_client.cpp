@@ -451,20 +451,24 @@ public:
             }
 
             auto const v = random::direction(trivial);
+            if (v.x == 0 && v.y == 0) {
+                continue;
+            }
+
             if (!can_move_by(mob, v)) {
                 continue;
             }
 
-            auto const p   = mob.position() + v;
-            auto const ent = entity_at(p);
-            if (ent) {
+            auto const p = mob.position() + v;
+            if (entity_at(p)) {
                 continue;
             }
 
-            mob.move_by(v);
+            mob.move_to(p);
+            mobs_.sort();
         }
 
-        mobs_.sort();
+        
     }
 
     //--------------------------------------------------------------------------
@@ -525,51 +529,92 @@ public:
     }
 
     //--------------------------------------------------------------------------
+    //! Return the item stack at p. If no item stack exists already, create one.
+    //--------------------------------------------------------------------------
+    item_stack& make_stack_at_(ipoint2 const p) {
+        auto const stack = items_.at(p);
+        if (!stack) {
+            items_.insert(p);
+            items_.sort(); //TODO
+        }
+
+        return *items_.at(p);
+    }
+
+    //--------------------------------------------------------------------------
+    //! Return the item stack at p. Fail if none exists.
+    //--------------------------------------------------------------------------
+    item_stack& require_stack_at_(ipoint2 const p) {
+        auto const stack = items_.at(p);
+        if (!stack) {
+            BK_TODO_FAIL();
+        }
+
+        return *stack;
+    }
+
+    item_stack const& require_stack_at_(ipoint2 const p) const {
+        return const_cast<level*>(this)->require_stack_at_(p);
+    }
+
+    //--------------------------------------------------------------------------
+    //! @result message_type::get_no_items      - nothing here
+    //!         message_type::get_which_prompt  - more than one item
+    //!         message_type::none              - ok; just one item
+    //--------------------------------------------------------------------------
     message_type can_get_item(ipoint2 const p) const {
-        auto result = message_type::get_no_items;
+        auto const& stack = items_.at(p);
+        if (!stack) {
+            return message_type::get_no_items;
+        }
 
-        items_.find(p, [&](item const&) {
-            result = (result == message_type::get_no_items)
-              ? message_type::none
-              : message_type::get_which_prompt;
-        });
+        auto const size = stack->size();
+        BK_ASSERT(size > 0);
 
-        return result;
+        if (size > 1) {
+            return message_type::get_which_prompt;
+        }
+
+        return message_type::none;
     }
 
+    //--------------------------------------------------------------------------
+    //! Get the item at @p index in the item stack at @p p, and remove it from the level.
+    //--------------------------------------------------------------------------
     item get_item(ipoint2 const p, int const index = 0) {
-        int i = 0;
+        auto& stack = require_stack_at_(p);
 
-        item* which = nullptr;
-        items_.find(p, [&](item& itm) {
-            if (i++ == index) {
-                which = &itm;
-            }
-        });
-        BK_ASSERT(which != nullptr);
+        BK_ASSERT_DBG(stack.size() > index);
+        auto result = stack.remove(index);
 
-        item result = std::move(*which);
-
-
-        i = 0;
-        items_.remove(p, [&](item&) {
-            return i++ == index;
-        });
-
-        items_.sort();
+        if (stack.empty()) {
+            items_.remove(p);
+        }
 
         return result;
     }
 
-    std::vector<item const*> get_item_list(ipoint2 const p) const {
-        std::vector<item const*> result;
-
-        items_.find(p, [&](item const& itm) {
-            result.push_back(&itm);
-        });
-
-        return result;
+    optional<item_stack const&> get_stack_at(ipoint2 const p) const {
+        return items_.at(p);
     }
+
+    //std::vector<item const*> get_item_list(ipoint2 const p) const {
+    //    std::vector<item const*> result;
+
+    //    auto opt_stack = items_.at(p);
+    //    if (!opt_stack) {
+    //        BK_TODO_FAIL();
+    //    }
+
+    //    auto const& stack = opt_stack.get();
+
+    //    result.reserve(stack.size());
+    //    for (auto const& itm : stack) {
+    //        result.push_back(&itm);
+    //    }
+
+    //    return result;
+    //}
 
     //--------------------------------------------------------------------------
     using adjacency = boost::container::static_vector<ipoint2, 9>;
@@ -617,47 +662,38 @@ public:
 
     //--------------------------------------------------------------------------
     optional<entity const&> entity_at(ipoint2 const p) const {
-        optional<entity const&> result {};
-
         if (player_->position() == p) {
-            result = *player_;
-            return result;
+            return static_cast<entity const&>(*player_);
         }
 
-        mobs_.find(p, [&](entity const& e) {
-            result = e;
-        });
-
-        return result;
+        return mobs_.at(p);
     }
 
     optional<entity&> entity_at(ipoint2 const p) {
-        optional<entity&> result {};
-
         if (player_->position() == p) {
-            result = static_cast<entity&>(*player_);
-            return result;
+            return static_cast<entity&>(*player_);
         }
 
-        mobs_.find(p, [&](entity& e) {
-            result = e;
-        });
-
-        return result;
+        return mobs_.at(p);
     }
     //--------------------------------------------------------------------------
+
+
+
     message_type attack(random::generator& trivial, entity& subject, entity& object) {
         auto const p = object.position();
         BK_ASSERT_DBG(!!entity_at(p));
 
         auto const range = definitions_->get_entities()[object.id()].items;
-
         auto const count = random::uniform_range(trivial, range);
-        for (int i = 0; i < count; ++i) {
-            items_.emplace(p, generate_mob_item_(trivial));
+        if (count == 0) {
+            return message_type::none;
         }
-
-        items_.sort();
+        
+        auto& stack = make_stack_at_(p);
+        for (int i = 0; i < count; ++i) {
+            stack.insert(generate_mob_item_(trivial), definitions_->get_items());
+        }
 
         mobs_.remove(p);
 
@@ -735,26 +771,24 @@ public:
         auto const type = grid_.get(attribute::tile_type, p);
         auto result = enum_map<tile_type>::get(type).string.to_string();
 
-        for (auto&& itm : as_const(items_)) {
-            if (items_.get_point(itm) != p) {
-                continue;
+        auto const stack = items_.at(p);
+        if (stack) {
+            auto const& locale = definitions_->get_items_loc();
+
+            for (auto&& itm : *stack) {
+                auto const& id   = itm.id;
+                auto const& name = locale[id].name;
+
+                result.push_back('\n');
+                result.append(name);
             }
-
-            result.push_back('\n');
-            
-            auto const& id = items_.get_value(itm).id;
-            auto const& name = definitions_->get_items_loc()[id].name;
-
-            result.append(name);
         }
         
-        for (auto&& mob : as_const(mobs_)) {
-            if (mob.position() != p) {
-                continue;
-            }
-
-            auto const& id = mob.id();
-            auto const& name = definitions_->get_entities_loc()[id].name;
+        auto const mob = mobs_.at(p);
+        if (mob) {
+            auto const& locale = definitions_->get_entities_loc();
+            auto const& id     = mob->id();
+            auto const& name   = locale[id].name;
 
             result.push_back('\n');
             result.append(name.data(), name.size());
@@ -888,10 +922,7 @@ private:
         BK_ASSERT(size > 0);
 
         auto const index = random::uniform_range(substantive, 0, size - 1);
-
         auto const& idef = items.at_index(index);
-        //auto const& iloc = locale[idef.id];
-        //auto const& name = iloc.name;
         
         return item {substantive, items, idef.id};
     }
@@ -920,10 +951,12 @@ private:
                 }
             }
 
-            items_.emplace(p, generate_level_item_(substantive));
+            auto& stack = make_stack_at_(p);
+            stack.insert(
+                generate_level_item_(substantive)
+              , definitions_->get_items()
+            );
         }
-
-        items_.sort();
     }
 
     //--------------------------------------------------------------------------
@@ -1124,7 +1157,7 @@ private:
     ipoint2 stairs_up_   = ipoint2 {0, 0};
     ipoint2 stairs_down_ = ipoint2 {0, 0};
 
-    spatial_map<item, int> items_;
+    spatial_map<item_stack, int> items_;
     spatial_map<entity>    mobs_;
 };
 
@@ -1660,7 +1693,7 @@ public:
         auto const x = 0;
         auto const y = 0;
         auto const w = last_message_.actual_width();
-        auto const h = last_message_.actual_height();
+        auto const h = font_face_.line_gap();
             
         r.set_draw_color(color_text_background);
         r.draw_filled_rect(make_rect_size(x, y, w, h));
@@ -1889,96 +1922,96 @@ public:
     void do_wait() {
         advance();
     }
+    
+    //--------------------------------------------------------------------------
+    //! Choose an item from a stack.
+    //! Changes the input mode to input_mode_selection.
     //--------------------------------------------------------------------------
     void get_item_selection_(ipoint2 const p) {
-        auto const items = cur_level_->get_item_list(p);
+        auto const stack = cur_level_->get_stack_at(p);
+        BK_ASSERT(stack);
 
         item_list_.clear();
-        item_list_.add_items(std::cbegin(items), std::cend(items));
+        item_list_.add_items(stack->cbegin(), stack->cend());
 
         auto const size = item_list_.size();
+        BK_ASSERT(size > 1);
 
         using result_t = input_mode_selection::result_t;
-
         input_mode_ = imode_selection_.enter_mode(size, [this, p](result_t const result, int const index) {
+            auto& l = item_list_;
+
             switch (result) {
-            case result_t::ok_select :
-                get_item(p, item_list_.get_selection());
-                break;
-            case result_t::ok_index :
-                get_item(p, index);
-                break;
-            case result_t::cancel :
-                break;
-            case result_t::next :
-                item_list_.select_next();
-                return;
-            case result_t::prev :
-                item_list_.select_prev();
-                return;
+            case result_t::ok_select : get_item_(p, l.get_selection()); break;
+            case result_t::ok_index  : get_item_(p, index);             break;
+            case result_t::cancel    :                                  break;
+            case result_t::next      : l.select_next();                 return;
+            case result_t::prev      : l.select_prev();                 return;
             }
 
             item_list_.clear();
         });
     }
     
-    void get_item(ipoint2 const p, int const index) {
+    //--------------------------------------------------------------------------
+    //! Get the item at @p index from the stack at @p p.
+    //--------------------------------------------------------------------------
+    void get_item_(ipoint2 const p, int const index = 0) {
+        auto const& itm_locale = definitions_->get_items_loc();
+        auto const& msg_locale = definitions_->get_messages();
+
         auto item = cur_level_->get_item(p, index);
-        auto const name = item.name(definitions_->get_items_loc());
 
-        auto const msg_string = definitions_->get_messages()[message_type::get_ok];
-        auto fmt = boost::format {msg_string.data()};
-        print_message(boost::str(fmt % name));
+        auto const& name = item.name(itm_locale);
+        auto const& msg  = msg_locale[message_type::get_ok];
 
-        player_.add_item(std::move(item), definitions_->get_items());
+        auto fmt = boost::format {msg.data()};
+        fmt % name;
+
+        print_message(boost::str(fmt));
+
+        auto const& itm_defs = definitions_->get_items();
+        player_.add_item(std::move(item), itm_defs);
 
         advance();
     }
 
+    //--------------------------------------------------------------------------
     void do_get() {
-        auto const p = player_.position();
-
+        auto const p   = player_.position();
         auto const msg = cur_level_->can_get_item(p);
-        if (msg == message_type::get_which_prompt) {
-            get_item_selection_(p);
-        } else if (msg != message_type::none) {
-            print_message(msg);
-        } else {
-            get_item(p, 0);
+
+        switch (msg) {
+        case message_type::get_which_prompt : get_item_selection_(p); break;
+        case message_type::none             : get_item_(p);           break;
+        default                             : print_message(msg);     break;
         }
     }
+
     //--------------------------------------------------------------------------
     void do_inventory() {
-        auto const beg = player_.items_begin();
-        auto const end = player_.items_end();
-
-        item_list_.clear();
-        item_list_.add_items(beg, end);
-
-        auto const size = item_list_.size();
-        if (size <= 0) {
+        auto const& items = player_.items();
+        
+        auto const size = items.size();
+        if (size == 0) {
             return;
         }
 
-        using result_t = input_mode_selection::result_t;
+        item_list_.clear();
+        item_list_.add_items(std::cbegin(items), std::cend(items));
 
+        using result_t = input_mode_selection::result_t;
         input_mode_ = imode_selection_.enter_mode(size, [this](result_t const result, int const index) {
             switch (result) {
-            case result_t::ok_select :
-            case result_t::ok_index :
-            case result_t::cancel :
-                break;
-            case result_t::next :
-                item_list_.select_next();
-                return;
-            case result_t::prev :
-                item_list_.select_prev();
-                return;
+            default                : break;
+            case result_t::next    : item_list_.select_next(); return;
+            case result_t::prev    : item_list_.select_prev(); return;
             }
 
             item_list_.clear();
         });
     }
+
     ////////////////////////////////////////////////////////////////////////////
     // Sinks
     ////////////////////////////////////////////////////////////////////////////

@@ -5,6 +5,9 @@
 #include "locale.hpp"
 #include "random.hpp"
 
+#include "algorithm.hpp" //TODO temp
+#include <vector> //TODO temp
+
 namespace bkrl {
 
 //class item_material_def;
@@ -130,6 +133,85 @@ public:
     int        count = 1;
     int        damage_min = 0;
     int        damage_max = 0;
+};
+
+class item_stack {
+public:
+    BK_NOCOPY(item_stack);
+    BK_DEFMOVE(item_stack);
+    item_stack() = default;
+
+    using cref = item_def::definition_t const&;
+
+    void insert(item&& itm, cref item_defs) {
+        //first try to increase an existing stack, then make a new stack
+        if (!insert_stack_(itm, item_defs)) {
+            insert_new_(std::move(itm));
+        }
+    }
+
+    item remove(int index, int n = 0) {
+        BK_ASSERT_DBG(index < size());
+        
+        item result = std::move(items_[index]);
+        
+        auto where = std::begin(items_);
+        std::advance(where, index);
+        items_.erase(where);
+
+        return result;
+    }
+
+    int size() const {
+        return items_.size();
+    }
+
+    bool empty() const {
+        return items_.empty();
+    }
+
+    auto begin()       { return items_.begin(); }
+    auto begin() const { return items_.begin(); }
+
+    auto end()       { return items_.end(); }
+    auto end() const { return items_.end(); }
+
+    auto cbegin() const { return items_.cbegin(); }
+    auto cend()   const { return items_.cend(); }
+private:
+    bool insert_stack_(item const& itm, cref item_defs) {
+        //make sure we have a stackable item first
+        if (!itm.can_stack(item_defs)) {
+            return false;
+        }
+    
+        auto const end = std::end(items_);
+        auto const beg = std::begin(items_);
+
+        //find a matching item with enough spare stack
+        auto const it = std::find_if(beg, end,
+            [&](item const& other) {
+                return (itm == other)
+                    && (other.count < other.max_stack(item_defs));
+            }
+        );
+
+        //nothing found
+        if (it == end) {
+            return false;
+        }
+
+        //ok
+        it->count += itm.count;
+        return true;
+    }
+
+    void insert_new_(item&& itm) {
+        items_.emplace_back(std::move(itm));
+        bkrl::sort(items_);
+    }
+
+    std::vector<item> items_;
 };
 
 } //namespace bkrl
