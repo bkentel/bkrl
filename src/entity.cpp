@@ -34,11 +34,12 @@ public:
 
     //--------------------------------------------------------------------------
     void rule_definition(cref value) {
+        entity_.id = json::require_string(value[json::common::field_id]);
+
         rule_items(value);
         rule_color(value);
         rule_tile(value);
-
-        entity_.id = json::require_string(value[json::common::field_id]);
+        rule_health(value);
 
         auto const hash = entity_.id.hash;
         entities_.emplace(hash, std::move(entity_));
@@ -79,17 +80,16 @@ public:
     void rule_items(cref value) {
         static utf8string const field {"items"};
 
-        //TODO should be able to clean this up a bit more
-
-        auto array = json::require_array(value[field], 2, 2);
-        
-        entity_.items.lo = json::require_int<int16_t>(array[0]);
-        entity_.items.hi = json::require_int<int16_t>(array[1]);
-
-        if (!entity_.items) {
-            BK_TODO_FAIL();
-        }
+        entity_.items = json::common::random(value[field]);
     }
+
+    //--------------------------------------------------------------------------
+    void rule_health(cref value) {
+        static utf8string const field {"health"};
+
+        entity_.health = json::common::random(value[field]);
+    }
+
     //--------------------------------------------------------------------------
     operator entity_def::definition_t::map_t&&() && {
         return std::move(entities_);

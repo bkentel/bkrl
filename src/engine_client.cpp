@@ -676,28 +676,40 @@ public:
 
         return mobs_.at(p);
     }
+
     //--------------------------------------------------------------------------
-
-
-
-    message_type attack(random::generator& trivial, entity& subject, entity& object) {
+    utf8string attack(random::generator& trivial, entity& subject, entity& object) {
         auto const p = object.position();
         BK_ASSERT_DBG(!!entity_at(p));
 
-        auto const range = definitions_->get_entities()[object.id()].items;
-        auto const count = random::uniform_range(trivial, range);
-        if (count == 0) {
-            return message_type::none;
+        auto const& entity_locale = definitions_->get_entities_loc();
+        auto const& msgs = definitions_->get_messages();
+        
+        auto const& name   = object.name(entity_locale);
+        auto const  damage = 1;
+
+        auto const killed = object.apply_damage(damage);
+        if (!killed) {
+            boost::format fmt {msgs[message_type::attack_regular].data()};
+            fmt % name % damage;
+            return boost::str(fmt);
         }
         
-        auto& stack = make_stack_at_(p);
-        for (int i = 0; i < count; ++i) {
-            stack.insert(generate_mob_item_(trivial), definitions_->get_items());
+        auto const count  = object.item_count();
+        if (count > 0) {
+            auto const& item_defs = definitions_->get_items();
+            auto&       stack     = make_stack_at_(p);
+
+            for (int i = 0; i < count; ++i) {
+                stack.insert(generate_mob_item_(trivial), item_defs);
+            }
         }
 
         mobs_.remove(p);
 
-        return message_type::none;
+        boost::format fmt {msgs[message_type::kill_regular].data()};
+        fmt % name;
+        return boost::str(fmt);
     }
     //--------------------------------------------------------------------------
     bool can_move_to(entity const& e, ipoint2 const p) const {
@@ -966,15 +978,22 @@ private:
                 continue;
             }
             
-            auto const& entities = definitions_->get_entities();
-            auto const  size     = static_cast<int>(entities.size());
+            auto const& item_defs   = definitions_->get_items();
+            auto const& entity_defs = definitions_->get_entities();
+            auto const  size        = static_cast<int>(entity_defs.size());
 
             BK_ASSERT(size > 0);
             auto const i = random::uniform_range(substantive, 0, size - 1);
 
-            auto const& id = entities.at_index(i).id;
+            auto const& id = entity_defs.at_index(i).id;
 
-            auto mob = entity {room.center(), id};
+            auto mob = entity {
+                substantive
+              , id
+              , room.center()
+              , item_defs
+              , entity_defs
+            };
 
             auto steps = random::uniform_range(substantive, 1, 10);
             for (; steps > 0; --steps) {
@@ -1562,7 +1581,7 @@ public:
       , imode_direction_    {[&] {input_mode_ = nullptr;}}
       , imode_selection_    {[&] {input_mode_ = nullptr;}}
     {
-        definitions_->set_language(BK_MAKE_LANG_CODE2('e','n'));
+        definitions_->set_language(BK_MAKE_LANG_CODE2('j','a'));
 
         //TODO
         item::current_locale = &definitions_->get_items_loc();;
@@ -1848,15 +1867,11 @@ public:
 
         auto ent = level.entity_at(p);
         if (ent) {
-            auto const& target = ent.get();
-            auto const& target_id = target.id();
-            auto const& target_name = definitions_->get_entities_loc()[target_id].name;
+            auto& subject = player_;
+            auto& object  = ent.get();
 
-            auto const msg_string = definitions_->get_messages()[message_type::kill_regular];
-            auto fmt = boost::format {msg_string.data()};
-            print_message(boost::str(fmt % target_name));
-
-            level.attack(random_trivial_, player_, ent.get());
+            auto const msg = level.attack(random_trivial_, subject, object);
+            print_message(msg);
         } else {
             player_.move_by(dx, dy);
             view_.scroll_by_tile(dx, dy);
