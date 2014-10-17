@@ -50,8 +50,12 @@ public:
     {
         auto const& edef = entities[id];
 
-        health_     = edef.health(gen);
-        item_count_ = edef.items(gen);
+        health_ = edef.health(gen);
+
+        auto const count = edef.items(gen);
+        for (int i = 0; i < count; ++i) {
+            add_item(generate_item(gen, items, loot_table {}), items);
+        }
     }
 
     point_t position() const {
@@ -89,14 +93,10 @@ public:
 
     identifier id() const { return id_; }
 
-    //TODO temp
-    int item_count() const { return item_count_; }
-
     entity(entity&& other)
       : id_  {other.id_}
       , pos_ (other.pos_)
       , items_ {std::move(other.items_)}
-      , item_count_ {other.item_count_}
       , health_ {other.health_}
     {
     }
@@ -106,7 +106,6 @@ public:
         id_    = rhs.id_;
         pos_   = rhs.pos_;
         items_ = std::move(rhs.items_);
-        item_count_ = rhs.item_count_;
         health_ = rhs.health_;
 
         return *this;
@@ -120,7 +119,6 @@ private:
     identifier id_;
     point_t    pos_ = {};
     item_stack items_;
-    int        item_count_;
     int        health_;
 };
 

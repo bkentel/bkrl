@@ -84,21 +84,9 @@ public:
     //TODO make atomic
     static localized_t const* current_locale;
 
-    explicit item(
-        random::generator&  gen
-      , definition_t const& defs
-      , identifier   const  id
-    )
+    explicit item(identifier const id)
       : id {id}
     {
-        auto const& def = defs[id];
-        
-        if (!!def.damage_min) {
-            BK_ASSERT_DBG(!!def.damage_max);
-
-            damage_min = def.damage_min(gen);
-            damage_max = def.damage_max(gen);
-        }
     }
 
     bool operator<(item const& other) const {
@@ -135,6 +123,37 @@ public:
     int        damage_max = 0;
 };
 
+class loot_table {
+};
+
+static item generate_item(
+    random::generator&            gen
+  , item_def::definition_t const& defs
+  , loot_table             const& table
+) {
+    auto const size = defs.size();
+    auto const i    = random::uniform_range(gen, 0u, size - 1);
+
+    auto const& idef = defs.at_index(i);
+
+    item result {idef.id};
+
+    auto const has_dmg_min = !!idef.damage_min;
+    auto const has_dmg_max = !!idef.damage_max;
+
+    BK_ASSERT_DBG(
+         (has_dmg_min &&  has_dmg_max)
+     || (!has_dmg_min && !has_dmg_max)
+    );
+
+    if (has_dmg_min && has_dmg_max) {
+        result.damage_min = idef.damage_min(gen);
+        result.damage_max = idef.damage_max(gen);
+    }
+
+    return result;
+}
+
 class item_stack {
 public:
     BK_NOCOPY(item_stack);
@@ -143,10 +162,25 @@ public:
 
     using cref = item_def::definition_t const&;
 
+    auto begin()       { return items_.begin(); }
+    auto begin() const { return items_.begin(); }
+
+    auto end()       { return items_.end(); }
+    auto end() const { return items_.end(); }
+
+    auto cbegin() const { return items_.cbegin(); }
+    auto cend()   const { return items_.cend(); }
+
     void insert(item&& itm, cref item_defs) {
         //first try to increase an existing stack, then make a new stack
         if (!insert_stack_(itm, item_defs)) {
             insert_new_(std::move(itm));
+        }
+    }
+
+    void merge(item_stack&& other, cref item_defs) {
+        for (auto&& itm : other) {
+            insert(std::move(itm), item_defs);
         }
     }
 
@@ -170,14 +204,7 @@ public:
         return items_.empty();
     }
 
-    auto begin()       { return items_.begin(); }
-    auto begin() const { return items_.begin(); }
 
-    auto end()       { return items_.end(); }
-    auto end() const { return items_.end(); }
-
-    auto cbegin() const { return items_.cbegin(); }
-    auto cend()   const { return items_.cend(); }
 private:
     bool insert_stack_(item const& itm, cref item_defs) {
         //make sure we have a stackable item first

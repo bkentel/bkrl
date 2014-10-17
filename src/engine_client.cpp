@@ -598,24 +598,6 @@ public:
         return items_.at(p);
     }
 
-    //std::vector<item const*> get_item_list(ipoint2 const p) const {
-    //    std::vector<item const*> result;
-
-    //    auto opt_stack = items_.at(p);
-    //    if (!opt_stack) {
-    //        BK_TODO_FAIL();
-    //    }
-
-    //    auto const& stack = opt_stack.get();
-
-    //    result.reserve(stack.size());
-    //    for (auto const& itm : stack) {
-    //        result.push_back(&itm);
-    //    }
-
-    //    return result;
-    //}
-
     //--------------------------------------------------------------------------
     using adjacency = boost::container::static_vector<ipoint2, 9>;
 
@@ -695,13 +677,15 @@ public:
             return boost::str(fmt);
         }
         
-        auto const count  = object.item_count();
-        if (count > 0) {
+        if (!object.items().empty()) {
             auto const& item_defs = definitions_->get_items();
-            auto&       stack     = make_stack_at_(p);
 
-            for (int i = 0; i < count; ++i) {
-                stack.insert(generate_mob_item_(trivial), item_defs);
+            auto const existing_stack = items_.at(p);
+            if (existing_stack) {
+                existing_stack->merge(std::move(object.items()), item_defs);
+            } else {
+                items_.emplace(p, std::move(object.items()));
+                items_.sort();
             }
         }
 
@@ -926,26 +910,9 @@ private:
     }
 
     //--------------------------------------------------------------------------
-    item generate_level_item_(random::generator& substantive) {
-        auto const& items  = definitions_->get_items();
-        auto const& locale = definitions_->get_items_loc();
-
-        auto const size = static_cast<int>(items.size());
-        BK_ASSERT(size > 0);
-
-        auto const index = random::uniform_range(substantive, 0, size - 1);
-        auto const& idef = items.at_index(index);
-        
-        return item {substantive, items, idef.id};
-    }
-
-    //--------------------------------------------------------------------------
-    item generate_mob_item_(random::generator& substantive) {
-        return generate_level_item_(substantive);
-    }
-
-    //--------------------------------------------------------------------------
     void place_items_(random::generator& substantive) {
+        auto const& item_defs = definitions_->get_items();
+
         for (auto const& room : rooms_) {
             if (random::percent(substantive) < 70) {
                 continue;
@@ -965,10 +932,12 @@ private:
 
             auto& stack = make_stack_at_(p);
             stack.insert(
-                generate_level_item_(substantive)
-              , definitions_->get_items()
+                generate_item(substantive, item_defs, loot_table {})
+              , item_defs
             );
         }
+
+        items_.sort();
     }
 
     //--------------------------------------------------------------------------
