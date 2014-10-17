@@ -27,7 +27,7 @@ public:
     void rule_definitions(cref value) {
         auto const definitions = json::require_array(value[json::common::field_definitions]);
 
-        for (auto&& def : definitions.array_items()) {           
+        for (auto&& def : definitions.array_items()) {
             rule_definition(def);
         }
     }

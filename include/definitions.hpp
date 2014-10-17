@@ -146,7 +146,7 @@ public:
         items_ = bkrl::load_items(value);
     }
 
-    void load_entity(json::cref value) {       
+    void load_entity(json::cref value) {
         entities_ = bkrl::load_entities(value);
     }
 

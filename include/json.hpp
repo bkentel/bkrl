@@ -284,7 +284,7 @@ inline string_ref get_filetype(cref value, string_ref const expected) {
 
 inline json11::Json from_memory(utf8string const& data) {
     std::string error;
-    auto const json = json11::Json::parse(data, error);   
+    auto const json = json11::Json::parse(data, error);
 
     if (!error.empty()) {
         BK_TODO_FAIL();

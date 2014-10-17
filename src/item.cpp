@@ -100,7 +100,7 @@ namespace {
 //        static utf8string const field {"color"};
 //        material_.color = json::require_string(value[field]);
 //    }
-//    
+//
 //    void rule_def_weight_mod(cref value) {
 //        static utf8string const field {"weight_mod"};
 //        material_.weight_mod = json::require_float<>(value, field, 0.0f, 100.0f);
@@ -262,7 +262,7 @@ public:
     void rule_definitions(cref value) {
         auto const definitions = json::require_array(value[json::common::field_definitions]);
 
-        for (auto&& def : definitions.array_items()) {           
+        for (auto&& def : definitions.array_items()) {
             rule_definition(def);
         }
     }

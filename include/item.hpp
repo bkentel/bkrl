@@ -32,10 +32,10 @@ namespace bkrl {
 //
 //    string_id id;
 //    string_id color;
-//    
+//
 //    float     weight_mod;
 //    float     value_mod;
-//    
+//
 //    std::vector<string_id> tags;
 //};
 //

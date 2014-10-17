@@ -214,7 +214,7 @@ tilemap bkrl::load_tilemap(json::cref data) {
 ////------------------------------------------------------------------------------
 //void tile_map::impl_t::rule_mapping_pair(cref value) {
 //    cref array = json::require_array(value, 2, 2);
-//    
+//
 //    auto const& str  = json::require_string(array[0]);
 //    auto const  id   = json::require_int(array[1]);
 //    auto const  hash = slash_hash32(str);

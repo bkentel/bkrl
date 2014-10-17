@@ -170,7 +170,7 @@ public:
           : r_ {other.r_}
           , old_scale_(other.old_scale_)
           , old_trans_(other.old_trans_)
-        { 
+        {
             other.r_ = nullptr;
         }
 

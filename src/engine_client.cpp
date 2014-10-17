@@ -735,7 +735,7 @@ public:
         return can_move_to(e, e.position() + v);
     }
     //--------------------------------------------------------------------------
-    bool can_move_by(entity const& e, int const dx, int const dy) {      
+    bool can_move_by(entity const& e, int const dx, int const dy) {
         return can_move_by(e, ivec2 {dx, dy});
     }
     //--------------------------------------------------------------------------
@@ -1501,7 +1501,7 @@ public:
             exit_mode(result_t::ok_select);
             break;
         case command_type::cancel :
-            index_ = 0;           
+            index_ = 0;
             exit_mode(result_t::cancel);
             break;
         case command_type::north :
@@ -1809,7 +1809,7 @@ public:
                 //ok
                 advance();
             }
-        });        
+        });
     }
 
     void clear_inspect_message() {
@@ -2063,7 +2063,7 @@ public:
     }
     //--------------------------------------------------------------------------
     void on_mouse_move(application::mouse_move_info const& info) {
-        auto const right = (info.state & (1<<2)) != 0;      
+        auto const right = (info.state & (1<<2)) != 0;
         
         if (!right) {
             auto const p = view_.screen_to_grid(info.x, info.y);

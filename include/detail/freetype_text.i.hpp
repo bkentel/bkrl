@@ -80,7 +80,7 @@ struct cached_glyph {
     int8_t  left;
     int8_t  top;
 
-    uint8_t advance;   
+    uint8_t advance;
     uint8_t reserved[3];
 
     operator bool() const noexcept {
@@ -115,7 +115,7 @@ public:
     enum : unsigned { error_index  = 0  };
 
     //--------------------------------------------------------------------------
-    //! 
+    //!
     //--------------------------------------------------------------------------
     face(
         library&              lib
@@ -213,7 +213,7 @@ public:
     
     //--------------------------------------------------------------------------
     //!
-    //--------------------------------------------------------------------------  
+    //--------------------------------------------------------------------------
     FT_Pos pixel_size() const noexcept { return metrics_().x_ppem        ; }
     FT_Pos ascender()   const noexcept { return metrics_().ascender  >> 6; }
     FT_Pos descender()  const noexcept { return metrics_().descender >> 6; }
@@ -917,11 +917,11 @@ public:
     int ascender()   const noexcept { return face_.ascender(); }
     int descender()  const noexcept { return face_.descender(); }
     int line_gap()   const noexcept { return face_.line_gap(); }
-private:   
+private:
     renderer&         renderer_;
     font::face        face_;
     unsigned          face_size_;
-    font::glyph_cache cache_;   
+    font::glyph_cache cache_;
     texture           texture_;
 };
 

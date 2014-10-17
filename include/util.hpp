@@ -146,7 +146,7 @@ struct string_id {
     
     string_id(utf8string str)
       : string (std::move(str))
-      , hash   {slash_hash32(string)} 
+      , hash   {slash_hash32(string)}
     {
     }
 

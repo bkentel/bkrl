@@ -117,7 +117,7 @@ private:
 };
 
 //==============================================================================
-// A connection algorithm for bsp_layout. 
+// A connection algorithm for bsp_layout.
 //==============================================================================
 class bsp_connector {
 public:

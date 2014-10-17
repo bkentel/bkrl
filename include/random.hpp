@@ -111,7 +111,7 @@ struct random_dist {
         BK_ASSERT_DBG(count > 0);
         BK_ASSERT_DBG(sides > 0);
 
-        type = dice;  
+        type = dice;
         data.dice.count = count;
         data.dice.sides = sides;
         data.dice.mod   = mod;
