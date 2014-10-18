@@ -1900,28 +1900,39 @@ public:
         set_door_state(false);
     }
 
+    void do_attack(entity& object) {
+        auto& subject = player_;
+
+        auto const v = subject.position() - object.position();
+        BK_ASSERT_DBG(std::abs(v.x) <= 1);
+        BK_ASSERT_DBG(std::abs(v.y) <= 1);
+
+        auto const msg = cur_level_->attack(random_trivial_, subject, object);
+        print_message(msg);
+
+        advance();
+    }
+
     //--------------------------------------------------------------------------
     void do_move_player(int const dx, int const dy) {
         auto& level = *cur_level_;
 
-        if (!level.can_move_by(player_, dx, dy)) {
+        auto const v = ivec2 {dx, dy};
+        auto const p = player_.position() + v;
+        if (!level.can_move_to(player_, p)) {
             return;
         }
 
-        auto const p = player_.position() + ivec2 {dx, dy};
-
-        auto ent = level.entity_at(p);
+        auto const ent = level.entity_at(p);
         if (ent) {
-            auto& subject = player_;
-            auto& object  = ent.get();
-
-            auto const msg = level.attack(random_trivial_, subject, object);
-            print_message(msg);
-        } else {
-            player_.move_by(dx, dy);
-            view_.scroll_by_tile(dx, dy);
-            clear_inspect_message();
+            do_attack(*ent);
+            return;
         }
+        
+        player_.move_by(v);
+        view_.scroll_by_tile(dx, dy);
+
+        clear_inspect_message();
 
         advance();
     }
