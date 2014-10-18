@@ -43,6 +43,7 @@ enum class command_type : uint16_t {
   , open
   , close
   , get
+  , drop
   , inventory
 
   , enum_size //!< last

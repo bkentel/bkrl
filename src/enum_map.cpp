@@ -462,6 +462,7 @@ namespace {
         BK_ENUMMAP_ADD_STRING(result, command, open);
         BK_ENUMMAP_ADD_STRING(result, command, close);
         BK_ENUMMAP_ADD_STRING(result, command, get);
+        BK_ENUMMAP_ADD_STRING(result, command, drop);
         BK_ENUMMAP_ADD_STRING(result, command, inventory);
 
         bkrl::sort(result, command_map_t::value_type::less_hash);
@@ -502,6 +503,8 @@ namespace {
         BK_ENUMMAP_ADD_STRING(result, message, get_no_items);
         BK_ENUMMAP_ADD_STRING(result, message, get_which_prompt);
         BK_ENUMMAP_ADD_STRING(result, message, get_ok);
+        BK_ENUMMAP_ADD_STRING(result, message, drop_nothing);
+        BK_ENUMMAP_ADD_STRING(result, message, drop_ok);
         BK_ENUMMAP_ADD_STRING(result, message, attack_regular);
         BK_ENUMMAP_ADD_STRING(result, message, kill_regular);
 

@@ -16,6 +16,8 @@
       , ["get_no_items",     "ここには拾うものがない。"]
       , ["get_which_prompt", "どれを拾う？"]
       , ["get_ok",           "%1%を拾った。"]
+      , ["drop_nothing",     "落とすことのできるものを持っていない。"]
+      , ["drop_ok",          "%1%を落とした。"]
       , ["attack_regular",   "%1%に%2%点のダメージを与えた."]
       , ["kill_regular",     "%1%を斃した。"]
     ]

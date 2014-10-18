@@ -73,15 +73,22 @@ font_face::get_texture() const {
 transitory_text_layout::transitory_text_layout(
     font_face&       face
   , string_ref const string
-  , int        const w
-  , int        const h
-)
-  : w_ {w}
-  , h_ {h}
-{
-    BK_ASSERT_DBG(
-        (w == 0 && h == 0) || (w != 0 && h != 0)
-    );
+  , int        const max_w
+  , int        const max_h
+) {
+    reset(face, string, max_w, max_h);
+}
+
+//------------------------------------------------------------------------------
+void transitory_text_layout::reset(
+    font_face&       face
+  , string_ref const string
+  , int        const max_w
+  , int        const max_h
+) {
+    constexpr auto tab_size = 20;
+    
+    clear();    
 
     //assume 2 bytes on average per codepoint.
     //overly pessimistic for mostly latin text
@@ -96,35 +103,42 @@ transitory_text_layout::transitory_text_layout(
     positions_.reserve(codepoints_.size());
 
     auto const line_gap = face.line_gap();
-    int x = 0;
-    int y = face.ascender();
+    auto       x        = 0;
+    auto       y        = face.ascender();
+
+    auto const next_line = [&] {
+        x  = 0;
+        y += line_gap;
+    };
+
+    auto const next_tab = [&] {
+        auto const rem = x % tab_size;
+        auto const tab = tab_size - rem;
+        x += tab;
+    };
 
     auto left = unicode::codepoint {};
     for (auto const codepoint : codepoints_) {
         auto const cp = unicode::codepoint {codepoint};
 
         //TODO
-        if (cp.value == '\n') {
-            x = 0;
-            y += line_gap;
-        } else if(cp.value == '\t') {
-            auto const rem = x % 20;
-            auto const tab = 20 - rem;
-            x += tab;
+        switch (cp.value) {
+        case '\n' : next_line(); break;
+        case '\t' : next_tab();  break;
         }
 
         auto const metrics = face.metrics(left, cp);
         left = cp;
 
-        if (w && x > w) {
-            x = 0;
-            y += line_gap;
+        if ((max_w != unlimited) && x > max_w) {
+            next_line();
         }
 
-        ipoint2 const p {
-            x + metrics.left
-          , y - metrics.top
-        };
+        if ((max_h != unlimited) && y > max_h) {
+            break;
+        }
+
+        ipoint2 const p {(x + metrics.left), (y - metrics.top)};
 
         actual_w_ = std::max(actual_w_, p.x + metrics.width);
         actual_h_ = std::max(actual_h_, p.y + metrics.height);
@@ -140,7 +154,25 @@ transitory_text_layout::transitory_text_layout(
 }
 
 //------------------------------------------------------------------------------
+void transitory_text_layout::clear() {
+    codepoints_.clear();
+    positions_.clear();
 
+    actual_w_ = 0;
+    actual_h_ = 0;
+}
+
+//------------------------------------------------------------------------------
+bool transitory_text_layout::empty() const {
+    BK_ASSERT_DBG(
+        ( codepoints_.empty() &&  positions_.empty())
+     || (!codepoints_.empty() && !positions_.empty())
+    );
+
+    return codepoints_.empty();
+}
+
+//------------------------------------------------------------------------------
 void
 transitory_text_layout::render(
     renderer&  r
@@ -148,12 +180,6 @@ transitory_text_layout::render(
   , int const  x
   , int const  y
 ) const {
-    //auto const scale = r.get_scale();
-    //auto const trans = r.get_translation();
-
-    //r.set_scale(1.0f);
-    //r.set_translation(0, 0);
-
     for (auto i = 0u; i < codepoints_.size(); ++i) {
         auto const cp = unicode::codepoint {codepoints_[i]};
         auto const p  = positions_[i];
@@ -169,7 +195,4 @@ transitory_text_layout::render(
 
         r.draw_texture(tex, src_rect, dst_rect);
     }
-
-    //r.set_scale(scale);
-    //r.set_translation(trans);
 }

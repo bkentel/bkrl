@@ -417,6 +417,94 @@ private:
     std::vector<transitory_text_layout> items_;
 };
 
+class message_log {
+public:
+    enum {line_count = 25};
+
+    using format_t = boost::format;
+
+    //--------------------------------------------------------------------------
+    explicit message_log(font_face& face, data_definitions const& defs)
+      : font_face_ {&face}
+      , defs_      {&defs}
+    {
+    }
+
+    //--------------------------------------------------------------------------
+    void print_line(message_type const msg) {
+        auto const& str = defs_->get_messages()[msg];
+        make_line_(str);
+    }
+
+    //--------------------------------------------------------------------------
+    void print_line(string_ref const str) {
+        make_line_(str);
+    }
+
+    //--------------------------------------------------------------------------
+    template <typename Head, typename... Tail>
+    void print_line(message_type const msg, Head&& head, Tail&&... tail) {
+        auto const& str = defs_->get_messages()[msg];
+
+        format_t format {str.data()};
+
+        print_line_(format % head, std::forward<Tail>(tail)...);
+    }
+
+    void render(renderer& r, int x, int y) {
+        constexpr auto max_line = 3;
+
+        auto const restore = r.restore_view();
+
+        auto beg = front_ - max_line;
+        beg = (beg < 0) ? (line_count + beg) : (beg);
+
+        auto const end = front_;
+
+        for (auto i = beg; i != end; i = (i + 1) % line_count) {
+            auto const& line = lines_[i];
+            if (line.empty()) {
+                continue;
+            }
+
+            line.render(r, *font_face_, x, y);
+            y += line.actual_height();
+        }
+    }
+private:
+    //--------------------------------------------------------------------------
+    template <typename Head, typename... Tail>
+    void print_line_(format_t& format, Head&& head, Tail&&... tail) {
+        print_line_(format, std::forward<Head>(head), std::forward<Tail>(tail)...);
+    }
+
+    //--------------------------------------------------------------------------
+    void print_line_(format_t& format) {
+        make_line_(boost::str(format));
+    }
+
+    //--------------------------------------------------------------------------
+    void make_line_(string_ref const str) {
+        constexpr auto max_w = 1000;
+        auto const max_h = font_face_->line_gap();
+
+        auto& line = lines_[front_++];
+        if (front_ >= line_count) {
+            front_ = 0;
+        }
+
+        line.reset(*font_face_, str, max_w, max_h);
+    }
+
+    //--------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
+    font_face* font_face_ = nullptr;
+    data_definitions const* defs_ = nullptr;
+
+    int front_ = 0;
+    std::array<transitory_text_layout, line_count> lines_;
+};
+
 }
 
 //==============================================================================
@@ -529,35 +617,6 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! Return the item stack at p. If no item stack exists already, create one.
-    //--------------------------------------------------------------------------
-    item_stack& make_stack_at_(ipoint2 const p) {
-        auto const stack = items_.at(p);
-        if (!stack) {
-            items_.insert(p);
-            items_.sort(); //TODO
-        }
-
-        return *items_.at(p);
-    }
-
-    //--------------------------------------------------------------------------
-    //! Return the item stack at p. Fail if none exists.
-    //--------------------------------------------------------------------------
-    item_stack& require_stack_at_(ipoint2 const p) {
-        auto const stack = items_.at(p);
-        if (!stack) {
-            BK_TODO_FAIL();
-        }
-
-        return *stack;
-    }
-
-    item_stack const& require_stack_at_(ipoint2 const p) const {
-        return const_cast<level*>(this)->require_stack_at_(p);
-    }
-
-    //--------------------------------------------------------------------------
     //! @result message_type::get_no_items      - nothing here
     //!         message_type::get_which_prompt  - more than one item
     //!         message_type::none              - ok; just one item
@@ -596,6 +655,13 @@ public:
 
     optional<item_stack const&> get_stack_at(ipoint2 const p) const {
         return items_.at(p);
+    }
+
+    //--------------------------------------------------------------------------
+    message_type drop_item_at(ipoint2 const p, item&& itm) {
+        make_stack_at_(p).insert(std::move(itm), definitions_->get_items());
+
+        return message_type::none;
     }
 
     //--------------------------------------------------------------------------
@@ -793,6 +859,35 @@ public:
         return result;
     }
 private:
+    //--------------------------------------------------------------------------
+    //! Return the item stack at p. If no item stack exists already, create one.
+    //--------------------------------------------------------------------------
+    item_stack& make_stack_at_(ipoint2 const p) {
+        auto const stack = items_.at(p);
+        if (!stack) {
+            items_.insert(p);
+            items_.sort(); //TODO
+        }
+
+        return *items_.at(p);
+    }
+
+    //--------------------------------------------------------------------------
+    //! Return the item stack at p. Fail if none exists.
+    //--------------------------------------------------------------------------
+    item_stack& require_stack_at_(ipoint2 const p) {
+        auto const stack = items_.at(p);
+        if (!stack) {
+            BK_TODO_FAIL();
+        }
+
+        return *stack;
+    }
+
+    item_stack const& require_stack_at_(ipoint2 const p) const {
+        return const_cast<level*>(this)->require_stack_at_(p);
+    }
+
     //--------------------------------------------------------------------------
     message_type use_stair_(ipoint2 const p, bool const down) const {
         auto const type = grid_.get(attribute::tile_type, p);
@@ -1387,6 +1482,7 @@ public:
     //--------------------------------------------------------------------------
     void on_char(char) override {
     }
+
     //--------------------------------------------------------------------------
     bool on_command(command_type cmd) override {
         bool done = true;
@@ -1480,6 +1576,7 @@ public:
         index_ = i;
         exit_mode(result_t::ok_index);
     }
+
     //--------------------------------------------------------------------------
     bool on_command(command_type cmd) override {
         switch (cmd) {
@@ -1547,6 +1644,7 @@ public:
       , player_             {}
       , input_mode_         {nullptr}
       , item_list_          {font_face_, *definitions_}
+      , msg_log_            {font_face_, *definitions_}
       , imode_direction_    {[&] {input_mode_ = nullptr;}}
       , imode_selection_    {[&] {input_mode_ = nullptr;}}
     {
@@ -1557,29 +1655,42 @@ public:
         
         ////////////////////////////////////////////////////
         init_sinks();
+        init_timers();
 
         next_level(0);
-
         print_message(message_type::welcome);
 
+        ////////////////////////////////////////////////////
+        main();
+    }
+
+    void main() {
+        while (app_.is_running()) {
+            app_.do_all_events();
+            timers_.update();
+            render(renderer_);
+            yield();
+        }
+    }
+
+    void yield() {
+        if (frames_ % 5 == 0) {
+            SDL_Delay(15);
+        }
+    }
+
+    void init_timers() {
         auto const fade_time = std::chrono::milliseconds {1000};
-        timers_.add_timer(fade_time, [&](timer::id_t, timer::duration_t) {
+        timers_.add_timer(fade_time, [this, fade_time](timer::id_t, timer::duration_t) {
             fade_message();
             return fade_time;
         });
 
         auto const frame_time = std::chrono::nanoseconds {1000000000 / 60};
-        timers_.add_timer(frame_time, [&](timer::id_t, timer::duration_t) {
+        timers_.add_timer(frame_time, [this, frame_time](timer::id_t, timer::duration_t) {
             render_ = true;
             return frame_time;
         });
-
-        ////////////////////////////////////////////////////
-        while (app_.is_running()) {
-            app_.do_all_events();
-            timers_.update();
-            render(renderer_);
-        }
     }
 
     void init_sinks() {
@@ -1619,12 +1730,7 @@ public:
     }
 
     void print_message(string_ref const msg) {
-        constexpr auto width  = 1024;
-        constexpr auto height = 32;
-
-        last_message_ = transitory_text_layout {font_face_, msg, width, height};
-
-        last_message_fade_ = 5;
+        msg_log_.print_line(msg);
     }
 
     void print_message(message_type const msg) {
@@ -1669,35 +1775,17 @@ public:
         do_zoom_reset();
     }
 
-    void draw_message_log(renderer& r) {
-        static auto const color_text_background = make_color(50, 50, 50);
-
-        if (last_message_fade_ <= 0) {
-            return;
-        }
-
-        auto const restore = r.restore_view();
-
-        auto const x = 0;
-        auto const y = 0;
-        auto const w = last_message_.actual_width();
-        auto const h = font_face_.line_gap();
-            
-        r.set_draw_color(color_text_background);
-        r.draw_filled_rect(make_rect_size(x, y, w, h));
-
-        last_message_.render(r, font_face_, x, y);
-    }
-
     void draw_inspect_msg(renderer& r) {
         static auto const color_text_background = make_color(50, 50, 50);
 
         auto const restore = r.restore_view();
 
-        auto const line_gap = font_face_.line_gap();
+        auto const actual_h = inspect_message_.actual_height();
+        auto const line_h   = font_face_.line_gap();
+        auto const diff_h   = actual_h % line_h;
 
+        auto const msg_h = actual_h + (diff_h ? (line_h - diff_h) : 0);
         auto const msg_w = inspect_message_.actual_width();
-        auto const msg_h = inspect_message_.actual_height();
 
         auto const x = 0;
         auto const y = view_.height() - msg_h;
@@ -1714,6 +1802,8 @@ public:
         if (!!item_list_) {
             item_list_.render(r, 24, 128);
         }
+
+        msg_log_.render(r, 0, 0);
     }
 
     void draw_level(renderer& r) {
@@ -1726,8 +1816,6 @@ public:
     }
 
     void render(renderer& r) {
-        static auto const color_text_background = make_color(50, 50, 50);
-
         if (!render_) {
             return;
         }
@@ -1739,7 +1827,6 @@ public:
         r.set_scale(view_.scale());
 
         draw_level(r);
-        draw_message_log(r);
         draw_inspect_msg(r);
         draw_gui(r);
 
@@ -1747,10 +1834,6 @@ public:
 
         render_ = false;
         frames_++;
-
-        if (frames_ % 5 == 0) {
-            SDL_Delay(15);
-        }
     }
 
     void advance() {
@@ -1805,12 +1888,12 @@ public:
     }
 
     void set_inspect_message(ipoint2 const p) {
-        inspect_message_ = transitory_text_layout {
-            font_face_
-          , cur_level_->get_inspect_msg(p)
-          , 1000
-          , 32
-        };
+        constexpr auto w = 1024;
+        constexpr auto h = transitory_text_layout::unlimited;
+
+        inspect_message_.reset(
+            font_face_, cur_level_->get_inspect_msg(p), w, h
+        );
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -1820,10 +1903,12 @@ public:
     void do_open() {
         set_door_state(true);
     }
+
     //--------------------------------------------------------------------------
     void do_close() {
         set_door_state(false);
     }
+
     //--------------------------------------------------------------------------
     void do_move_player(int const dx, int const dy) {
         auto& level = *cur_level_;
@@ -1849,6 +1934,7 @@ public:
 
         advance();
     }
+
     //--------------------------------------------------------------------------
     void do_scroll(int const dx, int const dy) {
         constexpr auto delta = 4.0f;
@@ -1859,21 +1945,25 @@ public:
         view_.scroll_by(scroll_x, scroll_y);
         clear_inspect_message();
     }
+
     //--------------------------------------------------------------------------
     void do_zoom_in() {
         view_.zoom_to(view_.zoom() * 1.1f);
         clear_inspect_message();
     }
+
     //--------------------------------------------------------------------------
     void do_zoom_out() {
         view_.zoom_to(view_.zoom() * 0.9f);
         clear_inspect_message();
     }
+
     //--------------------------------------------------------------------------
     void do_zoom_reset() {
         view_.zoom_to(1.0f, player_.position());
         clear_inspect_message();
     }
+
     //--------------------------------------------------------------------------
     void do_go_up() {
         auto const msg = cur_level_->go_up(player_.position());
@@ -1888,6 +1978,7 @@ public:
 
         clear_inspect_message();
     }
+
     //--------------------------------------------------------------------------
     void do_go_down() {
         auto const msg = cur_level_->go_down(player_.position());
@@ -1902,6 +1993,7 @@ public:
 
         clear_inspect_message();
     }
+
     //--------------------------------------------------------------------------
     void do_wait() {
         advance();
@@ -1973,6 +2065,50 @@ public:
     }
 
     //--------------------------------------------------------------------------
+    void do_drop() {
+        auto const p = player_.position();
+
+        auto& stack = player_.items();
+        if (stack.empty()) {
+            print_message(message_type::drop_nothing);
+            return;
+        }
+
+        item_list_.clear();
+        item_list_.add_items(std::cbegin(stack), std::cend(stack));
+
+        using result_t = input_mode_selection::result_t;
+        input_mode_ = imode_selection_.enter_mode(item_list_.size(), [this, p](result_t const result, int const index) {
+            auto& l = item_list_;
+
+            int i       = 0;
+            bool cancel = false;
+
+            switch (result) {
+            case result_t::ok_select : i = l.get_selection(); break;
+            case result_t::ok_index  : i = index;             break;
+            case result_t::cancel    : cancel = true;         break;
+            case result_t::next      : l.select_next();       return;
+            case result_t::prev      : l.select_prev();       return;
+            }
+            
+            if (!cancel) {
+                auto itm = player_.items().remove(i);
+                auto const name = itm.name(definitions_->get_items_loc());
+                
+                msg_log_.print_line(message_type::drop_ok, name);
+                //print_message(message_type::drop_ok);
+
+                cur_level_->drop_item_at(p, std::move(itm));
+            }
+
+            item_list_.clear();
+        });
+
+        //auto const msg = cur_level_->drop_item_at(p, item);
+    }
+
+    //--------------------------------------------------------------------------
     void do_inventory() {
         auto const& items = player_.items();
         
@@ -2017,6 +2153,7 @@ public:
         case command_type::open       : do_open(); break;
         case command_type::close      : do_close(); break;
         case command_type::get        : do_get(); break;
+        case command_type::drop       : do_drop(); break;
         case command_type::scroll_n   : do_scroll( 0,  1); break;
         case command_type::scroll_s   : do_scroll( 0, -1); break;
         case command_type::scroll_e   : do_scroll(-1,  0); break;
@@ -2137,7 +2274,8 @@ private:
     input_mode_direction imode_direction_;
     input_mode_selection imode_selection_;
 
-    gui::item_list item_list_;
+    gui::item_list   item_list_;
+    gui::message_log msg_log_;
 
     int frames_ = 0;
     float fps_ = 0.0f;

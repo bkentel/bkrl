@@ -33,6 +33,9 @@ enum class message_type : uint16_t {
   , get_which_prompt
   , get_ok
 
+  , drop_nothing
+  , drop_ok
+
   , attack_regular
   , kill_regular
 
