@@ -275,6 +275,14 @@ public:
     {
     }
 
+    void reset(item_stack const& stack) {
+        clear();
+
+        for (auto&& item : stack) {
+            add_item(item);
+        }
+    }
+
     template <typename It>
     void add_items(It begin, It end) {
         BK_ASSERT(face_ && definitions_);
@@ -1539,23 +1547,19 @@ class input_mode_selection final : public input_mode_base {
 public:
     using input_mode_base::input_mode_base;
 
-    enum class result_t {
-        ok_select, ok_index, cancel, next, prev
-    };
-
-    using completion_handler = std::function<void (result_t result, int index)>;
+    using completion_handler = std::function<void (bool ok, int index)>;
 
     //--------------------------------------------------------------------------
-    input_mode_base* enter_mode(int max, completion_handler handler) {
+    input_mode_base* enter_mode(gui::item_list& list, completion_handler handler) {
+        list_    = &list;
         handler_ = std::move(handler);
-        max_     = max;
-        index_   = 0;
 
         return this;
     }
 
-    void exit_mode(result_t const result) {
-        handler_(result, index_);
+    void exit_mode(bool const ok, int const index) {
+        handler_(ok, index);
+        list_->clear();
         do_on_exit_();
     }
 
@@ -1568,50 +1572,37 @@ public:
             return;
         }
 
-        auto const i = c - first;
-        if (i > max_) {
+        auto const i    = c - first;
+        auto const size = list_->size();
+        
+        if (i >= size) {
             return;
         }
 
-        index_ = i;
-        exit_mode(result_t::ok_index);
+        exit_mode(true, i);
     }
 
     //--------------------------------------------------------------------------
     bool on_command(command_type cmd) override {
         switch (cmd) {
-        default:
-            break;
-        case command_type::accept :
-            exit_mode(result_t::ok_select);
-            break;
-        case command_type::cancel :
-            index_ = 0;
-            exit_mode(result_t::cancel);
-            break;
-        case command_type::north :
-            handler_(result_t::prev, index_);
-            break;
-        case command_type::south :
-            handler_(result_t::next, index_);
-            break;
+        default: break;
+        case command_type::accept : exit_mode(true,  list_->get_selection()); break;
+        case command_type::cancel : exit_mode(false, list_->get_selection()); break;
+        case command_type::north  : list_->select_prev(); break;
+        case command_type::south  : list_->select_next(); break;
         }
 
         return true;
     }
     
     //--------------------------------------------------------------------------
-    void on_mouse_move(mouse_move_info const& info) override {
-    }
+    void on_mouse_move(mouse_move_info const& info) override {}
     
     //--------------------------------------------------------------------------
-    void on_mouse_button(mouse_button_info const& info) override {
-    }
+    void on_mouse_button(mouse_button_info const& info) override {}
 private:
+    gui::item_list*    list_ = nullptr;
     completion_handler handler_;
-
-    int max_   = 0;
-    int index_ = 0;
 };
 
 
@@ -2004,28 +1995,24 @@ public:
     //! Changes the input mode to input_mode_selection.
     //--------------------------------------------------------------------------
     void get_item_selection_(ipoint2 const p) {
-        auto const stack = cur_level_->get_stack_at(p);
-        BK_ASSERT(stack);
-
-        item_list_.clear();
-        item_list_.add_items(stack->cbegin(), stack->cend());
-
-        auto const size = item_list_.size();
-        BK_ASSERT(size > 1);
-
-        using result_t = input_mode_selection::result_t;
-        input_mode_ = imode_selection_.enter_mode(size, [this, p](result_t const result, int const index) {
-            auto& l = item_list_;
-
-            switch (result) {
-            case result_t::ok_select : get_item_(p, l.get_selection()); break;
-            case result_t::ok_index  : get_item_(p, index);             break;
-            case result_t::cancel    :                                  break;
-            case result_t::next      : l.select_next();                 return;
-            case result_t::prev      : l.select_prev();                 return;
+        auto const& stack = [&]() -> decltype(auto) {
+            auto const s = cur_level_->get_stack_at(p);
+            if (!s) {
+                BK_TODO_FAIL();
             }
 
-            item_list_.clear();
+            return s.get();
+        }();
+        
+
+        item_list_.reset(stack);
+
+        input_mode_ = imode_selection_.enter_mode(item_list_, [this, p](bool const ok, int const i) {
+            if (!ok) {
+                return;
+            }
+            
+            get_item_(p, i);
         });
     }
     
@@ -2074,61 +2061,32 @@ public:
             return;
         }
 
-        item_list_.clear();
-        item_list_.add_items(std::cbegin(stack), std::cend(stack));
+        item_list_.reset(stack);
 
-        using result_t = input_mode_selection::result_t;
-        input_mode_ = imode_selection_.enter_mode(item_list_.size(), [this, p](result_t const result, int const index) {
-            auto& l = item_list_;
-
-            int i       = 0;
-            bool cancel = false;
-
-            switch (result) {
-            case result_t::ok_select : i = l.get_selection(); break;
-            case result_t::ok_index  : i = index;             break;
-            case result_t::cancel    : cancel = true;         break;
-            case result_t::next      : l.select_next();       return;
-            case result_t::prev      : l.select_prev();       return;
+        input_mode_ = imode_selection_.enter_mode(item_list_, [this, p](bool const ok, int const i) {            
+            if (!ok) {
+                return;
             }
-            
-            if (!cancel) {
-                auto itm = player_.items().remove(i);
-                auto const name = itm.name(definitions_->get_items_loc());
+
+            auto        itm  = player_.items().remove(i);
+            auto const& name = itm.name(definitions_->get_items_loc());
                 
-                msg_log_.print_line(message_type::drop_ok, name);
-                //print_message(message_type::drop_ok);
+            msg_log_.print_line(message_type::drop_ok, name);
 
-                cur_level_->drop_item_at(p, std::move(itm));
-            }
-
-            item_list_.clear();
+            cur_level_->drop_item_at(p, std::move(itm));
         });
-
-        //auto const msg = cur_level_->drop_item_at(p, item);
     }
 
     //--------------------------------------------------------------------------
     void do_inventory() {
         auto const& items = player_.items();
-        
-        auto const size = items.size();
-        if (size == 0) {
+        if (items.empty()) {
             return;
         }
 
-        item_list_.clear();
-        item_list_.add_items(std::cbegin(items), std::cend(items));
+        item_list_.reset(items);
 
-        using result_t = input_mode_selection::result_t;
-        input_mode_ = imode_selection_.enter_mode(size, [this](result_t const result, int const index) {
-            switch (result) {
-            default                : break;
-            case result_t::next    : item_list_.select_next(); return;
-            case result_t::prev    : item_list_.select_prev(); return;
-            }
-
-            item_list_.clear();
+        input_mode_ = imode_selection_.enter_mode(item_list_, [this](bool const ok, int const i) {
         });
     }
 
