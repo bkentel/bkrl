@@ -64,6 +64,8 @@ public:
         utf8string text;
     };
 
+    static locale const& undefined();
+
     string_id id;
     int       stack;
     dist_t    damage_min;

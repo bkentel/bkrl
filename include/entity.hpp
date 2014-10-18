@@ -17,6 +17,12 @@ public:
         utf8string text;
     };
 
+    static locale const& undefined();
+
+    //TODO might have to be atomic at some point.
+    static path_string tile_filename;
+    static ipoint2     tile_size;
+
     string_id id;      //!< entity id
     dist_t    items;   //!< number of carried items
     int16_t   tile_x;  //!< tile x index
@@ -50,7 +56,8 @@ public:
     {
         auto const& edef = entities[id];
 
-        health_ = edef.health(gen);
+        health_total_ = edef.health(gen);
+        health_ = health_total_;
 
         auto const count = edef.items(gen);
         for (int i = 0; i < count; ++i) {
@@ -98,6 +105,7 @@ public:
       , pos_ (other.pos_)
       , items_ {std::move(other.items_)}
       , health_ {other.health_}
+      , health_total_ {other.health_total_}
     {
     }
 
@@ -107,6 +115,7 @@ public:
         pos_   = rhs.pos_;
         items_ = std::move(rhs.items_);
         health_ = rhs.health_;
+        health_total_ = rhs.health_total_;
 
         return *this;
     }
@@ -115,11 +124,16 @@ public:
         health_ -= n;
         return health_ <= 0;
     }
+
+    range<int> health() const {
+        return range<int> {health_, health_total_};
+    }
 private:
     identifier id_;
     point_t    pos_ = {};
     item_stack items_;
     int        health_;
+    int        health_total_;
 };
 
 //==============================================================================

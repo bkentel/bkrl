@@ -76,6 +76,7 @@ class tile_sheet {
 public:
     using rect_t = renderer::rect_t;
 
+    tile_sheet(renderer& render, path_string_ref filename, ipoint2 size);
     tile_sheet(tilemap const& map, renderer& render);
 
     rect_t get_rect(int const i) const {
@@ -97,11 +98,11 @@ public:
     }
      
     int tile_width() const noexcept {
-        return map().tile_w;
+        return tile_size_.x;
     }
 
     int tile_height() const noexcept {
-        return map().tile_h;
+        return tile_size_.y;
     }
 
     int tiles_x() const noexcept {
@@ -136,11 +137,13 @@ public:
         return const_cast<tile_sheet*>(this)->tile_texture_;
     }
 private:
-    tilemap const* map_;
+    tilemap const* map_ = nullptr;
     texture        tile_texture_;
 
-    int tile_x_; //tiles per row
-    int tile_y_; //rows
+    ipoint2 tile_size_;
+
+    int tile_x_ = 0; //tiles per row
+    int tile_y_ = 0; //rows
 };
 
 } //namespace bkrl

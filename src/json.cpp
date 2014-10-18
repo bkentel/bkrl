@@ -1,7 +1,10 @@
 #include "json.hpp"
 
-using bkrl::utf8string;
-using bkrl::string_ref;
+#if BOOST_OS_WINDOWS
+#   include <utf8.h>
+#endif
+
+using namespace bkrl;
 
 namespace common = bkrl::json::common;
 
@@ -25,3 +28,21 @@ string_ref const common::filetype_tilemap {"TILEMAP"};
 string_ref const common::filetype_keymap  {"KEYMAP"};
 
 string_ref const common::stringtype_messages  {"MESSAGE"};
+
+#if BOOST_OS_WINDOWS
+path_string common::get_filename(json::cref value) {
+    auto const str = require_string(value[field_filename]);
+    
+    path_string result;
+    result.reserve(str.length()); //TODO a bit wasteful
+
+    utf8::utf8to16(str.begin(), str.end(), std::back_inserter(result));
+
+    return result;
+}
+#else
+path_string common::get_filename(json::cref value) {
+    auto const str = require_string(value[field_filename]);
+    return str.to_string();
+}
+#endif

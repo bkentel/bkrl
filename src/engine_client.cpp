@@ -526,12 +526,14 @@ public:
       , random::generator& trivial
       , data_definitions const& definitions
       , player&            player
-      , tile_sheet const&  sheet
+      , tile_sheet const&  tiles_sheet
+      , tile_sheet const&  entities_sheet
       , grid_size const    width
       , grid_size const    height
     )
       : definitions_ {&definitions}
-      , tile_sheet_  {&sheet}
+      , tiles_sheet_    {&tiles_sheet}
+      , entities_sheet_ {&entities_sheet}
       , player_      {&player}
       , grid_        {width, height}
     {
@@ -572,7 +574,7 @@ public:
         auto const w = grid_.width();
         auto const h = grid_.height();
 
-        auto const& sheet = *tile_sheet_;
+        auto const& sheet = *tiles_sheet_;
         
         //set to default color
         r.set_color_mod(sheet.get_texture());
@@ -587,10 +589,14 @@ public:
 
     //--------------------------------------------------------------------------
     void draw_entities(renderer& r) {
-        auto const& sheet = *tile_sheet_;
+        auto const& sheet = *entities_sheet_;
         auto&       tex   = sheet.get_texture();
 
         auto const& entities = definitions_->get_entities();
+
+        r.set_color_mod(tex, make_color(255, 255, 255));
+        auto const player_pos = player_->position();
+        sheet.render(r, 13, 13, player_pos.x, player_pos.y);
 
         for (auto const& mob : mobs_) {
             auto const p = mob.position();
@@ -604,12 +610,44 @@ public:
 
             r.set_color_mod(tex, color);
             sheet.render(r, tx, ty, p.x, p.y);
+
+            auto const health = mob.health();
+            if (health.size() != 0) {
+                auto const tw = sheet.tile_width();
+                auto const th = sheet.tile_height();
+
+                constexpr auto bar_border = 1;
+                constexpr auto bar_size   = 2;
+                constexpr auto bar_h      = bar_size + bar_border * 2;
+
+                auto const x = p.x * tw;
+                auto const y = p.y * th - bar_h;
+                auto const w = tw;
+                auto const h = bar_size;
+
+                auto const percent = static_cast<float>(health.hi - health.size()) / health.hi;
+                auto const w2 = static_cast<int>(std::round(percent*w));
+
+                r.set_draw_color(make_color(0, 255, 255));
+                r.draw_filled_rect(make_rect_size(
+                    x - bar_border
+                  , y - bar_border
+                  , w + bar_border * 2
+                  , h + bar_border * 2
+                ));
+
+                r.set_draw_color(make_color(255, 0, 0));
+                r.draw_filled_rect(make_rect_size(
+                    x, y, w2, h
+                ));
+
+            }
         }
     }
 
     //--------------------------------------------------------------------------
     void draw_items(renderer& r) {
-        auto const& sheet = *tile_sheet_;
+        auto const& sheet = *tiles_sheet_;
 
         for (auto const& i : items_) {
             auto const p = i.first;
@@ -859,9 +897,12 @@ public:
             auto const& locale = definitions_->get_entities_loc();
             auto const& id     = mob->id();
             auto const& name   = locale[id].name;
+            auto const& text   = locale[id].text;
 
             result.push_back('\n');
             result.append(name.data(), name.size());
+            result.append({" - "});
+            result.append(text.data(), text.size());
         }
 
         return result;
@@ -1046,7 +1087,7 @@ private:
     //--------------------------------------------------------------------------
     void place_entities_(random::generator& substantive) {
         for (auto const& room : rooms_) {
-            if (random::uniform_range(substantive, 0, 100) < 70) {
+            if (random::uniform_range(substantive, 0, 100) < 20) {
                 continue;
             }
             
@@ -1231,14 +1272,16 @@ private:
 
     //--------------------------------------------------------------------------
     tilemap const& get_tile_map_() const {
-        BK_ASSERT_DBG(tile_sheet_);
-        return tile_sheet_->map();
+        BK_ASSERT_DBG(tiles_sheet_);
+        return tiles_sheet_->map();
     }
 private:
     //--------------------------------------------------------------------------
     data_definitions const* definitions_;
 
-    tile_sheet const* tile_sheet_;
+    tile_sheet const* tiles_sheet_;
+    tile_sheet const* entities_sheet_;
+
     player*           player_;
 
     grid_storage      grid_;
@@ -1629,8 +1672,9 @@ public:
       , font_lib_           {}
       , font_face_          {renderer_, font_lib_, config_->font_name, font_size}
       , last_message_       {}
-      , sheet_              {defs.get_tilemap(), renderer_}
-      , view_               {sheet_, app_.client_width(), app_.client_height()}
+      , tile_sheet_         {defs.get_tilemap(), renderer_}
+      , entities_sheet_     {renderer_, entity_def::tile_filename, entity_def::tile_size}
+      , view_               {tile_sheet_, app_.client_width(), app_.client_height()}
       , cur_level_          {nullptr}
       , player_             {}
       , input_mode_         {nullptr}
@@ -1739,7 +1783,17 @@ public:
         auto const size = static_cast<int>(levels_.size());
 
         if (level == size) {
-            levels_.emplace_back(random_substantive_, random_trivial_, *definitions_, player_, sheet_, level_w, level_h);
+            levels_.emplace_back(
+                random_substantive_
+              , random_trivial_
+              , *definitions_
+              , player_
+              , tile_sheet_
+              , entities_sheet_
+              , level_w
+              , level_h
+            );
+
             cur_level_ = &levels_.back();
         } else if (level < size) {
             cur_level_ = &levels_[level];
@@ -1767,7 +1821,7 @@ public:
     }
 
     void draw_inspect_msg(renderer& r) {
-        static auto const color_text_background = make_color(50, 50, 50);
+        static auto const color_text_background = make_color(50, 50, 50, 180);
 
         auto const restore = r.restore_view();
 
@@ -1778,13 +1832,20 @@ public:
         auto const msg_h = actual_h + (diff_h ? (line_h - diff_h) : 0);
         auto const msg_w = inspect_message_.actual_width();
 
-        auto const x = 0;
-        auto const y = view_.height() - msg_h;
+        auto const x = mouse_pos_.x;
+        auto const y = mouse_pos_.y - msg_h;
         auto const w = msg_w;
         auto const h = msg_h;
 
+        constexpr auto border = 4;
+
         r.set_draw_color(color_text_background);
-        r.draw_filled_rect(make_rect_size(x, y, w, h));
+        r.draw_filled_rect(make_rect_size(
+            x - border
+          , y - border
+          , w + border * 2
+          , h + border * 2
+        ));
 
         inspect_message_.render(r, font_face_, x, y);
     }
@@ -1799,11 +1860,6 @@ public:
 
     void draw_level(renderer& r) {
         cur_level_->render(r);
-
-        r.set_color_mod(sheet_.get_texture(), make_color(255, 255, 255));
-
-        auto const player_pos = player_.position();
-        sheet_.render(r, 1, 0, player_pos.x, player_pos.y);
     }
 
     void render(renderer& r) {
@@ -1879,7 +1935,7 @@ public:
     }
 
     void set_inspect_message(ipoint2 const p) {
-        constexpr auto w = 1024;
+        constexpr auto w = 256;
         constexpr auto h = transitory_text_layout::unlimited;
 
         inspect_message_.reset(
@@ -2111,6 +2167,7 @@ public:
             return;
         }
     }
+
     //--------------------------------------------------------------------------
     bool on_command(command_type const cmd) {
         if (input_mode_) {
@@ -2147,12 +2204,16 @@ public:
 
         return false;
     }
+
     //--------------------------------------------------------------------------
     void on_resize(unsigned const w, unsigned const h) {
         view_.set_size(static_cast<float>(w), static_cast<float>(h));
     }
+
     //--------------------------------------------------------------------------
     void on_mouse_move(application::mouse_move_info const& info) {
+        mouse_pos_ = ipoint2 {info.x, info.y};
+
         auto const right = (info.state & (1<<2)) != 0;
         
         if (!right) {
@@ -2166,6 +2227,7 @@ public:
           , static_cast<float>(info.dy)
         );
     }
+
     //--------------------------------------------------------------------------
     void on_mouse_button(application::mouse_button_info const& info) {
         //if (info.state != application::mouse_button_info::state_t::pressed) {
@@ -2227,7 +2289,8 @@ private:
 
     transitory_text_layout inspect_message_;
 
-    tile_sheet sheet_;
+    tile_sheet tile_sheet_;
+    tile_sheet entities_sheet_;
 
     view   view_;
 
@@ -2245,6 +2308,8 @@ private:
 
     gui::item_list   item_list_;
     gui::message_log msg_log_;
+
+    ipoint2 mouse_pos_ = ipoint2 {0, 0};
 
     int frames_ = 0;
     float fps_ = 0.0f;

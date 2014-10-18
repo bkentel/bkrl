@@ -1,7 +1,17 @@
 #include "entity.hpp"
 #include "json.hpp"
 
+#include <utf8.h>
+
 using namespace bkrl;
+
+path_string entity_def::tile_filename {};
+ipoint2     entity_def::tile_size     {0, 0};
+
+entity_def::locale const& entity_def::undefined() {
+    static locale const value {"<undefined name>", "<undefined text>"};
+    return value;
+}
 
 namespace {
 
@@ -20,9 +30,18 @@ public:
     void rule_root(cref value) {
         json::require_object(value);
         json::common::get_filetype(value, json::common::filetype_entity);
+        rule_tiles(value);
         rule_definitions(value);
     }
 
+    //--------------------------------------------------------------------------
+    void rule_tiles(cref value) {
+        entity_def::tile_filename = json::common::get_filename(value);
+
+        auto const size = json::require_array(value[json::common::field_tile_size], 2, 2);
+        entity_def::tile_size.x = json::require_int(size[0]);
+        entity_def::tile_size.y = json::require_int(size[1]);
+    }
     //--------------------------------------------------------------------------
     void rule_definitions(cref value) {
         auto const definitions = json::require_array(value[json::common::field_definitions]);

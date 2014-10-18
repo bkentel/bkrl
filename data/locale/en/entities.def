@@ -42,5 +42,9 @@
     , "name": "drudge apprentice"
     , "text": "A drudge still in training."
     }
+  , { "id":   "GOLEM_MUD"
+    , "name": "mud golem"
+    , "text": "A golem contructed of mud; not particulary sturdy."
+    }
   ]
 }

@@ -1,64 +1,72 @@
 { "file_type": "ENTITY"
+, "file_name": "./data/entities.bmp"
+, "tile_size": [18, 18]
 , "definitions": [
     { "id": "SKELETON"
     , "items": ["uniform", 0, 2]
-    , "tile": [3, 7]
+    , "tile": [5, 9]
     , "color": [85, 85, 85]
     , "health": ["dice", 3, 4]
     }
   , { "id": "SKELETON_WARRIOR"
     , "items": ["uniform", 1, 2]
-    , "tile": [3, 7]
+    , "tile": [5, 9]
     , "color": [255, 85, 85]
     , "health": ["dice", 3, 4]
     }
   , { "id": "SKELETON_ARCHER"
     , "items": ["uniform", 1, 2]
-    , "tile": [3, 7]
+    , "tile": [5, 9]
     , "color": [85, 255, 85]
     , "health": ["dice", 3, 4]
     }
   , { "id": "SKELETON_MAGE"
     , "items": ["uniform", 3, 5]
-    , "tile": [3, 7]
+    , "tile": [5, 9]
     , "color": [85, 85, 255]
     , "health": ["dice", 3, 4]
     }
   , { "id": "RAT_BROWN"
     , "items": ["uniform", 0, 1]
-    , "tile": [2, 7]
+    , "tile": [21, 6]
     , "color": [170, 170, 0]
     , "health": ["dice", 3, 4]
     }
   , { "id": "RAT_GREY"
     , "items": ["uniform", 0, 1]
-    , "tile": [2, 7]
+    , "tile": [21, 6]
     , "color": [170, 170, 170]
     , "health": ["dice", 3, 4]
     }
   , { "id": "WASP_YELLOW"
     , "items": ["uniform", 0, 1]
-    , "tile": [7, 7]
+    , "tile": [18, 0]
     , "color": [255, 255, 0]
     , "health": ["dice", 3, 4]
     }
   , { "id": "WASP_ORANGE"
     , "items": ["uniform", 0, 1]
-    , "tile": [7, 7]
+    , "tile": [18, 0]
     , "color": [255, 85, 0]
     , "health": ["dice", 3, 4]
     }
   , { "id": "DRUDGE_YOUNG"
     , "items": ["uniform", 0, 1]
-    , "tile": [4, 4]
+    , "tile": [5, 6]
     , "color": [85, 170, 85]
     , "health": ["dice", 3, 4]
     }
   , { "id": "DRUDGE_APPRENICE"
     , "items": ["uniform", 0, 2]
-    , "tile": [4, 4]
+    , "tile": [5, 6]
     , "color": [170, 85, 85]
     , "health": ["dice", 3, 4]
+    }
+  , { "id": "GOLEM_MUD"
+    , "items": ["uniform", 0, 2]
+    , "tile": [23, 5]
+    , "color": [170, 85, 85]
+    , "health": ["dice", 2, 3]
     }
   ]
 }

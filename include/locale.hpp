@@ -27,7 +27,7 @@ public:
     locale_t const& operator[](hash_t const key) const {
         auto const it = data_.find(key);
         if (it == std::cend(data_)) {
-            BK_TODO_FAIL();
+            return T::undefined();
         }
 
         return it->second;

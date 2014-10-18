@@ -519,6 +519,9 @@ public:
 
     ////////////////////////////////////////////////////////////////////////////
 
+    void set_draw_alpha(uint8_t const a) {
+    }
+
     void set_draw_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
         auto const result = SDL_SetRenderDrawColor(renderer_.get(), r, g, b, a);
         if (result) {
@@ -531,7 +534,10 @@ public:
     }
 
     void draw_filled_rect(rect_t const bounds) {
-        auto const dst = make_sdl_rect(bounds);
+        auto dst = make_sdl_rect(bounds);
+        dst.x += translation_.x;
+        dst.y += translation_.y;
+
         auto const result = SDL_RenderFillRect(renderer_.get(), &dst);
         if (result) {
             BK_TODO_FAIL();
@@ -580,6 +586,10 @@ renderer_impl::renderer_impl(application const& app)
   , translation_ (trans_vec {0, 0})
   , scale_       (scale_vec {1.0f, 1.0f})
 {
+    auto const result = SDL_SetRenderDrawBlendMode(renderer_.get(), SDL_BLENDMODE_BLEND);
+    if (result) {
+        BK_TODO_FAIL();
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -611,6 +621,8 @@ renderer_impl::present() {
 texture
 renderer_impl::create_texture_(SDL_Surface* const surface) {
     BK_ASSERT_DBG(surface);
+
+    //SDL_SetColorKey(surface, SDL_TRUE, 0);
 
     auto const result = SDL_CreateTextureFromSurface(renderer_.get(), surface);
     if (result == nullptr) {

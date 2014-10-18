@@ -176,30 +176,6 @@ inline bool has_field(cref value, size_t const i) {
 
 //==============================================================================
 //==============================================================================
-//template <typename T = float>
-//inline T require_float(cref value) {
-//    static_assert(std::is_floating_point<T>::value, "");
-//
-//    using limits = std::numeric_limits<T>;
-//
-//    static auto const min = static_cast<double>(limits::min());
-//    static auto const max = static_cast<double>(limits::max());
-//
-//    if (!value.is_number()) {
-//        BK_TODO_FAIL();
-//    }
-//
-//    auto const result = value.number_value();
-//
-//    if (result < min) {
-//        BK_TODO_FAIL();
-//    } else if (result > max) {
-//        BK_TODO_FAIL();
-//    }
-//
-//    return static_cast<T>(result);
-//}
-
 template <typename T = float>
 inline T require_float(cref value, T const min, T const max) {
     auto const result = require_float<T>(value);
@@ -267,6 +243,8 @@ extern string_ref const filetype_keymap;
 //------------------------------------------------------------
 extern string_ref const stringtype_messages;
 //------------------------------------------------------------
+
+path_string get_filename(cref value);
 
 inline string_ref get_filetype(cref value) {
     require_object(value);

@@ -148,9 +148,6 @@ void transitory_text_layout::reset(
 
         positions_.push_back(p);
     }
-
-    actual_w_ += 4;
-    actual_h_ += 4;
 }
 
 //------------------------------------------------------------------------------
