@@ -25,6 +25,10 @@ string_ref const jc::field_tile_size   {"tile_size"};
 string_ref const jc::field_stack       {"stack"};
 string_ref const jc::field_damage_min  {"damage_min"};
 string_ref const jc::field_damage_max  {"damage_max"};
+string_ref const jc::field_tile        {"tile"};
+string_ref const jc::field_color       {"color"};
+string_ref const jc::field_items       {"items"};
+string_ref const jc::field_health      {"health"};
 //------------------------------------------------------------------------------
 string_ref const jc::filetype_config  {"CONFIG"};
 string_ref const jc::filetype_locale  {"LOCALE"};

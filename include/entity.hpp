@@ -1,38 +1,53 @@
 #pragma once
 
-#include "math.hpp"
 #include "types.hpp"
-#include "locale.hpp"
-#include "algorithm.hpp"
-#include "item.hpp" //TODO temp
+#include "math.hpp"
+#include "item.hpp"
 
 namespace bkrl {
 
-class entity_def : public definition_base<entity_def> {
+namespace detail { class entity_definitions_impl; }
+
+//==============================================================================
+//!
+//==============================================================================
+class entity_definitions {
 public:
     using dist_t = random::random_dist;
+
+    struct definition {
+        static path_string tile_filename;
+        static ipoint2     tile_size;
+
+        string_id id;      //!< entity id
+        dist_t    items;   //!< number of carried items
+        int16_t   tile_x;  //!< tile x index
+        int16_t   tile_y;  //!< tile y index
+        uint8_t   r, g, b; //!< color
+        dist_t    health;  //!< health
+    };
 
     struct locale {
         utf8string name;
         utf8string text;
     };
 
-    static locale const& undefined();
+    entity_definitions();
+    ~entity_definitions();
 
-    //TODO might have to be atomic at some point.
-    static path_string tile_filename;
-    static ipoint2     tile_size;
+    void load_definitions(json::cref data);
+    void load_locale(json::cref data);
 
-    string_id id;      //!< entity id
-    dist_t    items;   //!< number of carried items
-    int16_t   tile_x;  //!< tile x index
-    int16_t   tile_y;  //!< tile y index
-    uint8_t   r, g, b; //!< color
-    dist_t    health;  //!< health
+    definition const& get_definition(identifier id) const;
+    locale     const& get_locale(identifier id) const;
+
+    void set_locale(lang_id lang);
+
+    int definitions_size() const;
+    definition const& get_definition_at(int index) const;
+private:
+    std::unique_ptr<detail::entity_definitions_impl> impl_;
 };
-
-entity_def::definition_t load_entities(json::cref data);
-entity_def::localized_t  load_entities_locale(json::cref data);
 
 //==============================================================================
 //==============================================================================
@@ -44,17 +59,19 @@ public:
 
     using point_t = ipoint2;
 
+    using defs_t = entity_definitions const&;
+
     entity(
-        random::generator& gen
-      , identifier const id
-      , point_t    const pos
+        random::generator&      gen
+      , identifier       const  id
+      , point_t          const  pos
       , item_definitions const& items
-      , entity_def::definition_t const& entities
+      , defs_t                  entities
     )
       : id_ {id}
       , pos_ (pos)
     {
-        auto const& edef = entities[id];
+        auto const& edef = entities.get_definition(id);
 
         health_total_ = edef.health(gen);
         health_ = health_total_;
@@ -87,8 +104,8 @@ public:
         move_to(p.x, p.y);
     }
 
-    string_ref name(entity_def::localized_t const& defs) const {
-        return defs[id_].name;
+    string_ref name(defs_t defs) const {
+        return defs.get_locale(id_).name;
     }
 
     void add_item(item&& itm, item_definitions const& defs) {
@@ -102,8 +119,8 @@ public:
 
     entity(entity&& other)
       : id_  {other.id_}
-      , pos_ (other.pos_)
       , items_ {std::move(other.items_)}
+      , pos_ (other.pos_)
       , health_ {other.health_}
       , health_total_ {other.health_total_}
     {
@@ -130,10 +147,10 @@ public:
     }
 private:
     identifier id_;
-    point_t    pos_ = {};
     item_stack items_;
-    int        health_;
-    int        health_total_;
+    point_t    pos_          = point_t {0, 0};
+    int        health_       = 1;
+    int        health_total_ = 1;
 };
 
 //==============================================================================

@@ -593,7 +593,7 @@ public:
         auto&       tex   = sheet.get_texture();
 
         auto const& entities = definitions_->get_entities();
-
+        
         r.set_color_mod(tex, make_color(255, 255, 255));
         auto const player_pos = player_->position();
         sheet.render(r, 13, 13, player_pos.x, player_pos.y);
@@ -601,7 +601,7 @@ public:
         for (auto const& mob : mobs_) {
             auto const p = mob.position();
 
-            entity_def const& e = entities[mob.id()];
+            auto const& e = entities.get_definition(mob.id());
 
             auto const tx = e.tile_x;
             auto const ty = e.tile_y;
@@ -776,10 +776,10 @@ public:
         auto const p = object.position();
         BK_ASSERT_DBG(!!entity_at(p));
 
-        auto const& entity_locale = definitions_->get_entities_loc();
+        auto const& entities = definitions_->get_entities();
         auto const& msgs = definitions_->get_messages();
         
-        auto const& name   = object.name(entity_locale);
+        auto const& name   = object.name(entities);
         auto const  damage = 1;
 
         auto const killed = object.apply_damage(damage);
@@ -894,10 +894,10 @@ public:
         
         auto const mob = mobs_.at(p);
         if (mob) {
-            auto const& locale = definitions_->get_entities_loc();
-            auto const& id     = mob->id();
-            auto const& name   = locale[id].name;
-            auto const& text   = locale[id].text;
+            auto const& entities = definitions_->get_entities();
+            auto const& id       = mob->id();
+            auto const& name     = entities.get_locale(id).name;
+            auto const& text     = entities.get_locale(id).text;
 
             result.push_back('\n');
             result.append(name.data(), name.size());
@@ -1091,21 +1091,21 @@ private:
                 continue;
             }
             
-            auto const& item_defs   = definitions_->get_items();
-            auto const& entity_defs = definitions_->get_entities();
-            auto const  size        = static_cast<int>(entity_defs.size());
+            auto const& items    = definitions_->get_items();
+            auto const& entities = definitions_->get_entities();
+            auto const  size     = entities.definitions_size();
 
             BK_ASSERT(size > 0);
             auto const i = random::uniform_range(substantive, 0, size - 1);
 
-            auto const& id = entity_defs.at_index(i).id;
+            auto const& id = entities.get_definition_at(i).id;
 
             auto mob = entity {
                 substantive
               , id
               , room.center()
-              , item_defs
-              , entity_defs
+              , items
+              , entities
             };
 
             auto steps = random::uniform_range(substantive, 1, 10);
@@ -1396,8 +1396,13 @@ public:
 
     //--------------------------------------------------------------------------
     ipoint2 screen_to_grid(int const x, int const y) const {
-        auto const fx = static_cast<float>(x);
-        auto const fy = static_cast<float>(y);
+        return screen_to_grid(static_cast<float>(x), static_cast<float>(y));
+    }
+
+    //--------------------------------------------------------------------------
+    ipoint2 screen_to_grid(float const x, float const y) const {
+        auto const fx = x;
+        auto const fy = y;
 
         auto const px = display_x_ + scroll_x_;
         auto const py = display_y_ + scroll_y_;
@@ -1413,6 +1418,11 @@ public:
     
     //--------------------------------------------------------------------------
     ipoint2 screen_to_grid(point2 const p) const {
+        return screen_to_grid(p.x, p.y);
+    }
+
+    //--------------------------------------------------------------------------
+    ipoint2 screen_to_grid(ipoint2 const p) const {
         return screen_to_grid(p.x, p.y);
     }
 
@@ -1571,11 +1581,11 @@ public:
     }
     
     //--------------------------------------------------------------------------
-    void on_mouse_move(mouse_move_info const& info) override {
+    void on_mouse_move(mouse_move_info const& ) override {
     }
     
     //--------------------------------------------------------------------------
-    void on_mouse_button(mouse_button_info const& info) override {
+    void on_mouse_button(mouse_button_info const& ) override {
     }
 private:
     completion_handler handler_;
@@ -1639,10 +1649,10 @@ public:
     }
     
     //--------------------------------------------------------------------------
-    void on_mouse_move(mouse_move_info const& info) override {}
+    void on_mouse_move(mouse_move_info const& ) override {}
     
     //--------------------------------------------------------------------------
-    void on_mouse_button(mouse_button_info const& info) override {}
+    void on_mouse_button(mouse_button_info const& ) override {}
 private:
     gui::item_list*    list_ = nullptr;
     completion_handler handler_;
@@ -1673,7 +1683,7 @@ public:
       , font_face_          {renderer_, font_lib_, config_->font_name, font_size}
       , last_message_       {}
       , tile_sheet_         {defs.get_tilemap(), renderer_}
-      , entities_sheet_     {renderer_, entity_def::tile_filename, entity_def::tile_size}
+      , entities_sheet_     {renderer_, entity_definitions::definition::tile_filename, entity_definitions::definition::tile_size}
       , view_               {tile_sheet_, app_.client_width(), app_.client_height()}
       , cur_level_          {nullptr}
       , player_             {}
@@ -2150,7 +2160,7 @@ public:
 
         item_list_.reset(items);
 
-        input_mode_ = imode_selection_.enter_mode(item_list_, [this](bool const ok, int const i) {
+        input_mode_ = imode_selection_.enter_mode(item_list_, [this](bool const , int const ) {
         });
     }
 
@@ -2226,7 +2236,7 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    void on_mouse_button(application::mouse_button_info const& info) {
+    void on_mouse_button(application::mouse_button_info const& ) {
         //if (info.state != application::mouse_button_info::state_t::pressed) {
         //    return;
         //}

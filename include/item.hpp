@@ -1,12 +1,11 @@
 #pragma once
 
+#include <vector>
+
 #include "types.hpp"
 #include "util.hpp"
-#include "locale.hpp"
 #include "random.hpp"
-
-#include "algorithm.hpp" //TODO temp
-#include <vector> //TODO temp
+#include "algorithm.hpp"
 
 namespace bkrl {
 
@@ -52,27 +51,6 @@ private:
 //==============================================================================
 //!
 //==============================================================================
-class item_def : public definition_base<item_def> {
-public:
-    using dist_t = random::random_dist;
-
-    struct locale {
-        utf8string name;
-        utf8string sort;
-        utf8string text;
-    };
-
-    static locale const& undefined();
-
-    string_id id;
-    int       stack;
-    dist_t    damage_min;
-    dist_t    damage_max;
-};
-
-//==============================================================================
-//!
-//==============================================================================
 class item {
 public:
     using defs_t = item_definitions const&;
@@ -108,15 +86,24 @@ public:
     int        damage_max = 0;
 };
 
+//==============================================================================
+//!
+//==============================================================================
 class loot_table {
 };
 
+//==============================================================================
+//!
+//==============================================================================
 item generate_item(
     random::generator&      gen
   , item_definitions const& defs
   , loot_table       const& table
 );
 
+//==============================================================================
+//!
+//==============================================================================
 class item_stack {
 public:
     BK_NOCOPY(item_stack);

@@ -233,6 +233,10 @@ extern string_ref const field_tile_size;
 extern string_ref const field_stack;
 extern string_ref const field_damage_min;
 extern string_ref const field_damage_max;
+extern string_ref const field_tile;
+extern string_ref const field_color;
+extern string_ref const field_items;
+extern string_ref const field_health;
 //------------------------------------------------------------------------------
 extern string_ref const filetype_config;
 extern string_ref const filetype_locale;

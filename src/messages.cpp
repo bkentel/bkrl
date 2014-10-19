@@ -128,7 +128,7 @@ message_map::~message_map() = default;
 message_map::message_map(message_map&&) = default;
 message_map& message_map::operator=(message_map&&) = default;
 
-void message_map::reload(json::cref data) {
+void message_map::reload(json::cref ) {
 }
 
 string_ref message_map::operator[](message_type const msg) const {

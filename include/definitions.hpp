@@ -65,10 +65,9 @@ public:
     }
 
     void set_language(lang_id const lang) {
-        //items_current_loc_    = get_current(items_locs_, lang);
-        entities_current_loc_ = get_current(entities_locs_, lang);
         messages_current_loc_ = get_current(messages_, lang);
 
+        entity_defs_.set_locale(lang);
         item_defs_.set_locale(lang);
     }
 
@@ -120,22 +119,9 @@ public:
                 it->second.reload(value);
             }
         } else if (type == filetype::entity) {
-            auto it = entities_locs_.find(lang);
-            if (it == std::end(entities_locs_)) {
-                entities_locs_.emplace(lang, bkrl::load_entities_locale(value));
-            } else {
-                it->second = bkrl::load_entities_locale(value);
-            }
+            entity_defs_.load_locale(value); //TODO reload
         } else if (type == filetype::item) {
-            //temp
-            item_defs_.load_locale(value);
-
-            //auto it = items_locs_.find(lang);
-            //if (it == std::end(items_locs_)) {
-            //    items_locs_.emplace(lang, bkrl::load_items_locale(value));
-            //} else {
-            //    it->second = bkrl::load_items_locale(value);
-            //}
+            item_defs_.load_locale(value); //TODO reload
         }
     }
 
@@ -147,14 +133,12 @@ public:
         tilemap_ = bkrl::load_tilemap(value);
     }
 
-    void load_item(json::cref value) {
-        //items_ = bkrl::load_items(value);
-        
+    void load_item(json::cref value) {      
         item_defs_.load_definitions(value);
     }
 
     void load_entity(json::cref value) {
-        entities_ = bkrl::load_entities(value);
+        entity_defs_.load_definitions(value);
     }
 
     void load_keymap(json::cref value) {
@@ -211,10 +195,8 @@ public:
 
     message_map const& get_messages() const { return *messages_current_loc_; }
 
-    item_definitions const& get_items() const { return item_defs_; }
-
-    entity_def::definition_t const& get_entities()     const { return entities_; }   
-    entity_def::localized_t  const& get_entities_loc() const { return *entities_current_loc_; }
+    item_definitions   const& get_items()    const { return item_defs_; }
+    entity_definitions const& get_entities() const { return entity_defs_; }
 private:
     lang_id language_ = BK_MAKE_LANG_CODE2('e','n');
 
@@ -227,18 +209,11 @@ private:
     keymap  keymap_;
     tilemap tilemap_;
 
-    //item_def::definition_t       items_;
-    //map_t<item_def::localized_t> items_locs_;
-    //item_def::localized_t*       items_current_loc_ = nullptr;
-
-    entity_def::definition_t       entities_;
-    map_t<entity_def::localized_t> entities_locs_;
-    entity_def::localized_t*       entities_current_loc_ = nullptr;
-
     map_t<message_map> messages_;
     message_map*       messages_current_loc_ = nullptr;
 
-    item_definitions item_defs_;
+    item_definitions   item_defs_;
+    entity_definitions entity_defs_;
 };
 
 
