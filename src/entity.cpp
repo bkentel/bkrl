@@ -99,14 +99,14 @@ public:
     void rule_items(cref value) {
         static utf8string const field {"items"};
 
-        entity_.items = json::common::random(value[field]);
+        entity_.items = json::common::get_random(value[field]);
     }
 
     //--------------------------------------------------------------------------
     void rule_health(cref value) {
         static utf8string const field {"health"};
 
-        entity_.health = json::common::random(value[field]);
+        entity_.health = json::common::get_random(value[field]);
     }
 
     //--------------------------------------------------------------------------
@@ -121,16 +121,12 @@ private:
 
 //==============================================================================
 //==============================================================================
-class entity_locale_parser : public json::common::locale {
+class entity_locale_parser {
 public:
+    using cref = json::cref;
+
     //--------------------------------------------------------------------------
-    explicit entity_locale_parser(cref data)
-      : locale {data}
-    {
-        if (string_type != json::common::filetype_entity) {
-            BK_TODO_FAIL();
-        }
-        
+    explicit entity_locale_parser(cref data) {        
         rule_root(data);
     }
 
@@ -141,7 +137,7 @@ public:
 
     //--------------------------------------------------------------------------
     void rule_definitions(cref value) {
-        auto const defs = definitions(value);
+        auto const defs = json::require_array(value[json::common::field_definitions]);
 
         for (auto&& def : defs.array_items()) {
             rule_definition(def);

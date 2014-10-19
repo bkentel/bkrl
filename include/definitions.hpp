@@ -65,9 +65,11 @@ public:
     }
 
     void set_language(lang_id const lang) {
-        items_current_loc_    = get_current(items_locs_, lang);
+        //items_current_loc_    = get_current(items_locs_, lang);
         entities_current_loc_ = get_current(entities_locs_, lang);
         messages_current_loc_ = get_current(messages_, lang);
+
+        item_defs_.set_locale(lang);
     }
 
     filetype get_file_type(json::cref value) {
@@ -125,12 +127,15 @@ public:
                 it->second = bkrl::load_entities_locale(value);
             }
         } else if (type == filetype::item) {
-            auto it = items_locs_.find(lang);
-            if (it == std::end(items_locs_)) {
-                items_locs_.emplace(lang, bkrl::load_items_locale(value));
-            } else {
-                it->second = bkrl::load_items_locale(value);
-            }
+            //temp
+            item_defs_.load_locale(value);
+
+            //auto it = items_locs_.find(lang);
+            //if (it == std::end(items_locs_)) {
+            //    items_locs_.emplace(lang, bkrl::load_items_locale(value));
+            //} else {
+            //    it->second = bkrl::load_items_locale(value);
+            //}
         }
     }
 
@@ -143,7 +148,9 @@ public:
     }
 
     void load_item(json::cref value) {
-        items_ = bkrl::load_items(value);
+        //items_ = bkrl::load_items(value);
+        
+        item_defs_.load_definitions(value);
     }
 
     void load_entity(json::cref value) {
@@ -204,11 +211,10 @@ public:
 
     message_map const& get_messages() const { return *messages_current_loc_; }
 
-    item_def::definition_t   const& get_items()    const { return items_; }
-    entity_def::definition_t const& get_entities() const { return entities_; }
-    
-    item_def::localized_t   const& get_items_loc()    const { return *items_current_loc_; }
-    entity_def::localized_t const& get_entities_loc() const { return *entities_current_loc_; }
+    item_definitions const& get_items() const { return item_defs_; }
+
+    entity_def::definition_t const& get_entities()     const { return entities_; }   
+    entity_def::localized_t  const& get_entities_loc() const { return *entities_current_loc_; }
 private:
     lang_id language_ = BK_MAKE_LANG_CODE2('e','n');
 
@@ -221,9 +227,9 @@ private:
     keymap  keymap_;
     tilemap tilemap_;
 
-    item_def::definition_t       items_;
-    map_t<item_def::localized_t> items_locs_;
-    item_def::localized_t*       items_current_loc_ = nullptr;
+    //item_def::definition_t       items_;
+    //map_t<item_def::localized_t> items_locs_;
+    //item_def::localized_t*       items_current_loc_ = nullptr;
 
     entity_def::definition_t       entities_;
     map_t<entity_def::localized_t> entities_locs_;
@@ -231,6 +237,8 @@ private:
 
     map_t<message_map> messages_;
     message_map*       messages_current_loc_ = nullptr;
+
+    item_definitions item_defs_;
 };
 
 

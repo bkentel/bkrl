@@ -56,6 +56,8 @@
 #include <memory>
 #include <initializer_list>
 
+#include <boost/utility/string_ref.hpp>
+
 namespace json11 {
 
 class JsonValue;
@@ -69,7 +71,7 @@ public:
 
     // Array and object typedefs
     typedef std::vector<Json> array;
-    typedef std::map<std::string, Json> object;
+    typedef std::map<std::string, Json, std::less<>> object;
 
     // Constructors for the various types of JSON value.
     Json() noexcept;                // NUL
@@ -135,6 +137,8 @@ public:
     const Json & operator[](size_t i) const;
     // Return a reference to obj[key] if this is an object, Json() otherwise.
     const Json & operator[](const std::string &key) const;
+    // Return a reference to obj[key] if this is an object, Json() otherwise.
+    const Json & operator[](boost::string_ref key) const;
 
     // Serialize.
     void dump(std::string &out) const;
@@ -194,6 +198,7 @@ protected:
     virtual const Json &operator[](size_t i) const;
     virtual const Json::object &object_items() const;
     virtual const Json &operator[](const std::string &key) const;
+    virtual const Json &operator[](boost::string_ref key) const;
     virtual ~JsonValue() {}
 };
 

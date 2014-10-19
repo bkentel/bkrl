@@ -491,7 +491,11 @@ public:
         }
     }
 
-    void set_color_mod(texture& tex, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
+    void set_color_mod(
+        texture& tex
+      , uint8_t r, uint8_t g, uint8_t b
+      , uint8_t //a //TODO
+    ) {
         set_color_mod(tex, r, g, b);
     }
     

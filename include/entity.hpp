@@ -48,7 +48,7 @@ public:
         random::generator& gen
       , identifier const id
       , point_t    const pos
-      , item_def::definition_t   const& items
+      , item_definitions const& items
       , entity_def::definition_t const& entities
     )
       : id_ {id}
@@ -91,7 +91,7 @@ public:
         return defs[id_].name;
     }
 
-    void add_item(item&& itm, item_def::definition_t const& defs) {
+    void add_item(item&& itm, item_definitions const& defs) {
         items_.insert(std::move(itm), defs);
     }
 

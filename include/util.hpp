@@ -216,6 +216,29 @@ struct identifier {
     operator hash_t() const noexcept { return hash; }
 };
 
+struct hashed_string_ref {
+    hashed_string_ref(string_ref const str) noexcept
+        : string (str)
+        , hash   (bkrl::slash_hash32(str))
+    {
+    }
+
+    string_ref string = string_ref {};
+    hash_t     hash   = hash_t {0};
+};
+
+inline bool operator==(hashed_string_ref const lhs, hashed_string_ref const rhs) noexcept {
+    return lhs.hash == rhs.hash;
+}
+
+inline bool operator==(hashed_string_ref const lhs, string_ref const rhs) noexcept {
+    return lhs.string == rhs;
+}
+
+inline bool operator==(hashed_string_ref const lhs, hash_t const rhs) noexcept {
+    return lhs.hash == rhs;
+}
+
 template <size_t Bytes> struct unsigned_int {
     static_assert(Bytes >= 1, "");
     static_assert(Bytes <= 9, "");
@@ -236,5 +259,20 @@ template <size_t Bytes> struct unsigned_int {
 
 template <size_t Bytes>
 using unsigned_int_t = typename unsigned_int<Bytes>::type;
+
+using lang_id = bkrl::tagged_type<uint32_t, struct lang_id_tag>;
+
+#define BK_MAKE_LANG_CODE3(a, b, c) bkrl::lang_id { \
+  static_cast<uint32_t>((a & 0xFF) << 16) \
+| static_cast<uint32_t>((b & 0xFF) <<  8) \
+| static_cast<uint32_t>((c & 0xFF) <<  0) \
+}
+
+#define BK_MAKE_LANG_CODE2(a, b) BK_MAKE_LANG_CODE3(0, a, b)
+
+inline static void assign(utf8string& out, string_ref const in) {
+    out.clear();
+    out.assign(in.data(), in.size());
+}
 
 } //namespace bkrl

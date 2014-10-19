@@ -212,6 +212,9 @@
     <ClInclude Include="..\include\definitions.hpp">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\lib\json11\json11.hpp">
+      <Filter>lib</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="boost_container.natvis" />

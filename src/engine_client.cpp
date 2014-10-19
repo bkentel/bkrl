@@ -302,7 +302,7 @@ public:
     }
 
     void add_item(item const& itm) {
-        auto const& def   = definitions_->get_items_loc()[itm.id];
+        auto const& def   = definitions_->get_items().get_locale(itm.id);
         auto const& name  = def.name;
 
         name_buffer_.clear();
@@ -881,11 +881,11 @@ public:
 
         auto const stack = items_.at(p);
         if (stack) {
-            auto const& locale = definitions_->get_items_loc();
+            auto const& items = definitions_->get_items();
 
             for (auto&& itm : *stack) {
                 auto const& id   = itm.id;
-                auto const& name = locale[id].name;
+                auto const& name = items.get_locale(id).name;
 
                 result.push_back('\n');
                 result.append(name);
@@ -1684,9 +1684,6 @@ public:
       , imode_selection_    {[&] {input_mode_ = nullptr;}}
     {
         definitions_->set_language(BK_MAKE_LANG_CODE2('j','a'));
-
-        //TODO
-        item::current_locale = &definitions_->get_items_loc();;
         
         ////////////////////////////////////////////////////
         init_sinks();
@@ -2087,12 +2084,12 @@ public:
     //! Get the item at @p index from the stack at @p p.
     //--------------------------------------------------------------------------
     void get_item_(ipoint2 const p, int const index = 0) {
-        auto const& itm_locale = definitions_->get_items_loc();
+        auto const& items      = definitions_->get_items();
         auto const& msg_locale = definitions_->get_messages();
 
         auto item = cur_level_->get_item(p, index);
 
-        auto const& name = item.name(itm_locale);
+        auto const& name = item.name(items);
         auto const& msg  = msg_locale[message_type::get_ok];
 
         auto fmt = boost::format {msg.data()};
@@ -2136,7 +2133,7 @@ public:
             }
 
             auto        itm  = player_.items().remove(i);
-            auto const& name = itm.name(definitions_->get_items_loc());
+            auto const& name = itm.name(definitions_->get_items());
                 
             msg_log_.print_line(message_type::drop_ok, name);
 

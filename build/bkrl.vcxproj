@@ -225,6 +225,7 @@
     <ClInclude Include="..\include\time.hpp" />
     <ClInclude Include="..\include\types.hpp" />
     <ClInclude Include="..\include\util.hpp" />
+    <ClInclude Include="..\lib\json11\json11.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="boost_container.natvis">

@@ -1,169 +1,264 @@
 #include "item.hpp"
 #include "json.hpp"
 
-using namespace bkrl;
-
-//TODO make atomic
-bkrl::item::localized_t const* bkrl::item::current_locale = nullptr;
-
-item_def::locale const& item_def::undefined() {
-    static locale const value {"<undefined name>", "<undefined sort>", "<undefined text>"};
-    return value;
-}
-
-namespace {
+namespace jc = bkrl::json::common;
 
 //==============================================================================
 //!
 //==============================================================================
-class item_parser {
+class bkrl::detail::item_definitions_impl {
 public:
-    using cref = json::cref;
+    using definition = item_definitions::definition;
+    using locale     = item_definitions::locale;
+    using cref = bkrl::json::cref;  
 
-    //--------------------------------------------------------------------------
-    explicit item_parser(cref data) {
-        rule_root(data);
+    item_definitions_impl() {
     }
 
-    //--------------------------------------------------------------------------
-    explicit item_parser(path_string_ref const filename)
-      : item_parser {json::common::from_file(filename)}
-    {
+    ////////////////////////////////////////////////////////////////////////////
+    void load_definitions(cref data) {
+        rule_def_root(data);
     }
-
-    //--------------------------------------------------------------------------
-    void rule_root(cref value) {
+    
+    void rule_def_root(cref value) {
         json::require_object(value);
-        json::common::get_filetype(value, json::common::filetype_item);
-        rule_definitions(value);
+
+        rule_def_filetype(value);
+        rule_def_definitions(value);
     }
 
-    //--------------------------------------------------------------------------
-    void rule_definitions(cref value) {
-        auto const definitions = json::require_array(value[json::common::field_definitions]);
-
-        for (auto&& def : definitions.array_items()) {
-            rule_definition(def);
-        }
+    void rule_def_filetype(cref value) {
+        jc::get_filetype(value, jc::filetype_item);
     }
 
-    //--------------------------------------------------------------------------
-    void rule_definition(cref value) {
-        item_.id = json::require_string(value[json::common::field_id]);
-
-        rule_stack(value);
-        rule_damage(value);
-
-        auto const hash = item_.id.hash;
-        items_.emplace(hash, std::move(item_));
-    }
-
-    //--------------------------------------------------------------------------
-    void rule_stack(cref value) {
-        static utf8string const field {"stack"};
-
-        item_.stack = json::optional_int(value[field]).get_value_or(1);
-    }
-
-    //--------------------------------------------------------------------------
-    void rule_damage(cref value) {
-        static utf8string const field_min {"damage_min"};
-        static utf8string const field_max {"damage_max"};
-
-        auto const dmg_min = value[field_min];
-        auto const dmg_max = value[field_max];
-
-        if (dmg_min.is_null() && dmg_max.is_null()) {
-            item_.damage_min.clear();
-            item_.damage_max.clear();
-            return;
-        }
-
-        if (dmg_min.is_null() ^ dmg_max.is_null()) {
-            BK_TODO_FAIL();
-        }
-
-        item_.damage_min = json::common::random {dmg_min};
-        item_.damage_max = json::common::random {dmg_max};
-    }
-
-    //--------------------------------------------------------------------------
-    operator item_def::definition_t::map_t&&() && {
-        return std::move(items_);
-    }
-private:
-    item_def item_;
-
-    item_def::definition_t::map_t items_;
-};
-
-//==============================================================================
-//!
-//==============================================================================
-class item_locale_parser : public json::common::locale {
-public:
-    //--------------------------------------------------------------------------
-    explicit item_locale_parser(path_string_ref const filename)
-      : item_locale_parser {json::common::from_file(filename)}
-    {
-    }
-
-    //--------------------------------------------------------------------------
-    explicit item_locale_parser(cref data)
-      : locale {data}
-    {
-        if (string_type != json::common::filetype_item) {
-            BK_TODO_FAIL();
-        }
-        
-        rule_root(data);
-    }
-
-    //--------------------------------------------------------------------------
-    void rule_root(cref value) {
-        rule_definitions(value);
-    }
-
-    //--------------------------------------------------------------------------
-    void rule_definitions(cref value) {
-        auto const defs = definitions(value);
-
+    void rule_def_definitions(cref value) {
+        auto const& defs = json::require_array(value[jc::field_definitions]);
         for (auto&& def : defs.array_items()) {
-            rule_definition(def);
+            rule_def_definition(def);
         }
     }
 
-    //--------------------------------------------------------------------------
-    void rule_definition(cref value) {
-        auto const id = json::require_string(value[json::common::field_id]);
-        
-        auto name = json::optional_string(value[json::common::field_name]);
-        auto text = json::optional_string(value[json::common::field_text]);
-        auto sort = json::optional_string(value[json::common::field_sort]);
+    void rule_def_definition(cref value) {
+        rule_def_id(value);
+        rule_def_stack(value);
+        rule_def_damage(value);
 
-        locale_.name = name.get_value_or("<undefined>").to_string();
-        locale_.text = text.get_value_or("<undefined>").to_string();
-        locale_.sort = sort.get_value_or(locale_.name).to_string();
-
-        auto const hash = slash_hash32(id);
-        strings_.emplace(hash, std::move(locale_));
+        definitions_.emplace(cur_def_.id.hash, std::move(cur_def_));
     }
 
-    //--------------------------------------------------------------------------
-    operator item_def::localized_t::map_t&&() && {
-        return std::move(strings_);
+    void rule_def_id(cref value) {
+        auto const str = json::require_string(value[jc::field_id]);
+        if (str.length() < 1) {
+            BK_TODO_FAIL();
+        }
+
+        cur_def_.id = str;
+    }
+
+    void rule_def_stack(cref value) {
+        auto const stack = json::default_int(value[jc::field_stack], 1);
+        if (stack < 1) {
+            BK_TODO_FAIL();
+        }
+
+        cur_def_.max_stack = stack;
+    }
+
+    void rule_def_damage(cref value) {
+        using dist_t = item_definitions::dist_t;
+
+        auto const dmg_min = value[jc::field_damage_min];
+        auto const dmg_max = value[jc::field_damage_max];
+
+        auto const no_min = dmg_min.is_null();
+        auto const no_max = dmg_max.is_null();
+
+        if (no_min ^ no_max) {
+            BK_TODO_FAIL();
+        }
+
+        auto const has_damage = !no_min && !no_max;
+
+        cur_def_.damage_min = has_damage ? jc::get_random(dmg_min) : dist_t {};
+        cur_def_.damage_max = has_damage ? jc::get_random(dmg_max) : dist_t {};
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    void load_locale(cref data) {
+        rule_loc_root(data);
+    }
+
+    void rule_loc_root(cref value) {
+        auto const locale = jc::get_locale(value, jc::filetype_item);
+        if (!locale) {
+            BK_TODO_FAIL();
+        }
+        
+        cur_lang_ = *locale;
+
+        rule_loc_definitions(value);
+    }
+
+    void rule_loc_definitions(cref value) {
+        auto const& defs = json::require_array(value[jc::field_definitions]);
+        for (auto&& def : defs.array_items()) {
+            rule_loc_definition(def);
+        }
+
+        locales_.emplace(cur_lang_, std::move(cur_loc_map_));
+    }
+
+    void rule_loc_definition(cref value) {
+        static string_ref const undefined {"<undefined string>"};
+
+        hashed_string_ref const id = json::require_string(value[jc::field_id]);
+        
+        assign(cur_loc_.name, json::default_string(value[jc::field_name], undefined));
+        assign(cur_loc_.text, json::default_string(value[jc::field_text], undefined));
+        assign(cur_loc_.sort, json::default_string(value[jc::field_sort], ""));
+
+        cur_loc_map_.emplace(id.hash, std::move(cur_loc_));
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    definition const& get_definition(identifier const id) const {
+        auto const it = definitions_.find(id.hash);
+        if (it == std::end(definitions_)) {
+            BK_TODO_FAIL();
+        }
+
+        return it->second;
+    }
+    
+    locale const& get_locale(identifier const id) const {
+        auto const it = current_locale_->find(id.hash);
+        if (it == std::end(*current_locale_)) {
+            BK_TODO_FAIL();
+        }
+
+        return it->second;
+    }
+
+    void set_locale(lang_id const lang) {
+        auto const it = locales_.find(lang);
+        if (it == std::end(locales_)) {
+            BK_TODO_FAIL();
+        }
+
+        current_locale_ = &it->second;
+    }
+
+    int definitions_size() const {
+        return static_cast<int>(definitions_.size());
+    }
+    
+    definition const& get_definition_at(int const index) const {
+        BK_ASSERT(index < definitions_size());
+
+        auto it = definitions_.begin();
+        std::advance(it, index);
+        return it->second;
     }
 private:
-    item_def::locale             locale_;
-    item_def::localized_t::map_t strings_;
+    template <typename K, typename V>
+    using map_t = boost::container::flat_map<K, V, std::less<>>;
+
+    using locale_map = map_t<hash_t, locale>;
+
+    item_definitions::definition cur_def_;
+    item_definitions::locale     cur_loc_;
+    lang_id                      cur_lang_;
+    locale_map                   cur_loc_map_;
+
+    map_t<hash_t,  definition> definitions_;
+    map_t<lang_id, locale_map> locales_;
+
+    locale_map const* current_locale_ = nullptr;
 };
 
-} //namespace
+////////////////////////////////////////////////////////////////////////////////
+// item_definitions
+////////////////////////////////////////////////////////////////////////////////
+using bkrl::item_definitions;
 
-item_def::definition_t bkrl::load_items(json::cref data) {
-    return item_def::definition_t { item_parser {data} };
+//------------------------------------------------------------------------------
+item_definitions::~item_definitions() = default;
+
+//------------------------------------------------------------------------------
+item_definitions::item_definitions()
+  : impl_ {std::make_unique<detail::item_definitions_impl>()}
+{
 }
 
-item_def::localized_t bkrl::load_items_locale(json::cref data) {
-    return item_def::localized_t { item_locale_parser {data} };
+//------------------------------------------------------------------------------
+void
+bkrl::item_definitions::load_definitions(json::cref data) {
+    impl_->load_definitions(data);
+}
+
+//------------------------------------------------------------------------------
+void
+bkrl::item_definitions::load_locale(json::cref data) {
+    impl_->load_locale(data);
+}
+
+//------------------------------------------------------------------------------
+item_definitions::definition const&
+bkrl::item_definitions::get_definition(identifier const id) const {
+    return impl_->get_definition(id);
+}
+
+//------------------------------------------------------------------------------
+item_definitions::locale const&
+bkrl::item_definitions::get_locale(identifier const id) const {
+    return impl_->get_locale(id);
+}
+
+//------------------------------------------------------------------------------
+void bkrl::item_definitions::set_locale(lang_id const lang) {
+    impl_->set_locale(lang);
+}
+
+//------------------------------------------------------------------------------
+int item_definitions::definitions_size() const {
+    return impl_->definitions_size();
+}
+
+//------------------------------------------------------------------------------
+item_definitions::definition const&
+item_definitions::get_definition_at(int const index) const {
+    return impl_->get_definition_at(index);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+bkrl::item
+bkrl::generate_item(
+    random::generator&      gen
+  , item_definitions const& defs
+  , loot_table       const& table
+) {
+    auto const size = defs.definitions_size();
+    auto const i    = random::uniform_range(gen, 0, size - 1);
+
+    auto const& idef = defs.get_definition_at(i);
+
+    item result;
+
+    result.id = idef.id;
+
+    auto const has_dmg_min = !!idef.damage_min;
+    auto const has_dmg_max = !!idef.damage_max;
+
+    BK_ASSERT_DBG(
+         (has_dmg_min &&  has_dmg_max)
+     || (!has_dmg_min && !has_dmg_max)
+    );
+
+    if (has_dmg_min && has_dmg_max) {
+        result.damage_min = idef.damage_min(gen);
+        result.damage_max = idef.damage_max(gen);
+    }
+
+    return result;
 }
