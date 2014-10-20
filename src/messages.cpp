@@ -1,70 +1,59 @@
 #include "messages.hpp"
 #include "json.hpp"
 
-#include <vector>
 #include <boost/container/flat_map.hpp>
 
-using namespace bkrl;
+namespace jc = bkrl::json::common;
 
-namespace {
-class message_parser {
+class bkrl::message_map::impl_t {
 public:
     using cref = json::cref;
 
-    using key_t   = message_type;
-    using value_t = utf8string;
-    using container_t = boost::container::flat_map<key_t, value_t>;
-
-    explicit message_parser(cref data) {
+    //--------------------------------------------------------------------------
+    void load(json::cref data) {
         rule_root(data);
     }
 
+    //--------------------------------------------------------------------------
     void rule_root(cref value) {
-        json::require_object(value);
-
         rule_file_type(value);
-        rule_string_type(value);
         rule_language(value);
         rule_definitions(value);
     }
     
+    //--------------------------------------------------------------------------
     void rule_file_type(cref value) {
-        json::common::get_filetype(value, "LOCALE");
+        jc::get_filetype(value, jc::filetype_locale);
     }
-    
-    void rule_string_type(cref value) {
-        static utf8string const field {"string_type"};
-        static utf8string const expected {"MESSAGE"};
-        
-        auto const type = json::require_string(value[field]);
-
-        if (type != expected) {
+       
+    //--------------------------------------------------------------------------
+    void rule_language(cref value) {
+        auto const locale = jc::get_locale(value, jc::filetype_messages);
+        if (!locale) {
             BK_TODO_FAIL();
         }
-    }
-    
-    void rule_language(cref value) {
-        static utf8string const field {"language"};
-        
-        lang_ = json::require_string(value[field]).to_string();
-    }
-    
-    void rule_definitions(cref value) {
-        static utf8string const field {"definitions"};
-        auto const defs = json::require_array(value[field]);
 
-        messages_.reserve(enum_value(message_type::enum_size));
+        cur_lang_ = *locale;
+    }
+    
+    //--------------------------------------------------------------------------
+    void rule_definitions(cref value) {
+        auto const defs = json::require_array(value[jc::field_definitions]);
+        cur_loc_.reserve(enum_value(message_type::enum_size));
 
         for (auto const& def : defs.array_items()) {
             rule_definition(def);
         }
+
+        locales_.emplace(cur_lang_, std::move(cur_loc_));
     }
     
+    //--------------------------------------------------------------------------
     void rule_definition(cref value) {
-        auto const arr = json::require_array(value, 2, 2);
+        auto const def = json::require_array(value, 2, 2);
         
-        auto const id  = json::require_string(arr[0]);
-        auto const str = json::require_string(arr[1]);
+        auto const id  = json::require_string(def[0]);
+        auto const str = json::require_string(def[1]);
 
         auto const hash   = slash_hash32(id);
         auto const mapped = enum_map<message_type>::get(hash);
@@ -75,62 +64,68 @@ public:
             BK_TODO_FAIL();
         }
 
-        messages_.emplace(mapped.value, str.to_string());
+        cur_loc_.emplace(mapped.value, str.to_string());
     }
 
-    string_ref language() const {
-        return lang_;
-    }
-
-    container_t& messages() {
-        return messages_;
-    }
-
-
-private:
-    utf8string lang_;
-    container_t messages_;
-};
-
-}
-
-class message_map::impl_t {
-public:
-    impl_t(json::cref data) {
-        reload(data);
-    }
-
-    void reload(json::cref data) {
-        message_parser parser {data};
-        messages_ = std::move(parser.messages());
-    }
-
+    //--------------------------------------------------------------------------
     string_ref operator[](message_type const msg) const {
         static string_ref const undefined {"<undefined message>"};
 
-        auto const it = messages_.find(msg);
-        if (it == std::cend(messages_)) {
+        auto const it = current_locale_->find(msg);
+        if (it == std::cend(*current_locale_)) {
             return undefined;
         }
 
         return it->second;
     }
+
+    //--------------------------------------------------------------------------
+    void set_locale(lang_id const lang) {
+        auto const it = locales_.find(lang);
+        if (it == std::end(locales_)) {
+            BK_TODO_FAIL();
+        }
+
+        current_locale_ = &it->second;
+    }
 private:
-    message_parser::container_t messages_;
+    template <typename K, typename V>
+    using map_t = boost::container::flat_map<K, V, std::less<>>;
+    using locale_map = map_t<message_type, utf8string>;
+    
+    lang_id    cur_lang_;
+    locale_map cur_loc_;
+
+    map_t<lang_id, locale_map> locales_;
+
+    locale_map const* current_locale_ = nullptr;
 };
 
-message_map::message_map(json::cref data)
-  : impl_ {std::make_unique<impl_t>(data)}
+////////////////////////////////////////////////////////////////////////////////
+// message_map
+////////////////////////////////////////////////////////////////////////////////
+bkrl::message_map::~message_map() = default;
+
+//------------------------------------------------------------------------------
+bkrl::message_map::message_map()
+  : impl_ {std::make_unique<impl_t>()}
 {
 }
 
-message_map::~message_map() = default;
-message_map::message_map(message_map&&) = default;
-message_map& message_map::operator=(message_map&&) = default;
-
-void message_map::reload(json::cref ) {
+//------------------------------------------------------------------------------
+void
+bkrl::message_map::load(json::cref value) {
+    impl_->load(value);
 }
 
-string_ref message_map::operator[](message_type const msg) const {
+//------------------------------------------------------------------------------
+bkrl::string_ref
+bkrl::message_map::operator[](message_type const msg) const {
     return (*impl_)[msg];
+}
+
+//------------------------------------------------------------------------------
+void
+bkrl::message_map::set_locale(lang_id const lang) {
+    impl_->set_locale(lang);
 }

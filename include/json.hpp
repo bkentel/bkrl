@@ -244,8 +244,7 @@ extern string_ref const filetype_item;
 extern string_ref const filetype_entity;
 extern string_ref const filetype_tilemap;
 extern string_ref const filetype_keymap;
-//------------------------------------------------------------------------------
-extern string_ref const stringtype_messages;
+extern string_ref const filetype_messages;
 //------------------------------------------------------------------------------
 
 //==============================================================================

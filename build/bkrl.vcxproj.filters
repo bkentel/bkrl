@@ -102,6 +102,9 @@
     <ClCompile Include="..\src\entity.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\definitions.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pch.hpp">
@@ -204,9 +207,6 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\entity.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\locale.hpp">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\definitions.hpp">

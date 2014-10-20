@@ -30,14 +30,14 @@ string_ref const jc::field_color       {"color"};
 string_ref const jc::field_items       {"items"};
 string_ref const jc::field_health      {"health"};
 //------------------------------------------------------------------------------
-string_ref const jc::filetype_config  {"CONFIG"};
-string_ref const jc::filetype_locale  {"LOCALE"};
-string_ref const jc::filetype_item    {"ITEM"};
-string_ref const jc::filetype_entity  {"ENTITY"};
-string_ref const jc::filetype_tilemap {"TILEMAP"};
-string_ref const jc::filetype_keymap  {"KEYMAP"};
+string_ref const jc::filetype_config   {"CONFIG"};
+string_ref const jc::filetype_locale   {"LOCALE"};
+string_ref const jc::filetype_item     {"ITEM"};
+string_ref const jc::filetype_entity   {"ENTITY"};
+string_ref const jc::filetype_tilemap  {"TILEMAP"};
+string_ref const jc::filetype_keymap   {"KEYMAP"};
+string_ref const jc::filetype_messages {"MESSAGE"};
 //------------------------------------------------------------------------------
-string_ref const jc::stringtype_messages  {"MESSAGE"};
 
 //------------------------------------------------------------------------------
 #if BOOST_OS_WINDOWS

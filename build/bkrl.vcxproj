@@ -146,6 +146,7 @@
     <ClCompile Include="..\src\assert.cpp" />
     <ClCompile Include="..\src\bsp_layout.cpp" />
     <ClCompile Include="..\src\config.cpp" />
+    <ClCompile Include="..\src\definitions.cpp" />
     <ClCompile Include="..\src\engine_client.cpp" />
     <ClCompile Include="..\src\entity.cpp" />
     <ClCompile Include="..\src\enum_map.cpp" />
@@ -208,7 +209,6 @@
     <ClInclude Include="..\include\iterable.hpp" />
     <ClInclude Include="..\include\json.hpp" />
     <ClInclude Include="..\include\keyboard.hpp" />
-    <ClInclude Include="..\include\locale.hpp" />
     <ClInclude Include="..\include\macros.hpp" />
     <ClInclude Include="..\include\math.hpp" />
     <ClInclude Include="..\include\messages.hpp" />

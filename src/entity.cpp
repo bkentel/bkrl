@@ -1,6 +1,8 @@
 #include "entity.hpp"
 #include "json.hpp"
 
+#include <boost/container/flat_map.hpp>
+
 namespace jc = bkrl::json::common;
 
 //==============================================================================
@@ -39,9 +41,12 @@ public:
 
     //--------------------------------------------------------------------------
     void rule_ent_definitions(cref value) {
-        auto const defs = json::require_array(value[jc::field_definitions]);
+        auto const& defs  = json::require_array(value[jc::field_definitions]);
+        auto const& array = defs.array_items();
 
-        for (auto&& def : defs.array_items()) {
+        definitions_.reserve(array.size());
+
+        for (auto&& def : array) {
             rule_ent_definition(def);
         }
     }
@@ -116,8 +121,12 @@ public:
 
     //--------------------------------------------------------------------------
     void rule_loc_definitions(cref value) {
-        auto const& defs = json::require_array(value[jc::field_definitions]);
-        for (auto&& def : defs.array_items()) {
+        auto const& defs  = json::require_array(value[jc::field_definitions]);
+        auto const& array = defs.array_items();
+
+        cur_loc_map_.reserve(array.size());
+
+        for (auto&& def : array) {
             rule_loc_definition(def);
         }
 
