@@ -150,6 +150,16 @@ operator+=(
 //------------------------------------------------------------------------------
 template <typename T>
 inline xy_type<T, geometry::point>
+operator-=(
+    xy_type<T, geometry::point>&       p
+  , xy_type<T, geometry::vector> const q
+) noexcept {
+    return (p = p - q);
+}
+
+//------------------------------------------------------------------------------
+template <typename T>
+inline xy_type<T, geometry::point>
 operator-(
     xy_type<T, geometry::point>  const p
   , xy_type<T, geometry::vector> const q

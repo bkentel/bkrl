@@ -133,8 +133,8 @@ enum class message_type      : uint16_t;
 
 using texture_id = unsigned;
 
-using grid_size   = signed;
-using grid_index  = signed;
+using grid_size   = int;
+using grid_index  = int;
 using grid_point  = point2d<grid_index>;
 using grid_region = axis_aligned_rect<grid_index>;
 using grid_data_value = uint32_t;

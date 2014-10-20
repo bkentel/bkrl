@@ -572,7 +572,7 @@ private:
     //--------------------------------------------------------------------------
     // transform the tile at @p p to a corridor.
     //--------------------------------------------------------------------------
-    void generate_at_(
+    tile_type generate_at_(
         grid_storage& grid
       , grid_point    p
     ) const;
@@ -659,7 +659,7 @@ bsp_connector_impl::can_gen_corridor(
 }
 
 //------------------------------------------------------------------------------
-void
+tile_type
 bsp_connector_impl::generate_at_(
     grid_storage&      grid
   , grid_point   const p
@@ -670,7 +670,7 @@ bsp_connector_impl::generate_at_(
     case tile_type::invalid :
     case tile_type::empty :
         grid.set(attribute::tile_type, p, tile_type::corridor);
-        break;
+        return tile_type::corridor;
     case tile_type::floor :
     case tile_type::door :
     case tile_type::stair :
@@ -678,10 +678,41 @@ bsp_connector_impl::generate_at_(
         break;
     case tile_type::wall :
         grid.set(attribute::tile_type, p, tile_type::door);
-        break;
+        return tile_type::door;
     default :
         BK_TODO_FAIL();
     }
+
+    return type;
+}
+
+static inline bool can_place_door_at(
+    grid_storage const& grid
+  , grid_point   const  p
+) {
+    auto const is_ok = [&](ipoint2 const q) {
+        if (!grid.is_valid(q)) {
+            return false;
+        }
+
+        auto const type = grid.get(attribute::tile_type, q);
+
+        switch (type) {
+        case tile_type::corridor :
+        case tile_type::floor :
+        case tile_type::stair :
+            return true;
+        }
+
+        return false;
+    };
+
+    auto const n = ipoint2 {p.x,     p.y - 1};
+    auto const s = ipoint2 {p.x,     p.y + 1};
+    auto const w = ipoint2 {p.x - 1, p.y    };
+    auto const e = ipoint2 {p.x + 1, p.y    };
+
+    return (is_ok(n) && is_ok(s)) || (is_ok(e) && is_ok(w));
 }
 
 //------------------------------------------------------------------------------
@@ -697,41 +728,71 @@ bsp_connector_impl::generate_segment_(
 ) const {
     BK_ASSERT_DBG(len > 0);
     BK_ASSERT_DBG(intersects(bounds, start));
-    //BK_ASSERT_DBG((dir.x || dir.y) && !(dir.x && dir.y)); TODO
     BK_ASSERT_DBG(src_id && dst_id && src_id != dst_id);
-    BK_ASSERT_DBG(can_gen_corridor(grid, bounds, start));
+    BK_ASSERT_DBG(dir.x || dir.y);
 
-    auto const step = (dir.x ? dir.x : dir.y) > 0 ? 1 : -1;
+    //a list of doors that have been generated along this segment
+    boost::container::static_vector<ipoint2, 8> doors;
+
+    auto const v = 
+        (dir.x > 0) ? ivec2 { 1,  0}
+      : (dir.x < 0) ? ivec2 {-1,  0}
+      : (dir.y > 0) ? ivec2 { 0,  1}
+      :               ivec2 { 0, -1};
 
     auto  result = std::make_pair(start, corridor_result::ok);
-    auto& cur    = result.first;
+    auto& p      = result.first;
     auto& ok     = result.second;
-    auto& p      = dir.x ? cur.x : cur.y;
+
+    //
+    // try to transform the grid at q
+    //
+    auto const gen_at = [&](ipoint2 const q) {
+        if (!can_gen_corridor(grid, bounds, q)) {
+            return false;
+        }
+
+        auto const type = generate_at_(grid, q);
+        if (type == tile_type::door) {
+            doors.push_back(q);
+        }
+
+        return true;
+    };
+
+    BK_ASSERT_DBG(gen_at(p));
 
     for (int i = 0; i < len; ++i) {
-        p += step;
+        p += v;
 
-        ok = can_gen_corridor(grid, bounds, cur)
-          ? corridor_result::ok
-          : corridor_result::failed;
-
-        if (ok == corridor_result::failed) {
-            p -= step; //back up
+        //
+        // can't gen here
+        //
+        if (!gen_at(p)) {
+            ok = corridor_result::failed;
+            p -= v; //back up
             break;
         }
 
-        generate_at_(grid, cur);
-
-        auto const id = grid.get(attribute::room_id, cur);
+        //
+        // reached out destination
+        //
+        auto const id = grid.get(attribute::room_id, p);
         if (id == dst_id) {
             ok = corridor_result::ok_done;
             break;
         }
 
-        grid.set(attribute::room_id, cur, src_id);
+        grid.set(attribute::room_id, p, src_id);
     }
 
-    BK_ASSERT(can_gen_corridor(grid, bounds, cur));
+    for (auto const d : doors) {
+        if (!can_place_door_at(grid, d)) {
+            grid.set(attribute::tile_type, d, tile_type::wall);
+        }
+    }
+
+    BK_ASSERT(can_gen_corridor(grid, bounds, p));
     return result;
 }
 
