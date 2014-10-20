@@ -2,11 +2,10 @@
 #include "json.hpp"
 #include "random.hpp"
 
+namespace jc = bkrl::json::common;
 using namespace bkrl;
 
 namespace {
-
-
 
 class config_parser {
 public:
@@ -14,11 +13,6 @@ public:
 
     explicit config_parser(cref data) {
         rule_root(data);
-    }
-
-    explicit config_parser(path_string_ref const filename)
-      : config_parser {json::common::from_file(filename)}
-    {
     }
 
     //--------------------------------------------------------------------------
@@ -31,11 +25,12 @@ public:
         rule_window_size(value);
         rule_window_pos(value);
         rule_font(value);
+        rule_language(value);
     }
 
     //--------------------------------------------------------------------------
     void rule_filetype(cref value) {
-        json::common::get_filetype(value, json::common::filetype_config);
+        json::common::get_filetype(value, jc::filetype_config);
     }
 
     static hash_t get_seed(cref value) {
@@ -56,39 +51,33 @@ public:
 
     //--------------------------------------------------------------------------
     void rule_substantive_seed(cref value) {
-        static const utf8string field {"substantive_seed"};
-        config_.substantive_seed = get_seed(value[field]);
+        config_.substantive_seed = get_seed(value[jc::field_substantive_seed]);
     }
 
     //--------------------------------------------------------------------------
     void rule_trivial_seed(cref value) {
-        static const utf8string field {"trivial_seed"};
-        config_.substantive_seed = get_seed(value[field]);
+        config_.substantive_seed = get_seed(value[jc::field_trivial_seed]);
     }
 
     //--------------------------------------------------------------------------
     void rule_window_size(cref value) {
-        static const utf8string field {"window_size"};
-
-        if (!json::has_field(value, field)) {
+        if (!json::has_field(value, jc::field_window_size)) {
             return;
         }
 
-        cref size = json::require_array(value[field], 2, 2);
+        cref size = json::require_array(value[jc::field_window_size], 2, 2);
 
         config_.window_w = json::optional_int<uint32_t>(size[0]);
         config_.window_h = json::optional_int<uint32_t>(size[1]);
     }
 
     //--------------------------------------------------------------------------
-    void rule_window_pos(cref value) {
-        static const utf8string field {"window_pos"};
-        
-        if (!json::has_field(value, field)) {
+    void rule_window_pos(cref value) {       
+        if (!json::has_field(value, jc::field_window_pos)) {
             return;
         }
 
-        cref size = json::require_array(value[field], 2, 2);
+        cref size = json::require_array(value[jc::field_window_pos], 2, 2);
 
         config_.window_x = json::optional_int<int32_t>(size[0]);
         config_.window_y = json::optional_int<int32_t>(size[1]);
@@ -96,9 +85,13 @@ public:
 
     //--------------------------------------------------------------------------
     void rule_font(cref value) {
-        static const utf8string field {"font"};
-        //TODO need to widen this
-        //config_.font_name = json::require_string(value[field]).to_string();
+        config_.font_name = json::common::get_path_string(value[jc::field_font]);
+    }
+
+    //--------------------------------------------------------------------------
+    void rule_language(cref value) {
+        auto const lang = json::common::get_locale(value);
+        config_.language  = lang ? *lang : BK_MAKE_LANG_CODE2('e','n');
     }
 
     //--------------------------------------------------------------------------

@@ -237,6 +237,11 @@ extern string_ref const field_tile;
 extern string_ref const field_color;
 extern string_ref const field_items;
 extern string_ref const field_health;
+extern string_ref const field_substantive_seed;
+extern string_ref const field_trivial_seed;
+extern string_ref const field_window_size;
+extern string_ref const field_window_pos;
+extern string_ref const field_font;
 //------------------------------------------------------------------------------
 extern string_ref const filetype_config;
 extern string_ref const filetype_locale;
@@ -246,6 +251,11 @@ extern string_ref const filetype_tilemap;
 extern string_ref const filetype_keymap;
 extern string_ref const filetype_messages;
 //------------------------------------------------------------------------------
+
+//==============================================================================
+//==============================================================================
+template <typename T> path_string get_path_string(T) = delete;
+path_string get_path_string(cref value);
 
 //==============================================================================
 //==============================================================================
@@ -293,13 +303,8 @@ inline json11::Json from_file(path_string_ref const filename) {
 
 //==============================================================================
 //==============================================================================
-template <typename T> optional<lang_id> get_locale(T, string_ref) = delete;
-inline optional<lang_id> get_locale(cref value, string_ref const expected_type) {
-    auto const type = require_string(value[field_stringtype]);
-    if (type != expected_type) {
-        return optional<lang_id> {};
-    }
-
+template <typename T> optional<lang_id> get_locale(T) = delete;
+inline optional<lang_id> get_locale(cref value) {
     auto const lang = require_string(value[field_language]);
     auto const size = lang.size();
     if (size == 2) {
@@ -309,6 +314,16 @@ inline optional<lang_id> get_locale(cref value, string_ref const expected_type) 
     }
 
     return optional<lang_id> {};
+}
+
+template <typename T> optional<lang_id> get_locale(T, string_ref) = delete;
+inline optional<lang_id> get_locale(cref value, string_ref const expected_type) {
+    auto const type = require_string(value[field_stringtype]);
+    if (type != expected_type) {
+        return optional<lang_id> {};
+    }
+
+    return get_locale(value);
 }
 
 //==============================================================================

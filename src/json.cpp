@@ -29,6 +29,11 @@ string_ref const jc::field_tile        {"tile"};
 string_ref const jc::field_color       {"color"};
 string_ref const jc::field_items       {"items"};
 string_ref const jc::field_health      {"health"};
+string_ref const jc::field_substantive_seed {"substantive_seed"};
+string_ref const jc::field_trivial_seed     {"trivial_seed"};
+string_ref const jc::field_window_size      {"window_size"};
+string_ref const jc::field_window_pos       {"window_pos"};
+string_ref const jc::field_font             {"font"};
 //------------------------------------------------------------------------------
 string_ref const jc::filetype_config   {"CONFIG"};
 string_ref const jc::filetype_locale   {"LOCALE"};
@@ -41,8 +46,8 @@ string_ref const jc::filetype_messages {"MESSAGE"};
 
 //------------------------------------------------------------------------------
 #if BOOST_OS_WINDOWS
-bkrl::path_string jc::get_filename(cref value) {
-    auto const str = require_string(value[field_filename]);
+bkrl::path_string jc::get_path_string(cref value) {
+    auto const str = require_string(value);
     
     path_string result;
     result.reserve(str.length()); //TODO a bit wasteful
@@ -52,11 +57,16 @@ bkrl::path_string jc::get_filename(cref value) {
     return result;
 }
 #else
-bkrl::path_string jc::get_filename(cref value) {
-    auto const str = require_string(value[field_filename]);
+bkrl::path_string jc::get_path_string(cref value) {
+    auto const str = require_string(value);
     return str.to_string();
 }
 #endif
+
+//------------------------------------------------------------------------------
+bkrl::path_string jc::get_filename(cref value) {
+    return get_path_string(value[field_filename]);
+}
 
 //------------------------------------------------------------------------------
 namespace {

@@ -1440,7 +1440,7 @@ public:
       , imode_direction_    {[&] {input_mode_ = nullptr;}}
       , imode_selection_    {[&] {input_mode_ = nullptr;}}
     {
-        definitions_->set_language(BK_MAKE_LANG_CODE2('j','a'));
+        definitions_->set_language(config_->language);
         
         ////////////////////////////////////////////////////
         init_sinks();

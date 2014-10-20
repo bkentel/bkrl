@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.hpp"
+#include "util.hpp"
 
 namespace bkrl {
 
@@ -13,6 +14,7 @@ public:
     optional<uint32_t> window_h;
     optional<int32_t>  window_x;
     optional<int32_t>  window_y;
+    lang_id            language;
 };
 
 config load_config(json::cref data);
