@@ -105,6 +105,9 @@
     <ClCompile Include="..\src\definitions.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\gui.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pch.hpp">
@@ -214,6 +217,9 @@
     </ClInclude>
     <ClInclude Include="..\lib\json11\json11.hpp">
       <Filter>lib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\gui.hpp">
+      <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

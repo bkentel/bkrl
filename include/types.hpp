@@ -129,6 +129,7 @@ enum class texture_type      : uint16_t;
 enum class key               : uint16_t;
 enum class scancode          : uint16_t;
 enum class key_modifier_type : uint16_t;
+enum class message_type      : uint16_t;
 
 using texture_id = unsigned;
 
