@@ -195,6 +195,9 @@ struct string_id {
 };
 
 struct identifier {
+    BK_DEFCOPY(identifier);
+    BK_DEFMOVE(identifier);
+
     identifier()
       : string {}, hash {}
     {

@@ -1,4 +1,7 @@
 #pragma once
+
+#include <boost/container/static_vector.hpp>
+
 #include "bsp_layout.hpp"
 #include "generate.hpp"
 #include "random.hpp"
@@ -775,7 +778,7 @@ bsp_connector_impl::generate_segment_(
         }
 
         //
-        // reached out destination
+        // reached our destination
         //
         auto const id = grid.get(attribute::room_id, p);
         if (id == dst_id) {

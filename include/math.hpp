@@ -267,8 +267,8 @@ struct axis_aligned_rect {
     point2d<R> center() const {
         auto const half = R {2};
         return point2d<R> {
-            (static_cast<R>(left + (right  - left)) / half)
-          , (static_cast<R>(top  + (bottom - top )) / half)
+            static_cast<R>(left + ((right  - left) / half))
+          , static_cast<R>(top  + ((bottom - top ) / half))
         };
     }
 

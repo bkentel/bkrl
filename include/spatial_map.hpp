@@ -70,6 +70,7 @@ public:
     using base_t  = spatial_map_base<value_type, point_type>;
     using point_t = typename base_t::point_t;
     using data_t  = typename base_t::data_t;
+    using value_t = typename base_t::value_t;
 
     //--------------------------------------------------------------------------
     struct less {
@@ -142,7 +143,7 @@ private:
 
         BK_ASSERT(n == 1);
 
-        return &get_value(*range.first);
+        return &base_t::get_value(*range.first);
     }
 };
 

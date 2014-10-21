@@ -4,6 +4,8 @@
 #include <cstring>
 #include <cstdio>
 
+#include <utf8.h>
+
 using namespace bkrl;
 
 bkrl::uint64_t bkrl::slash_hash64(char const* s, size_t const len) {
@@ -53,9 +55,14 @@ unique_file open_file(path_string_ref const filename) {
 
     return unique_file {ptr};
 }
-#else
-unique_file open_file(string_ref const filename) {
-    auto const result = std::fopen(filename.data(), "rb");
+#elif !BOOST_COMP_MSVC && BOOST_OS_WINDOWS
+unique_file open_file(path_string_ref const filename) {
+    utf8string narrow;
+    narrow.reserve(filename.size());
+
+    utf8::utf16to8(std::cbegin(filename), std::cend(filename), std::back_inserter(narrow));
+
+    auto const result = std::fopen(narrow.data(), "rb");
     if (result == nullptr) {
         BK_TODO_FAIL();
     }

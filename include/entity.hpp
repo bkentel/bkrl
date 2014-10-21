@@ -53,13 +53,14 @@ private:
 //==============================================================================
 class entity {
 public:
-    BK_NOCOPY(entity);
+    //TODO looks like MSCV is broken w.r.t defaulted / deleted constructors here
     //BK_DEFMOVE(entity);
-    entity() = default;
-
+    BK_NOCOPY(entity);
+    
     using point_t = ipoint2;
-
     using defs_t = entity_definitions const&;
+
+    entity() = default;
 
     entity(
         random::generator&      gen
@@ -117,21 +118,22 @@ public:
 
     identifier id() const { return id_; }
 
+    //TODO looks like MSCV is broken w.r.t defaulted / deleted constructors here
     entity(entity&& other)
-      : id_  {other.id_}
-      , items_ {std::move(other.items_)}
-      , pos_ (other.pos_)
-      , health_ {other.health_}
+      : id_           {other.id_}
+      , items_        {std::move(other.items_)}
+      , pos_          (other.pos_)
+      , health_       {other.health_}
       , health_total_ {other.health_total_}
     {
     }
 
+    //TODO looks like MSCV is broken w.r.t defaulted / deleted constructors here
     entity& operator=(entity&& rhs) {
-        //TODO use swap
-        id_    = rhs.id_;
-        pos_   = rhs.pos_;
-        items_ = std::move(rhs.items_);
-        health_ = rhs.health_;
+        id_           = rhs.id_;
+        pos_          = rhs.pos_;
+        items_        = std::move(rhs.items_);
+        health_       = rhs.health_;
         health_total_ = rhs.health_total_;
 
         return *this;
@@ -152,6 +154,14 @@ private:
     int        health_       = 1;
     int        health_total_ = 1;
 };
+
+//==============================================================================
+//==============================================================================
+entity generate_entity(
+    random::generator&        gen
+  , entity_definitions const& entities
+  , item_definitions   const& items
+);
 
 //==============================================================================
 //==============================================================================

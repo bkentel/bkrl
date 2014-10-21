@@ -9,11 +9,14 @@
 #include "types.hpp"
 #include "renderer.hpp"
 
+#include <boost/container/flat_map.hpp> //TODO
+
 namespace bkrl {
 
 class renderer;
 class texture;
 
+//TODO
 template <typename Key, typename Value>
 class mapping {
 public:
@@ -57,6 +60,7 @@ private:
 //! tilemap
 //! map texture_type -> texture_id
 //==============================================================================
+//TODO
 class tilemap : public mapping<texture_type, texture_id> {
 public:
     using mapping<texture_type, texture_id>::mapping;

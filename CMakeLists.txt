@@ -38,7 +38,8 @@ set(SOURCE_FILES
     include/spatial_map.hpp
     include/time.hpp
     include/entity.hpp
-    include/locale.hpp
+    include/gui.hpp
+    include/definitions.hpp
     lib/catch/catch.hpp
     lib/json11/json11.cpp
     lib/json11/json11.hpp
@@ -66,6 +67,8 @@ set(SOURCE_FILES
     src/messages.cpp
     src/time.cpp
     src/entity.cpp
+    src/gui.cpp
+    src/definitions.cpp
 #    test/algorithm.t.cpp
 #    test/bsp_layout.t.cpp
 #    test/engine_client.t.cpp

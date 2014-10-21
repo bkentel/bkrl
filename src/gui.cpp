@@ -146,8 +146,7 @@ bkrl::gui::message_log::message_log(font_face& face, message_map const& msgs)
 //--------------------------------------------------------------------------
 void
 bkrl::gui::message_log::print_line(message_type const msg) {
-    auto const& str = (*msgs_)[msg];
-    make_line_(str);
+    make_line_(get_message_string_(msg));
 }
 
 //--------------------------------------------------------------------------
@@ -201,4 +200,9 @@ bkrl::gui::message_log::make_line_(string_ref const str) {
     }
 
     line.reset(*font_face_, str, max_w, max_h);
+}
+
+bkrl::string_ref
+bkrl::gui::message_log::get_message_string_(message_type msg) const {
+    return (*msgs_)[msg];
 }

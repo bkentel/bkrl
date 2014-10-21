@@ -253,10 +253,30 @@ int entity_definitions::definitions_size() const {
 }
 
 //------------------------------------------------------------------------------
-entity_definitions::definition const&
-entity_definitions::get_definition_at(int const index) const {
+bkrl::entity_definitions::definition const&
+bkrl::entity_definitions::get_definition_at(int const index) const {
     return impl_->get_definition_at(index);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
+
+bkrl::entity
+bkrl::generate_entity(
+    random::generator&        gen
+  , entity_definitions const& entities
+  , item_definitions   const& items
+) {
+    auto const size = entities.definitions_size();
+    auto const i    = random::uniform_range(gen, 0, size - 1);
+
+    auto const& edef = entities.get_definition_at(i);
+
+    return entity {
+        gen
+      , edef.id
+      , ipoint2 {0, 0}
+      , items
+      , entities
+    };
+}

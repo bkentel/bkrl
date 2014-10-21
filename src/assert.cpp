@@ -1,6 +1,8 @@
 #include <atomic>
 #include <cstdlib>
 
+//#include <boost/assert.hpp>
+
 #include "assert.hpp"
 
 using namespace bkrl;
@@ -44,7 +46,9 @@ BK_NORETURN void bkrl::on_assert_failure(assert_info const& info) {
     std::abort();
 }
 
-void boost::assertion_failed(char const* expr, char const* function, char const* file, long line) {
+namespace boost {
+
+void assertion_failed(char const* expr, char const* function, char const* file, long line) {
     assert_info info {};
 
     info.expression  = expr;
@@ -55,6 +59,8 @@ void boost::assertion_failed(char const* expr, char const* function, char const*
     bkrl::on_assert_failure(info);
 }
 
-void boost::assertion_failed_msg(char const* expr, char const* msg, char const* function, char const* file, long line) {
+void assertion_failed_msg(char const* expr, char const* msg, char const* function, char const* file, long line) {
     boost::assertion_failed(expr, function, file, line);
+}
+
 }

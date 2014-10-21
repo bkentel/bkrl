@@ -6,6 +6,9 @@
 #include <array>
 #include <vector>
 
+#include <boost/format.hpp> //TODO ?
+#include "messages.hpp"
+
 namespace bkrl {
 
 class font_face;
@@ -75,15 +78,14 @@ public:
     //--------------------------------------------------------------------------
     template <typename Head, typename... Tail>
     void print_line(message_type const msg, Head&& head, Tail&&... tail) {
-        auto const& str = (*msgs_)[msg];
-
-        format_t format {str.data()};
-
+        auto format = format_t {get_message_string_(msg).data()};
         print_line_(format % head, std::forward<Tail>(tail)...);
     }
 
     void render(renderer& r, int x, int y);
 private:
+    string_ref get_message_string_(message_type msg) const;
+
     //--------------------------------------------------------------------------
     template <typename Head, typename... Tail>
     void print_line_(format_t& format, Head&& head, Tail&&... tail) {

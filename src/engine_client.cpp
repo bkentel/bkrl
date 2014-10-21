@@ -562,22 +562,33 @@ public:
             return false;
         }
 
-        auto const type = grid_.get(attribute::tile_type, p);
+        auto const tile_ok = [&] {
+            auto const type = grid_.get(attribute::tile_type, p);
+            switch (type) {
+            case tile_type::invalid : //TODO this is just for testing
 
-        switch (type) {
-        case tile_type::invalid : //TODO this is just for testing
+            case tile_type::floor :
+            case tile_type::corridor :
+            case tile_type::stair :
+                return true;
+            case tile_type::door :
+                return door_data {grid_, p}.is_open();
+            default :
+                break;
+            }
 
-        case tile_type::floor :
-        case tile_type::corridor :
-        case tile_type::stair :
-            return true;
-        case tile_type::door :
-            return door_data {grid_, p}.is_open();
-        default :
-            break;
+            return false;
+        }();
+
+        if (!tile_ok) {
+            return false;
         }
 
-        return false;
+        if (entity_at(p)) {
+            return false;
+        }
+
+        return true;
     }
     //--------------------------------------------------------------------------
     bool can_move_to(entity const& e, int const x, int const y) const {
@@ -842,30 +853,36 @@ private:
             
             auto const& items    = definitions_->get_items();
             auto const& entities = definitions_->get_entities();
-            auto const  size     = entities.definitions_size();
+           
+            auto const bounds = room.bounds();
+            auto            p = room.center();
 
-            BK_ASSERT(size > 0);
-            auto const i = random::uniform_range(substantive, 0, size - 1);
+            BK_ASSERT_DBG(intersects(bounds, p));
 
-            auto const& id = entities.get_definition_at(i).id;
+            auto mob = generate_entity(substantive, entities, items);
 
-            auto mob = entity {
-                substantive
-              , id
-              , room.center()
-              , items
-              , entities
-            };
-
-            auto steps = random::uniform_range(substantive, 1, 10);
-            for (; steps > 0; --steps) {
+            while (!can_move_to(mob, p)) {
                 auto const v = random::direction(substantive);
-
-                if (can_move_by(mob, v)) {
-                    mob.move_by(v);
+                auto const q = p + v;
+                
+                if (intersects(bounds, q)) {
+                    p = q;
                 }
             }
 
+            for (auto steps = random::uniform_range(substantive, 1, 10)
+               ; steps > 0
+               ; --steps
+            ) {
+                auto const v = random::direction(substantive);
+                auto const q = p + v;
+                
+                if (intersects(bounds, q) && can_move_to(mob, q)) {
+                    p = q;
+                }
+            }
+
+            mob.move_to(p);
             mobs_.emplace(std::move(mob));
         }
 
@@ -1041,7 +1058,7 @@ private:
     ipoint2 stairs_down_ = ipoint2 {0, 0};
 
     spatial_map<item_stack, int> items_;
-    spatial_map<entity>    mobs_;
+    spatial_map<entity>          mobs_;
 };
 
 //==============================================================================
@@ -1435,10 +1452,10 @@ public:
       , cur_level_          {nullptr}
       , player_             {}
       , input_mode_         {nullptr}
-      , item_list_          {font_face_, defs.get_items()}
-      , msg_log_            {font_face_, defs.get_messages()}
       , imode_direction_    {[&] {input_mode_ = nullptr;}}
       , imode_selection_    {[&] {input_mode_ = nullptr;}}
+      , item_list_          {font_face_, defs.get_items()}
+      , msg_log_            {font_face_, defs.get_messages()}
     {
         definitions_->set_language(config_->language);
         
@@ -1464,7 +1481,7 @@ public:
 
     void yield() {
         if (frames_ % 5 == 0) {
-            SDL_Delay(15);
+            //SDL_Delay(15);
         }
     }
 
@@ -1729,13 +1746,13 @@ public:
 
         auto const v = ivec2 {dx, dy};
         auto const p = player_.position() + v;
+        
         if (!level.can_move_to(player_, p)) {
-            return;
-        }
-
-        auto const ent = level.entity_at(p);
-        if (ent) {
-            do_attack(*ent);
+            auto const ent = level.entity_at(p);
+            if (ent) {
+                do_attack(*ent);
+            }
+            
             return;
         }
         
