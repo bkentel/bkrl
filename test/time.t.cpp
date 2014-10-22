@@ -60,6 +60,4 @@ TEST_CASE("timer basics", "[time]") {
     REQUIRE(counts[0] == 20);
     REQUIRE(counts[1] == 10);
     REQUIRE(counts[2] == 2);
-
-    std::cout << "done";
 }

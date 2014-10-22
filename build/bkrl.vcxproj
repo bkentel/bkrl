@@ -59,9 +59,8 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="preprocessor.debug.props" />
-    <Import Project="Preprocessor.Test.props" />
-    <Import Project="build.props" />
-    <Import Project="Libraries.props" />
+    <Import Project="build.debug.props" />
+    <Import Project="libraries.debug.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -100,8 +99,6 @@
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <ShowIncludes Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ShowIncludes>
-      <ShowIncludes Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ShowIncludes>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -132,16 +129,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\lib\json11\json11.cpp">
-      <WarningLevel Condition="">TurnOffAllWarnings</WarningLevel>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-      </ForcedIncludeFiles>
-      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">
-      </ForcedIncludeFiles>
-      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-      </ForcedIncludeFiles>
+      <WarningLevel>TurnOffAllWarnings</WarningLevel>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\src\assert.cpp" />
     <ClCompile Include="..\src\bsp_layout.cpp" />
@@ -162,7 +151,7 @@
     <ClCompile Include="..\src\math.cpp" />
     <ClCompile Include="..\src\messages.cpp" />
     <ClCompile Include="..\src\pch.cpp">
-      <PrecompiledHeader Condition="">Create</PrecompiledHeader>
+      <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\src\renderer.cpp" />
     <ClCompile Include="..\src\tile_sheet.cpp" />
@@ -175,6 +164,9 @@
       <ExcludedFromBuild Condition="'$(Configuration)'!='Test_Debug'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\test\engine_client.t.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Test_Debug'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\test\item.t.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)'!='Test_Debug'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\test\main.t.cpp">

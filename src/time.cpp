@@ -89,7 +89,7 @@ void timer::impl_t::update() {
 timer::id_t timer::impl_t::add_timer(duration_t const period, callback_t&& callback) {
     auto const id = id_t {++next_id_};
 
-    auto const now = clock_t::now();
+    auto const now = last_;
 
     callbacks_.emplace_back(std::move(callback));
     deadlines_.emplace_back(record_t {

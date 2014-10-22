@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <bitset>
 
 #include "types.hpp"
 #include "util.hpp"
@@ -11,6 +12,32 @@ namespace bkrl {
 
 namespace detail { class item_definitions_impl; }
 
+enum class equip_slot {
+    invalid
+
+  , none = 0
+  , head
+  , arms_upper
+  , arms_lower
+  , hands
+  , chest
+  , waist
+  , legs_upper
+  , legs_lower
+  , feet
+  , finger_left
+  , finger_right
+  , neck
+  , back
+  , hand_main
+  , hand_off
+  , ammo
+
+  , enum_size
+};
+
+using equip_slot_flags = std::bitset<static_cast<size_t>(equip_slot::enum_size) - 1>;
+
 //==============================================================================
 //!
 //==============================================================================
@@ -20,6 +47,7 @@ public:
 
     struct definition {
         string_id id;
+        equip_slot_flags slot_flags;
         int       max_stack;
         dist_t    damage_min;
         dist_t    damage_max;
@@ -104,6 +132,14 @@ item generate_item(
 //==============================================================================
 //!
 //==============================================================================
+item generate_item(
+    random::generator& gen
+  , item_definitions::definition const& def
+);
+
+//==============================================================================
+//!
+//==============================================================================
 class item_stack {
 public:
     BK_NOCOPY(item_stack);
@@ -112,14 +148,17 @@ public:
 
     using defs_t = item_definitions const&;
 
-    auto begin()       { return items_.begin(); }
-    auto begin() const { return items_.begin(); }
-
-    auto end()       { return items_.end(); }
-    auto end() const { return items_.end(); }
-
+    auto begin()        { return items_.begin(); }
+    auto begin()  const { return items_.begin(); }
     auto cbegin() const { return items_.cbegin(); }
+
+    auto end()          { return items_.end(); }
+    auto end()    const { return items_.end(); }
     auto cend()   const { return items_.cend(); }
+
+    int size()    const { return static_cast<int>(items_.size()); }
+
+    bool empty()  const { return items_.empty(); }
 
     void insert(item&& itm, defs_t defs) {
         //first try to increase an existing stack, then make a new stack
@@ -134,65 +173,45 @@ public:
         }
     }
 
-    item remove(int index, int n = 0) {
-        BK_ASSERT_DBG(index < size());
-        
-        item result = std::move(items_[index]);
-        
-        auto where = std::begin(items_);
-        std::advance(where, index);
-        items_.erase(where);
-
-        return result;
-    }
-
-    int size() const {
-        return items_.size();
-    }
-
-    bool empty() const {
-        return items_.empty();
-    }
+    item remove(int index, int n = 0);
 private:
-    bool insert_stack_(item const& itm, defs_t defs) {
-        //make sure we have a stackable item first
-        if (!itm.can_stack(defs)) {
-            return false;
-        }
-    
-        auto const end = std::end(items_);
-        auto const beg = std::begin(items_);
+    bool insert_stack_(item const& itm, defs_t defs);
 
-        //find a matching item with enough spare stack
-        auto const it = std::find_if(beg, end,
-            [&](item const& other) {
-                return (itm == other)
-                    && (other.count < other.max_stack(defs));
-            }
-        );
+    void insert_new_(item&& itm, defs_t defs);
 
-        //nothing found
-        if (it == end) {
-            return false;
-        }
-
-        //ok
-        it->count += itm.count;
-        return true;
-    }
-
-    void insert_new_(item&& itm, defs_t defs) {
-        items_.emplace_back(std::move(itm));
-        sort_(defs);
-    }
-
-    void sort_(defs_t defs) {
-        bkrl::sort(items_, [&](item const& lhs, item const& rhs) {
-            return lhs.sort_string(defs) < rhs.sort_string(defs);
-        });
-    }
+    void sort_(defs_t defs);
 
     std::vector<item> items_;
+};
+
+//==============================================================================
+//!
+//==============================================================================
+class equipment {
+public:
+    using defs_t = item_definitions const&;
+    using idef_t = item_definitions::definition const&;
+
+    bool can_equip(item const& itm, idef_t idef) const;
+
+    bool can_equip(item const& itm, defs_t defs) const {
+        return can_equip(itm, defs.get_definition(itm.id));
+    }
+
+    void equip(item&& itm, idef_t idef);
+
+    void equip(item&& itm, defs_t defs) {
+        equip(std::move(itm), defs.get_definition(itm.id));
+    }
+
+    item unequip(equip_slot slot, defs_t defs);
+
+    optional<item const&> in_slot(equip_slot slot, defs_t defs) const;
+private:
+    enum { equip_size = static_cast<size_t>(equip_slot::enum_size) - 1 };
+
+    equip_slot_flags flags_;
+    boost::container::static_vector<item, equip_size> items_;
 };
 
 } //namespace bkrl

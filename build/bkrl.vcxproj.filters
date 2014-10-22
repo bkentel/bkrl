@@ -108,6 +108,9 @@
     <ClCompile Include="..\src\gui.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\test\item.t.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pch.hpp">

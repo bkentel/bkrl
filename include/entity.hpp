@@ -169,6 +169,7 @@ class player : public entity {
 public:
     using entity::entity;
 private:
+    equipment equip_;
 };
 
 inline entity::point_t position(entity const& e) {
