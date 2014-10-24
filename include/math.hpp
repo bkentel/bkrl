@@ -187,6 +187,15 @@ operator-(
 }
 
 //------------------------------------------------------------------------------
+template <typename T>
+inline xy_type<T, geometry::vector>
+operator/(
+    xy_type<T, geometry::vector> const p, T const n
+) noexcept {
+    return {p.x / n, p.y / n};
+}
+
+//------------------------------------------------------------------------------
 template <typename T, geometry G>
 inline bool
 lexicographical_compare(

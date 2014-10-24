@@ -1066,6 +1066,8 @@ private:
 //==============================================================================
 class view {
 public:
+    using fpoint2 = point2d<float>;
+
     //--------------------------------------------------------------------------
     view(tile_sheet const& sheet, int const width, int const height)
       : sheet_     {&sheet}
@@ -1077,7 +1079,7 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    void set_size(int const width, int const height) {
+    void set_size(int const width, int const height) noexcept {
         BK_ASSERT_SAFE(width  > 0.0f);
         BK_ASSERT_SAFE(height > 0.0f);
 
@@ -1089,152 +1091,7 @@ public:
     int width()  const noexcept { return static_cast<int>(display_w_); }
     int height() const noexcept { return static_cast<int>(display_h_); }
 
-    point2 grid_coord_to_screen_coord(int const x, int const y) const {
-        auto const z = zoom_;
-
-        auto const tw = static_cast<float>(sheet_->tile_width());
-        auto const th = static_cast<float>(sheet_->tile_height());
-
-        return {
-            (x + 0.5f) * tw * z, (y + 0.5f) * th * z
-        };
-    }
-
-    ipoint2 screen_coord_to_grid_coord(float const x, float const y) const {
-        auto const z = zoom_;
-
-        auto const tw = static_cast<float>(sheet_->tile_width());
-        auto const th = static_cast<float>(sheet_->tile_height());
-
-        return {
-            static_cast<int>(std::trunc((x - 0.5f) / tw / z))
-          , static_cast<int>(std::trunc((y - 0.5f) / th / z))
-        };
-    }
-
-    //--------------------------------------------------------------------------
-    template <typename T = float>
-    point2d<T> center() const noexcept {
-        auto const z  = zoom_;
-        auto const dw = display_w_ / 2.0f;
-        auto const dh = display_h_ / 2.0f;
-
-        return {
-            static_cast<T>(dw - z*scroll_x_)
-          , static_cast<T>(dh - z*scroll_y_)
-        };
-    }
-
-    //--------------------------------------------------------------------------
-    void zoom_by(float const delta, ipoint2 const center) {
-        zoom_to(zoom_ + delta, center);
-    }
-
-    //--------------------------------------------------------------------------
-    void zoom_to(float const z, ipoint2 const center) {
-        auto constexpr min =  0.1f;
-        auto constexpr max = 10.0f;
-
-        zoom_ = clamp(z, min, max);
-
-        center_on_grid(center);
-    }
-
-    //--------------------------------------------------------------------------
-    void zoom_by(float const delta) {
-        zoom_to(zoom_ + delta, screen_to_grid(center()));
-    }
-
-    //--------------------------------------------------------------------------
-    void zoom_to(float const z) {
-        auto const p = center();
-        zoom_to(z, screen_coord_to_grid_coord(p.x, p.y));
-    }
-
-    //--------------------------------------------------------------------------
-    void scroll_by_tile(int const dx, int const dy) {
-        auto const z = zoom_;
-
-        auto const tw = static_cast<float>(sheet_->tile_width());
-        auto const th = static_cast<float>(sheet_->tile_height());
-
-        auto const w = tw * z;
-        auto const h = th * z;
-
-        scroll_by(-dx * w, -dy * h);
-    }
-
-    //--------------------------------------------------------------------------
-    void scroll_by(float const dx, float const dy) {
-        auto const z = zoom_;
-        auto const x = dx / z;
-        auto const y = dy / z;
-
-        scroll_to(scroll_x_ + x, scroll_y_ + y);
-    }
-
-    //--------------------------------------------------------------------------
-    void scroll_to(float const x, float const y) {
-        scroll_x_ = x;
-        scroll_y_ = y;
-    }
-
-    //--------------------------------------------------------------------------
-    ipoint2 screen_to_grid(float const x, float const y) const {
-        auto const z  = zoom_;
-
-        auto const px = scroll_x_;
-        auto const py = scroll_y_;
-
-        auto const tw = static_cast<float>(sheet_->tile_width());
-        auto const th = static_cast<float>(sheet_->tile_height());
-
-        auto const ix = static_cast<int>(std::trunc((x / z - px) / tw));
-        auto const iy = static_cast<int>(std::trunc((y / z - py) / th));
-
-        return {ix, iy};
-    }
-    
-    //--------------------------------------------------------------------------
-    template <typename T>
-    ipoint2 screen_to_grid(T x, T y) const {
-        return screen_to_grid(static_cast<float>(x), static_cast<float>(y));
-    }
-
-    //--------------------------------------------------------------------------
-    template <typename T>
-    ipoint2 screen_to_grid(point2d<T> const p) const {
-        return screen_to_grid(p.x, p.y);
-    }
-
-    //--------------------------------------------------------------------------
-    point2 grid_to_screen(int const x, int const y) const {
-        auto const p = grid_coord_to_screen_coord(x, y);
-        return p + vec2 {scroll_x_, scroll_y_};
-    }
-
-    //--------------------------------------------------------------------------
-    point2 grid_to_screen(ipoint2 const p) const {
-        return grid_to_screen(p.x, p.y);
-    }
-
-    //--------------------------------------------------------------------------
-    void center_on_grid(int const x, int const y) {
-        auto const z  = zoom_;
-        auto const dw = display_w_ / 2.0f;
-        auto const dh = display_h_ / 2.0f;
-
-        auto const p = grid_coord_to_screen_coord(x, y);
-        
-        scroll_x_ = (dw - p.x) / z;
-        scroll_y_ = (dh - p.y) / z;
-    }
-
-    //--------------------------------------------------------------------------
-    void center_on_grid(ipoint2 const p) {
-        center_on_grid(p.x, p.y);
-    }
-
+    ////////////////////////////////////////////////////////////////////////////
     //--------------------------------------------------------------------------
     float zoom() const noexcept { return zoom_; }
 
@@ -1250,6 +1107,101 @@ public:
     renderer::scale_vec scale() const noexcept {
         return {zoom_, zoom_};
     }
+
+    ////////////////////////////////////////////////////////////////////////////
+    void zoom_by(float const factor) noexcept {
+        zoom_to(zoom_ * factor);
+    }
+
+    void zoom_to(float const zoom) noexcept {
+        constexpr auto z_min = 0.1f;
+        constexpr auto z_max = 8.0f;
+        
+        auto const c = center();
+        auto const z = zoom_;
+
+        zoom_ = bkrl::clamp(zoom, z_min, z_max);
+
+        auto const px = (c.x - scroll_x_ * z) / z;
+        auto const py = (c.y - scroll_y_ * z) / z;
+
+        center_on_point(px, py);
+    }
+
+    fpoint2 center() const noexcept {
+        auto const w = display_w_;
+        auto const h = display_h_;
+
+        return {w / 2.0f, h / 2.0f};
+    }
+    
+    void center_on_point(float const x, float const y) noexcept {
+        auto const z = zoom_;
+        auto const c = center();
+        auto const p = fpoint2 {x, y};
+
+        scroll_x_ = (c.x - z * p.x) / z;
+        scroll_y_ = (c.y - z * p.y) / z;
+    }
+
+    void center_on_point(fpoint2 const p) noexcept {
+        center_on_point(p.x, p.y);
+    }
+
+    void center_on_grid(int const x, int const y) noexcept {
+        auto const tw = sheet_->tile_width();
+        auto const th = sheet_->tile_height();
+
+        auto const px = (x + 0.5f) * tw;
+        auto const py = (y + 0.5f) * th;
+
+        center_on_point(px, py);
+    }
+
+    void center_on_grid(ipoint2 const p) noexcept {
+        center_on_grid(p.x, p.y);
+    }
+
+    void scroll_x(int const dx) noexcept {
+        scroll_x_ += dx / zoom_;
+    }
+
+    void scroll_y(int const dy) noexcept {
+        scroll_y_ += dy / zoom_;
+    }
+
+    void scroll(int const dx, int const dy) noexcept {
+        scroll_x(dx);
+        scroll_y(dy);
+    }
+
+    template <typename T>
+    fpoint2 screen_to_point(point2d<T> const p) const {
+        return screen_to_point(p.x, p.y);
+    }
+
+    template <typename T>
+    fpoint2 screen_to_point(T const x, T const y) const {
+        auto const z = zoom_;
+        auto const c = center();
+
+        auto const sx = (x - scroll_x_ * z) / z;
+        auto const sy = (y - scroll_y_ * z) / z;
+
+        return {static_cast<float>(sx), static_cast<float>(sy)};
+    }
+
+    ipoint2 screen_to_grid(int const x, int const y) const {
+        auto const p = screen_to_point(x, y);
+
+        auto const tw = sheet_->tile_width();
+        auto const th = sheet_->tile_height();
+
+        auto const gx = std::trunc(p.x / tw);
+        auto const gy = std::trunc(p.y / th);
+
+        return {static_cast<int>(gx), static_cast<int>(gy)};
+    }
 private:
     tile_sheet const* sheet_;
 
@@ -1259,7 +1211,7 @@ private:
     float scroll_x_  = 0.0f;
     float scroll_y_  = 0.0f;
 
-    float zoom_      = 1.0f;
+    float zoom_      = 2.0f;
 };
 
 //==============================================================================
@@ -1645,8 +1597,11 @@ public:
         r.set_draw_color();
         r.clear();
 
-        r.set_translation(view_.translation());
-        r.set_scale(view_.scale());
+        auto const s = view_.scale();
+        auto const t = view_.translation();
+
+        r.set_translation(t);
+        r.set_scale(s);
 
         draw_level(r);
         draw_inspect_msg(r);
@@ -1760,24 +1715,24 @@ public:
             return;
         }
         
-        auto const w = view_.width();
-        auto const h = view_.height();
-        auto const q = view_.grid_to_screen(p);
-        
-        auto const dist_x = w - q.x;
-        auto const dist_y = h - q.y;
+        //auto const w = view_.width();
+        //auto const h = view_.height();
+        //auto const q = view_.grid_to_screen(p);
+        //
+        //auto const dist_x = w - q.x;
+        //auto const dist_y = h - q.y;
 
-        if (dist_x < w*0.1
-         || dist_x > w*0.9
-        ) {
-            view_.scroll_by_tile(dx, 0);
-        }
+        //if (dist_x < w*0.1
+        // || dist_x > w*0.9
+        //) {
+        //    view_.scroll_by_tile(dx, 0);
+        //}
 
-        if (dist_y < h*0.1
-         || dist_y > h*0.9
-        ) {
-            view_.scroll_by_tile(0, dy);
-        }
+        //if (dist_y < h*0.1
+        // || dist_y > h*0.9
+        //) {
+        //    view_.scroll_by_tile(0, dy);
+        //}
 
 
         player_.move_by(v);
@@ -1795,25 +1750,26 @@ public:
         auto const scroll_x = static_cast<float>(dx) * delta;
         auto const scroll_y = static_cast<float>(dy) * delta;
 
-        view_.scroll_by(scroll_x, scroll_y);
+        //view_.scroll_by(scroll_x, scroll_y);
         clear_inspect_message();
     }
 
     //--------------------------------------------------------------------------
     void do_zoom_in() {
-        view_.zoom_to(view_.zoom() * 1.1f);
+        view_.zoom_by(1.1f);
         clear_inspect_message();
     }
 
     //--------------------------------------------------------------------------
     void do_zoom_out() {
-        view_.zoom_to(view_.zoom() * 0.9f);
+        view_.zoom_by(0.9f);
         clear_inspect_message();
     }
 
     //--------------------------------------------------------------------------
     void do_zoom_reset() {
-        view_.zoom_to(1.0f, player_.position());
+        view_.zoom_to(1.0f);
+        view_.center_on_grid(player_.position());
         clear_inspect_message();
     }
 
@@ -2013,14 +1969,13 @@ public:
         
         if (!right) {
             auto const p = view_.screen_to_grid(info.x, info.y);
+
             set_inspect_message(p);
+
             return;
         }
 
-        view_.scroll_by(
-            static_cast<float>(info.dx)
-          , static_cast<float>(info.dy)
-        );
+        view_.scroll(info.dx, info.dy);
     }
 
     //--------------------------------------------------------------------------

@@ -184,7 +184,13 @@ public:
         
         assign(cur_loc_.name, json::default_string(value[jc::field_name], undefined));
         assign(cur_loc_.text, json::default_string(value[jc::field_text], undefined));
-        assign(cur_loc_.sort, json::default_string(value[jc::field_sort], ""));
+        
+        auto const sort = json::optional_string(value[jc::field_sort]);
+        if (sort) {
+            assign(cur_loc_.sort, *sort);
+        } else {
+            cur_loc_.sort.clear();
+        }
 
         cur_loc_map_.emplace(id.hash, std::move(cur_loc_));
     }
@@ -402,7 +408,10 @@ bkrl::item_stack::insert_new_(item&& itm, defs_t defs) {
 void
 bkrl::item_stack::sort_(defs_t defs) {
     bkrl::sort(items_, [&](item const& lhs, item const& rhs) {
-        return lhs.sort_string(defs) < rhs.sort_string(defs);
+        auto const left  = lhs.sort_string(defs);
+        auto const right = rhs.sort_string(defs);
+
+        return left < right;
     });
 }
 

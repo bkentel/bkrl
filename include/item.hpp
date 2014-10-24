@@ -104,8 +104,13 @@ public:
     }
 
     string_ref sort_string(defs_t defs) const {
-        auto const sort = defs.get_locale(id).sort;
-        return sort.empty() ? name(defs) : sort;
+        auto const& sort = defs.get_locale(id).sort;
+
+        if (sort.empty()) {
+            return name(defs);
+        }
+
+        return sort;
     }
 
     identifier id;
@@ -181,6 +186,7 @@ private:
 
     void sort_(defs_t defs);
 
+    //TODO could use some sort of small buffer optimization
     std::vector<item> items_;
 };
 
