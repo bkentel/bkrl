@@ -142,7 +142,13 @@
     <ClCompile Include="..\src\font.cpp" />
     <ClCompile Include="..\src\generate.cpp" />
     <ClCompile Include="..\src\gui.cpp" />
-    <ClCompile Include="..\src\item.cpp" />
+    <ClCompile Include="..\src\item.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Test_Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\src\items.cpp" />
     <ClCompile Include="..\src\json.cpp" />
     <ClCompile Include="..\src\keyboard.cpp" />
     <ClCompile Include="..\src\main.cpp">
@@ -199,7 +205,13 @@
     <ClInclude Include="..\include\generate.hpp" />
     <ClInclude Include="..\include\grid.hpp" />
     <ClInclude Include="..\include\gui.hpp" />
-    <ClInclude Include="..\include\item.hpp" />
+    <ClInclude Include="..\include\identifier.hpp" />
+    <ClInclude Include="..\include\integers.hpp" />
+    <ClInclude Include="..\include\item.hpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="..\include\items.hpp" />
     <ClInclude Include="..\include\iterable.hpp" />
     <ClInclude Include="..\include\json.hpp" />
     <ClInclude Include="..\include\keyboard.hpp" />

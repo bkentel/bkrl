@@ -263,7 +263,7 @@ template <size_t Bytes> struct unsigned_int {
 template <size_t Bytes>
 using unsigned_int_t = typename unsigned_int<Bytes>::type;
 
-using lang_id = bkrl::tagged_type<uint32_t, struct lang_id_tag>;
+//using lang_id = bkrl::tagged_type<uint32_t, struct lang_id_tag>;
 
 #define BK_MAKE_LANG_CODE3(a, b, c) bkrl::lang_id { \
   static_cast<uint32_t>((a & 0xFF) << 16) \

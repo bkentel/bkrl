@@ -2,7 +2,10 @@
 
 #include "types.hpp"
 #include "math.hpp"
-#include "item.hpp"
+#include "items.hpp"
+
+#include "random.hpp"
+#include "identifier.hpp"
 
 namespace bkrl {
 
@@ -19,12 +22,13 @@ public:
         static path_string tile_filename;
         static ipoint2     tile_size;
 
-        string_id id;      //!< entity id
-        dist_t    items;   //!< number of carried items
-        int16_t   tile_x;  //!< tile x index
-        int16_t   tile_y;  //!< tile y index
-        uint8_t   r, g, b; //!< color
-        dist_t    health;  //!< health
+        entity_def_id id;      //!< entity id
+        utf8string    id_string;
+        dist_t        items;   //!< number of carried items
+        int16_t       tile_x;  //!< tile x index
+        int16_t       tile_y;  //!< tile y index
+        uint8_t       r, g, b; //!< color
+        dist_t        health;  //!< health
     };
 
     struct locale {
@@ -38,8 +42,8 @@ public:
     void load_definitions(json::cref data);
     void load_locale(json::cref data);
 
-    definition const& get_definition(identifier id) const;
-    locale     const& get_locale(identifier id) const;
+    definition const& get_definition(entity_def_id id) const;
+    locale     const& get_locale(entity_def_id id) const;
 
     void set_locale(lang_id lang);
 
@@ -64,7 +68,7 @@ public:
 
     entity(
         random::generator&      gen
-      , identifier       const  id
+      , entity_def_id       const  id
       , point_t          const  pos
       , item_definitions const& items
       , defs_t                  entities
@@ -79,7 +83,7 @@ public:
 
         auto const count = edef.items(gen);
         for (int i = 0; i < count; ++i) {
-            add_item(generate_item(gen, items, loot_table {}), items);
+            //add_item(generate_item(gen, items, loot_table {}), items);
         }
     }
 
@@ -109,14 +113,14 @@ public:
         return defs.get_locale(id_).name;
     }
 
-    void add_item(item&& itm, item_definitions const& defs) {
-        items_.insert(std::move(itm), defs);
+    void add_item(item_id const id) {
+        items_.insert(id);
     }
 
     item_stack&       items()       { return items_; }
     item_stack const& items() const { return items_; }
 
-    identifier id() const { return id_; }
+    entity_def_id id() const { return id_; }
 
     //TODO looks like MSCV is broken w.r.t defaulted / deleted constructors here
     entity(entity&& other)
@@ -148,7 +152,7 @@ public:
         return range<int> {health_, health_total_};
     }
 private:
-    identifier id_;
+    entity_def_id id_;
     item_stack items_;
     point_t    pos_          = point_t {0, 0};
     int        health_       = 1;
@@ -169,7 +173,7 @@ class player : public entity {
 public:
     using entity::entity;
 private:
-    equipment equip_;
+    //equipment equip_;
 };
 
 inline entity::point_t position(entity const& e) {

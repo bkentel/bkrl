@@ -59,7 +59,7 @@ public:
         rule_ent_tile(value);
         rule_ent_health(value);
 
-        definitions_.emplace(cur_def_.id.hash, std::move(cur_def_));
+        definitions_.emplace(cur_def_.id, std::move(cur_def_));
     }
 
     void rule_end_id(cref value) {
@@ -68,7 +68,8 @@ public:
             BK_TODO_FAIL();
         }
 
-        cur_def_.id = str;
+        cur_def_.id = entity_def_id {slash_hash32(str)};
+        cur_def_.id_string = str.to_string();
     }
 
     //--------------------------------------------------------------------------
@@ -146,8 +147,8 @@ public:
     }
 
     ////////////////////////////////////////////////////////////////////////////
-    definition const& get_definition(identifier const id) const {
-        auto const it = definitions_.find(id.hash);
+    definition const& get_definition(entity_def_id const id) const {
+        auto const it = definitions_.find(id);
         if (it == std::end(definitions_)) {
             BK_TODO_FAIL();
         }
@@ -155,8 +156,8 @@ public:
         return it->second;
     }
     
-    locale const& get_locale(identifier const id) const {
-        auto const it = current_locale_->find(id.hash);
+    locale const& get_locale(entity_def_id const id) const {
+        auto const it = current_locale_->find(id);
         if (it == std::end(*current_locale_)) {
             BK_TODO_FAIL();
         }
@@ -188,14 +189,14 @@ private:
     template <typename K, typename V>
     using map_t = boost::container::flat_map<K, V, std::less<>>;
 
-    using locale_map = map_t<hash_t, locale>;
+    using locale_map = map_t<entity_def_id, locale>;
 
     entity_definitions::definition cur_def_;
     entity_definitions::locale     cur_loc_;
     lang_id                        cur_lang_;
     locale_map                     cur_loc_map_;
 
-    map_t<hash_t,  definition> definitions_;
+    map_t<entity_def_id,  definition> definitions_;
     map_t<lang_id, locale_map> locales_;
 
     locale_map const* current_locale_ = nullptr;
@@ -232,13 +233,13 @@ bkrl::entity_definitions::load_locale(json::cref data) {
 
 //------------------------------------------------------------------------------
 entity_definitions::definition const&
-bkrl::entity_definitions::get_definition(identifier const id) const {
+bkrl::entity_definitions::get_definition(entity_def_id const id) const {
     return impl_->get_definition(id);
 }
 
 //------------------------------------------------------------------------------
 entity_definitions::locale const&
-bkrl::entity_definitions::get_locale(identifier const id) const {
+bkrl::entity_definitions::get_locale(entity_def_id const id) const {
     return impl_->get_locale(id);
 }
 

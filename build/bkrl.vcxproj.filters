@@ -111,6 +111,9 @@
     <ClCompile Include="..\test\item.t.cpp">
       <Filter>test</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\items.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pch.hpp">
@@ -222,6 +225,15 @@
       <Filter>lib</Filter>
     </ClInclude>
     <ClInclude Include="..\include\gui.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\identifier.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\items.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\integers.hpp">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

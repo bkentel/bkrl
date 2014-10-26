@@ -10,6 +10,8 @@
 #include "enum_map.hpp"
 #include "types.hpp"
 
+#include "identifier.hpp"
+
 namespace bkrl {
 
 enum class message_type : uint16_t {

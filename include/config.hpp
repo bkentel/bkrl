@@ -3,6 +3,8 @@
 #include "types.hpp"
 #include "util.hpp"
 
+#include "identifier.hpp"
+
 namespace bkrl {
 
 class config {

@@ -7,41 +7,41 @@
 namespace json = bkrl::json;
 namespace jc   = bkrl::json::common;
 
-using bkrl::string_ref;
+using bkrl::json::common::field_string;
 using bkrl::json::cref;
 
 //------------------------------------------------------------------------------
-string_ref const jc::field_filetype    {"file_type"};
-string_ref const jc::field_stringtype  {"string_type"};
-string_ref const jc::field_language    {"language"};
-string_ref const jc::field_definitions {"definitions"};
-string_ref const jc::field_id          {"id"};
-string_ref const jc::field_name        {"name"};
-string_ref const jc::field_text        {"text"};
-string_ref const jc::field_sort        {"sort"};
-string_ref const jc::field_mappings    {"mappings"};
-string_ref const jc::field_filename    {"file_name"};
-string_ref const jc::field_tile_size   {"tile_size"};
-string_ref const jc::field_stack       {"stack"};
-string_ref const jc::field_damage_min  {"damage_min"};
-string_ref const jc::field_damage_max  {"damage_max"};
-string_ref const jc::field_tile        {"tile"};
-string_ref const jc::field_color       {"color"};
-string_ref const jc::field_items       {"items"};
-string_ref const jc::field_health      {"health"};
-string_ref const jc::field_substantive_seed {"substantive_seed"};
-string_ref const jc::field_trivial_seed     {"trivial_seed"};
-string_ref const jc::field_window_size      {"window_size"};
-string_ref const jc::field_window_pos       {"window_pos"};
-string_ref const jc::field_font             {"font"};
+field_string const jc::field_filetype    {"file_type"};
+field_string const jc::field_stringtype  {"string_type"};
+field_string const jc::field_language    {"language"};
+field_string const jc::field_definitions {"definitions"};
+field_string const jc::field_id          {"id"};
+field_string const jc::field_name        {"name"};
+field_string const jc::field_text        {"text"};
+field_string const jc::field_sort        {"sort"};
+field_string const jc::field_mappings    {"mappings"};
+field_string const jc::field_filename    {"file_name"};
+field_string const jc::field_tile_size   {"tile_size"};
+field_string const jc::field_stack       {"stack"};
+field_string const jc::field_damage_min  {"damage_min"};
+field_string const jc::field_damage_max  {"damage_max"};
+field_string const jc::field_tile        {"tile"};
+field_string const jc::field_color       {"color"};
+field_string const jc::field_items       {"items"};
+field_string const jc::field_health      {"health"};
+field_string const jc::field_substantive_seed {"substantive_seed"};
+field_string const jc::field_trivial_seed     {"trivial_seed"};
+field_string const jc::field_window_size      {"window_size"};
+field_string const jc::field_window_pos       {"window_pos"};
+field_string const jc::field_font             {"font"};
 //------------------------------------------------------------------------------
-string_ref const jc::filetype_config   {"CONFIG"};
-string_ref const jc::filetype_locale   {"LOCALE"};
-string_ref const jc::filetype_item     {"ITEM"};
-string_ref const jc::filetype_entity   {"ENTITY"};
-string_ref const jc::filetype_tilemap  {"TILEMAP"};
-string_ref const jc::filetype_keymap   {"KEYMAP"};
-string_ref const jc::filetype_messages {"MESSAGE"};
+field_string const jc::filetype_config   {"CONFIG"};
+field_string const jc::filetype_locale   {"LOCALE"};
+field_string const jc::filetype_item     {"ITEM"};
+field_string const jc::filetype_entity   {"ENTITY"};
+field_string const jc::filetype_tilemap  {"TILEMAP"};
+field_string const jc::filetype_keymap   {"KEYMAP"};
+field_string const jc::filetype_messages {"MESSAGE"};
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------

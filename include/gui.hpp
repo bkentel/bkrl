@@ -9,14 +9,17 @@
 #include <boost/format.hpp> //TODO ?
 #include "messages.hpp"
 
+#include "identifier.hpp"
+
 namespace bkrl {
 
 class font_face;
-class item_definitions;
-class item;
-class item_stack;
 class renderer;
 class message_map;
+
+class item_definitions;
+class item_stack;
+class item_store;
 
 namespace gui {
 
@@ -24,11 +27,15 @@ namespace gui {
 //==============================================================================
 class item_list {
 public:
-    item_list(font_face& face, item_definitions const& items);
+    item_list(
+        font_face&              face
+      , item_definitions const& item_defs
+      , item_store       const& items
+    );
 
     void reset(item_stack const& stack);
 
-    void add_item(item const& itm);
+    void add_item(item_id id);
 
     void render(renderer& r, int x, int y);
 
@@ -46,8 +53,9 @@ public:
 
     explicit operator bool() const noexcept { return !empty(); }
 private:
-    font_face*              face_      = nullptr;
-    item_definitions const* item_defs_ = nullptr;
+    font_face*              face_       = nullptr;
+    item_definitions const* item_defs_  = nullptr;
+    item_store const*       item_store_ = nullptr;
 
     int  selection_ = 0;
     int  width_     = 0;

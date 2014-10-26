@@ -4,7 +4,7 @@
 #include "util.hpp"
 
 #include "config.hpp"
-#include "item.hpp"
+#include "items.hpp"
 #include "entity.hpp"
 #include "messages.hpp"
 #include "tile_sheet.hpp"

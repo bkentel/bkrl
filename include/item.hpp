@@ -8,6 +8,8 @@
 #include "random.hpp"
 #include "algorithm.hpp"
 
+#include "identifier.hpp"
+
 namespace bkrl {
 
 namespace detail { class item_definitions_impl; }

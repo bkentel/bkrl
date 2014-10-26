@@ -1,4 +1,4 @@
-﻿#include "item.hpp"
+﻿#include "items.hpp"
 #include "engine_client.hpp"
 #include "font.hpp"
 #include "config.hpp"
@@ -274,6 +274,7 @@ public:
         random::generator& substantive
       , random::generator& trivial
       , data_definitions const& definitions
+      , item_store&        items
       , player&            player
       , tile_sheet const&  tiles_sheet
       , tile_sheet const&  entities_sheet
@@ -281,6 +282,7 @@ public:
       , grid_size const    height
     )
       : definitions_ {&definitions}
+      , item_store_ {&items}
       , tiles_sheet_    {&tiles_sheet}
       , entities_sheet_ {&entities_sheet}
       , player_      {&player}
@@ -435,7 +437,7 @@ public:
     //--------------------------------------------------------------------------
     //! Get the item at @p index in the item stack at @p p, and remove it from the level.
     //--------------------------------------------------------------------------
-    item get_item(ipoint2 const p, int const index = 0) {
+    item_id get_item(ipoint2 const p, int const index = 0) {
         auto& stack = require_stack_at_(p);
 
         BK_ASSERT_DBG(stack.size() > index);
@@ -453,8 +455,8 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    message_type drop_item_at(ipoint2 const p, item&& itm) {
-        make_stack_at_(p).insert(std::move(itm), definitions_->get_items());
+    message_type drop_item_at(ipoint2 const p, item_id const id) {
+        make_stack_at_(p).insert(id);
 
         return message_type::none;
     }
@@ -543,7 +545,7 @@ public:
 
             auto const existing_stack = items_.at(p);
             if (existing_stack) {
-                existing_stack->merge(std::move(object.items()), item_defs);
+                existing_stack->insert(std::move(object.items()));
             } else {
                 items_.emplace(p, std::move(object.items()));
                 items_.sort();
@@ -643,8 +645,8 @@ public:
         if (stack) {
             auto const& items = definitions_->get_items();
 
-            for (auto&& itm : *stack) {
-                auto const& id   = itm.id;
+            for (auto const& itm : *stack) {
+                auto const& id = (*item_store_)[itm].id;
                 auto const& name = items.get_locale(id).name;
 
                 result.push_back('\n');
@@ -815,6 +817,7 @@ private:
 
     //--------------------------------------------------------------------------
     void place_items_(random::generator& substantive) {
+        auto& items     = *item_store_;
         auto const& item_defs = definitions_->get_items();
 
         for (auto const& room : rooms_) {
@@ -836,8 +839,7 @@ private:
 
             auto& stack = make_stack_at_(p);
             stack.insert(
-                generate_item(substantive, item_defs, loot_table {})
-              , item_defs
+                generate_item(substantive, items, item_defs, loot_table {})
             );
         }
 
@@ -1045,8 +1047,10 @@ private:
     //--------------------------------------------------------------------------
     data_definitions const* definitions_;
 
-    tile_sheet const* tiles_sheet_;
-    tile_sheet const* entities_sheet_;
+    item_store* item_store_ = nullptr;
+
+    tile_sheet const* tiles_sheet_ = nullptr;
+    tile_sheet const* entities_sheet_ = nullptr;
 
     player*           player_;
 
@@ -1410,7 +1414,7 @@ public:
       , input_mode_         {nullptr}
       , imode_direction_    {[&] {input_mode_ = nullptr;}}
       , imode_selection_    {[&] {input_mode_ = nullptr;}}
-      , item_list_          {font_face_, defs.get_items()}
+      , item_list_          {font_face_, defs.get_items(), item_store_}
       , msg_log_            {font_face_, defs.get_messages()}
     {
         definitions_->set_language(config_->language);
@@ -1514,6 +1518,7 @@ public:
                 random_substantive_
               , random_trivial_
               , *definitions_
+              , item_store_
               , player_
               , tile_sheet_
               , entities_sheet_
@@ -1838,12 +1843,14 @@ public:
     //! Get the item at @p index from the stack at @p p.
     //--------------------------------------------------------------------------
     void get_item_(ipoint2 const p, int const index = 0) {
-        auto const& items      = definitions_->get_items();
-        auto const& msg_locale = definitions_->get_messages();
+        auto const& items       = definitions_->get_items();
+        auto const& msg_locale  = definitions_->get_messages();
 
-        auto item = cur_level_->get_item(p, index);
+        auto const  id   = cur_level_->get_item(p, index);
+        auto const& item = item_store_[id];
+        auto const& loc  = items.get_locale(item.id);
 
-        auto const& name = item.name(items);
+        auto const& name = loc.name;
         auto const& msg  = msg_locale[message_type::get_ok];
 
         auto fmt = boost::format {msg.data()};
@@ -1852,7 +1859,7 @@ public:
         print_message(boost::str(fmt));
 
         auto const& itm_defs = definitions_->get_items();
-        player_.add_item(std::move(item), itm_defs);
+        player_.add_item(id);
 
         advance();
     }
@@ -1886,12 +1893,14 @@ public:
                 return;
             }
 
-            auto        itm  = player_.items().remove(i);
-            auto const& name = itm.name(definitions_->get_items());
+            auto const  id   = player_.items().remove(i);
+            auto const& itm  = item_store_[id];
+            auto const& loc  = definitions_->get_items().get_locale(itm.id);
+            auto const& name = loc.name;
                 
             msg_log_.print_line(message_type::drop_ok, name);
 
-            cur_level_->drop_item_at(p, std::move(itm));
+            cur_level_->drop_item_at(p, id);
         });
     }
 
@@ -2033,6 +2042,8 @@ private:
     font_face   font_face_;
 
     timer       timers_;
+
+    item_store  item_store_;
 
     transitory_text_layout last_message_;
     int                    last_message_fade_ = 5;

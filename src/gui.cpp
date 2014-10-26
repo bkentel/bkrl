@@ -1,7 +1,7 @@
 #include "gui.hpp"
 
 #include "renderer.hpp"
-#include "item.hpp"
+#include "items.hpp"
 #include "messages.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -10,10 +10,12 @@
 
 bkrl::gui::item_list::item_list(
     font_face&              face
-  , item_definitions const& items
+  , item_definitions const& item_defs
+  , item_store       const& items
 )
-  : face_      {&face}
-  , item_defs_ {&items}
+  : face_       {&face}
+  , item_defs_  {&item_defs}
+  , item_store_ {&items}
 {
 }
 
@@ -28,10 +30,11 @@ bkrl::gui::item_list::reset(item_stack const& stack) {
 
 void
 bkrl::gui::item_list::add_item(
-    item const& itm
+    item_id const id
 ) {
-    auto const& def   = item_defs_->get_locale(itm.id);
-    auto const& name  = def.name;
+    auto const& itm  = (*item_store_)[id];
+    auto const& loc  = item_defs_->get_locale(itm.id);
+    auto const& name = loc.name;
 
     name_buffer_.clear();
     name_buffer_.reserve(2 + name.size());
@@ -39,24 +42,24 @@ bkrl::gui::item_list::add_item(
     name_buffer_.push_back(prefix_);
     name_buffer_.append({"\t-\t"});
 
-    if (itm.count > 1) {
-        name_buffer_.append(std::to_string(itm.count));
-    }
+    //if (itm.count > 1) {
+    //    name_buffer_.append(std::to_string(itm.count));
+    //}
 
     name_buffer_.push_back('\t');
     name_buffer_.append(name.data(), name.size());
 
-    if (itm.damage_min) {
-        BK_ASSERT_DBG(itm.damage_max);
+    //if (itm.damage_min) {
+    //    BK_ASSERT_DBG(itm.damage_max);
 
-        name_buffer_.append({" ["});
-        name_buffer_.append(std::to_string(itm.damage_min));
-        name_buffer_.append({" - "});
-        name_buffer_.append(std::to_string(itm.damage_max));
-        name_buffer_.append({"]"});
-    }
+    //    name_buffer_.append({" ["});
+    //    name_buffer_.append(std::to_string(itm.damage_min));
+    //    name_buffer_.append({" - "});
+    //    name_buffer_.append(std::to_string(itm.damage_max));
+    //    name_buffer_.append({"]"});
+    //}
 
-    ////////
+    //////////
 
     items_.emplace_back(*face_, name_buffer_, 500, 32);
 

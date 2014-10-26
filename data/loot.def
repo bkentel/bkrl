@@ -1,0 +1,13 @@
+{ "file_type": "LOOT"
+, "definitions": [
+    { "id": "DEFAULT"
+    , "table": [
+        [10, "item", "WEAPON_SWORD_SHORT"]
+      , [10, "item", "WEAPON_LONG_SWORD"]
+      , [10, "item", "WEAPON_HAMMER"]
+      , [10, "item", "WEAPON_STAFF"]
+      , [10, "item", "POTION_HEALTH_MINOR", ["uniform", 1, 3]]
+      ]
+    }
+  ]
+}
