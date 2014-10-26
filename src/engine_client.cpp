@@ -351,13 +351,15 @@ public:
 
         for (auto const& mob : mobs_) {
             auto const p = mob.position();
+            
+            auto const rinfo = mob.render_info(entities);
 
-            auto const& e = entities.get_definition(mob.id());
+            //auto const& e = entities.get_definition(mob.id);
 
-            auto const tx = e.tile_x;
-            auto const ty = e.tile_y;
+            auto const tx = rinfo.tile_x;
+            auto const ty = rinfo.tile_y;
 
-            auto const color = make_color(e.r, e.g, e.b);
+            auto const color = make_color(rinfo.r, rinfo.g, rinfo.b);
 
             r.set_color_mod(tex, color);
             sheet.render(r, tx, ty, p.x, p.y);
@@ -657,7 +659,7 @@ public:
         auto const mob = mobs_.at(p);
         if (mob) {
             auto const& entities = definitions_->get_entities();
-            auto const& id       = mob->id();
+            auto const& id       = mob->id;
             auto const& name     = entities.get_locale(id).name;
             auto const& text     = entities.get_locale(id).text;
 
@@ -861,7 +863,7 @@ private:
 
             BK_ASSERT_DBG(intersects(bounds, p));
 
-            auto mob = generate_entity(substantive, entities, items);
+            auto mob = generate_entity(substantive, entities, items, *item_store_);
 
             while (!can_move_to(mob, p)) {
                 auto const v = random::direction(substantive);
@@ -1206,6 +1208,16 @@ public:
 
         return {static_cast<int>(gx), static_cast<int>(gy)};
     }
+
+    ipoint2 grid_to_screen(int const x, int const y) const {
+        auto const tw = sheet_->tile_width();
+        auto const th = sheet_->tile_height();
+
+        return {
+            static_cast<int>(x * tw * zoom_ + scroll_x_)
+          , static_cast<int>(y * th * zoom_ + scroll_y_)
+        };
+    }
 private:
     tile_sheet const* sheet_;
 
@@ -1407,7 +1419,7 @@ public:
       , font_face_          {renderer_, font_lib_, config_->font_name, font_size}
       , last_message_       {}
       , tile_sheet_         {defs.get_tilemap(), renderer_}
-      , entities_sheet_     {renderer_, entity_definitions::definition::tile_filename, entity_definitions::definition::tile_size}
+      , entities_sheet_     {renderer_, entity_definitions::tile_filename(), entity_definitions::tile_size()}
       , view_               {tile_sheet_, app_.client_width(), app_.client_height()}
       , cur_level_          {nullptr}
       , player_             {}
@@ -1720,25 +1732,31 @@ public:
             return;
         }
         
-        //auto const w = view_.width();
-        //auto const h = view_.height();
-        //auto const q = view_.grid_to_screen(p);
-        //
-        //auto const dist_x = w - q.x;
-        //auto const dist_y = h - q.y;
+        auto const w = view_.width();
+        auto const h = view_.height();
+        auto const q = view_.grid_to_screen(p.x, p.y);
+        
+        auto const dist_x = w - q.x;
+        auto const dist_y = h - q.y;
 
-        //if (dist_x < w*0.1
-        // || dist_x > w*0.9
-        //) {
-        //    view_.scroll_by_tile(dx, 0);
-        //}
+        auto const tw = tile_sheet_.tile_width();
+        auto const th = tile_sheet_.tile_height();
 
-        //if (dist_y < h*0.1
-        // || dist_y > h*0.9
-        //) {
-        //    view_.scroll_by_tile(0, dy);
-        //}
+        constexpr auto border    = 0.1f;
+        constexpr auto border_lo = border;
+        constexpr auto border_hi = 1 - border;
 
+        if (dist_x < (w * border_lo)) {
+            view_.scroll_x(-tw);
+        } else if (dist_x > (w * border_hi)) {
+            view_.scroll_x(tw);
+        }
+
+        if (dist_y < (h * border_lo)) {
+            view_.scroll_y(-th);
+        } else if (dist_y > (h * border_hi)) {
+            view_.scroll_y(th);
+        }
 
         player_.move_by(v);
         //view_.scroll_by_tile(dx, dy);
@@ -1859,7 +1877,8 @@ public:
         print_message(boost::str(fmt));
 
         auto const& itm_defs = definitions_->get_items();
-        player_.add_item(id);
+        player_.items().insert(id);
+        
 
         advance();
     }

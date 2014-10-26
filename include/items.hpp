@@ -8,22 +8,13 @@
 #include <type_traits>
 #include <memory>
 #include <vector>
-#include <string>
 
 #include "identifier.hpp"
-
-namespace json11 { class Json; }
+#include "types.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
 namespace bkrl {
 ////////////////////////////////////////////////////////////////////////////////
-using utf8string = std::string;
-
-namespace json   { using cref = ::json11::Json const&; }
-namespace random { class generator; }
-
-using random_t = random::generator;
-
 class item;
 class item_stack;
 class item_store;
@@ -122,7 +113,7 @@ public:
 
     auto empty() const noexcept { return items_.empty(); }
     
-    auto size() const noexcept { return items_.size(); }
+    auto size() const noexcept { return static_cast<int>(items_.size()); }
 
     auto begin()       { return std::begin(items_); }
     auto begin() const { return std::begin(items_); }
@@ -247,10 +238,13 @@ public:
     void load_definitions(json::cref data);
     void load_locale(json::cref data);
 
-    item_locale const& get_locale(item_def_id const id) const;
-    item_definition const& get_definition(item_def_id const id) const;
+    item_locale     const& get_locale(item_def_id id)     const;
+    item_definition const& get_definition(item_def_id id) const;
 
     void set_locale(lang_id const lang);
+
+    int get_definitions_size() const;
+    item_definition const& get_definition_at(int index) const;
 private:
     std::unique_ptr<detail::item_definitions_impl> impl_;
 };

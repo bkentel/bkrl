@@ -494,4 +494,13 @@ extern template struct xy_type<float, geometry::vector>;
 extern template struct axis_aligned_rect<int>;
 extern template struct axis_aligned_rect<float>;
 
+using irect   = axis_aligned_rect<int>;
+using frect2  = axis_aligned_rect<float>;
+
+using ipoint2 = point2d<int>;
+using fpoint2 = point2d<float>;
+
+using ivec2   = vector2d<int>;
+using fvec2   = vector2d<float>;
+
 } //namespace bkrl

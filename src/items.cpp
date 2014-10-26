@@ -264,12 +264,12 @@ public:
         current_locale_ = &it->second;
     }
 
-    int definitions_size() const {
+    auto get_definitions_size() const {
         return static_cast<int>(definitions_.size());
     }
     
-    definition const& get_definition_at(int const index) const {
-        BK_ASSERT(index < definitions_size());
+    auto const& get_definition_at(int const index) const {
+        BK_ASSERT(index < get_definitions_size());
 
         auto it = definitions_.begin();
         std::advance(it, index);
@@ -512,6 +512,16 @@ void bkrl::item_definitions::set_locale(lang_id const lang) {
     impl_->set_locale(lang);
 }
 
+//------------------------------------------------------------------------------
+int bkrl::item_definitions::get_definitions_size() const {
+    return impl_->get_definitions_size();
+}
+
+//------------------------------------------------------------------------------
+bkrl::item_definition const&
+bkrl::item_definitions::get_definition_at(int const index) const {
+    return impl_->get_definition_at(index);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // generate_item
@@ -520,12 +530,14 @@ bkrl::item_id
 bkrl::generate_item(
     random_t&               gen
   , item_store&             store
-  , item_definitions const& defs
+  , item_definitions const& item_defs
   , loot_table       const& table
 ) {
-    auto const id0 = table(gen);
-    auto const id = item_def_id {slash_hash32("WEAPON_LONG_SWORD")};
-    auto const& def = defs.get_definition(id);
+    auto const size = item_defs.get_definitions_size();
+    auto const i    = random::uniform_range(gen, 0, size - 1);
+
+    auto const& def = item_defs.get_definition_at(i);
+    auto const& id  = def.id;
     
     item itm;
     itm.id = id;;

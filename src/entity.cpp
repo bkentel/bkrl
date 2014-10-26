@@ -5,13 +5,34 @@
 
 namespace jc = bkrl::json::common;
 
+////////////////////////////////////////////////////////////////////////////////
+// item_definitions
+////////////////////////////////////////////////////////////////////////////////
+struct bkrl::entity_definition {
+    using dist_t = random::random_dist;
+
+    static path_string tile_filename;
+    static ipoint2     tile_size;
+
+    entity_def_id id;      //!< entity id
+    utf8string    id_string;
+    dist_t        items;   //!< number of carried items
+    int16_t       tile_x;  //!< tile x index
+    int16_t       tile_y;  //!< tile y index
+    uint8_t       r, g, b; //!< color
+    dist_t        health;  //!< health
+};
+
+bkrl::path_string bkrl::entity_definition::tile_filename {};
+bkrl::ipoint2     bkrl::entity_definition::tile_size     {0, 0};
+
 //==============================================================================
 //!
 //==============================================================================
 class bkrl::detail::entity_definitions_impl {
 public:
-    using definition = entity_definitions::definition;
-    using locale     = entity_definitions::locale;
+    using definition = entity_definition;
+    using locale     = entity_locale;
     using cref = bkrl::json::cref;  
 
     entity_definitions_impl() {
@@ -174,12 +195,12 @@ public:
         current_locale_ = &it->second;
     }
 
-    int definitions_size() const {
+    auto get_definitions_size() const {
         return static_cast<int>(definitions_.size());
     }
     
-    definition const& get_definition_at(int const index) const {
-        BK_ASSERT(index < definitions_size());
+    auto const& get_definition_at(int const index) const {
+        BK_ASSERT(index < get_definitions_size());
 
         auto it = definitions_.begin();
         std::advance(it, index);
@@ -191,54 +212,75 @@ private:
 
     using locale_map = map_t<entity_def_id, locale>;
 
-    entity_definitions::definition cur_def_;
-    entity_definitions::locale     cur_loc_;
-    lang_id                        cur_lang_;
-    locale_map                     cur_loc_map_;
+    definition cur_def_;
+    locale     cur_loc_;
+    lang_id    cur_lang_;
+    locale_map cur_loc_map_;
 
-    map_t<entity_def_id,  definition> definitions_;
-    map_t<lang_id, locale_map> locales_;
+    map_t<entity_def_id, definition> definitions_;
+    map_t<lang_id,       locale_map> locales_;
 
     locale_map const* current_locale_ = nullptr;
 };
 
-bkrl::path_string bkrl::entity_definitions::definition::tile_filename {};
-bkrl::ipoint2     bkrl::entity_definitions::definition::tile_size     {0, 0};
+////////////////////////////////////////////////////////////////////////////////
+// entity
+////////////////////////////////////////////////////////////////////////////////
+bkrl::entity_render_info_t
+bkrl::entity::render_info(entity_definitions const& defs) const {
+    auto const& def = defs.get_definition(id);
+    
+    return entity_render_info_t {
+        def.tile_x, def.tile_y
+      , def.r, def.g, def.b, 255 //TODO
+    };
+}
 
+bkrl::string_ref bkrl::entity::name(defs_t defs) const {
+    return defs.get_locale(id).name;
+}
+
+bool bkrl::entity::apply_damage(damage_t const delta) {
+    return (data.cur_health -= delta) <= 0;
+}
 ////////////////////////////////////////////////////////////////////////////////
 // entity_definitions
 ////////////////////////////////////////////////////////////////////////////////
-using bkrl::entity_definitions;
+bkrl::path_string const& bkrl::entity_definitions::tile_filename() {
+    return entity_definition::tile_filename;
+}
+
+bkrl::ipoint2 bkrl::entity_definitions::tile_size() {
+    return entity_definition::tile_size;
+}
 
 //------------------------------------------------------------------------------
-entity_definitions::~entity_definitions() = default;
+bkrl::entity_definitions::~entity_definitions() = default;
 
 //------------------------------------------------------------------------------
-entity_definitions::entity_definitions()
+bkrl::entity_definitions::entity_definitions()
   : impl_ {std::make_unique<detail::entity_definitions_impl>()}
 {
 }
 
 //------------------------------------------------------------------------------
-void
-bkrl::entity_definitions::load_definitions(json::cref data) {
+void bkrl::entity_definitions::load_definitions(json::cref data) {
     impl_->load_definitions(data);
 }
 
 //------------------------------------------------------------------------------
-void
-bkrl::entity_definitions::load_locale(json::cref data) {
+void bkrl::entity_definitions::load_locale(json::cref data) {
     impl_->load_locale(data);
 }
 
 //------------------------------------------------------------------------------
-entity_definitions::definition const&
+bkrl::entity_definition const&
 bkrl::entity_definitions::get_definition(entity_def_id const id) const {
     return impl_->get_definition(id);
 }
 
 //------------------------------------------------------------------------------
-entity_definitions::locale const&
+bkrl::entity_locale const&
 bkrl::entity_definitions::get_locale(entity_def_id const id) const {
     return impl_->get_locale(id);
 }
@@ -249,35 +291,46 @@ void bkrl::entity_definitions::set_locale(lang_id const lang) {
 }
 
 //------------------------------------------------------------------------------
-int entity_definitions::definitions_size() const {
-    return impl_->definitions_size();
+int bkrl::entity_definitions::get_definitions_size() const {
+    return impl_->get_definitions_size();
 }
 
 //------------------------------------------------------------------------------
-bkrl::entity_definitions::definition const&
+bkrl::entity_definition const&
 bkrl::entity_definitions::get_definition_at(int const index) const {
     return impl_->get_definition_at(index);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// generate_entity
 ////////////////////////////////////////////////////////////////////////////////
-
 bkrl::entity
 bkrl::generate_entity(
     random::generator&        gen
-  , entity_definitions const& entities
-  , item_definitions   const& items
+  , entity_definitions const& entity_defs
+  , item_definitions   const& item_defs
+  , item_store&               items
 ) {
-    auto const size = entities.definitions_size();
-    auto const i    = random::uniform_range(gen, 0, size - 1);
+    auto const size  = entity_defs.get_definitions_size();
+    auto const index = random::uniform_range(gen, 0, size - 1);
 
-    auto const& edef = entities.get_definition_at(i);
+    auto const& def = entity_defs.get_definition_at(index);
+    auto const& id  = def.id;
 
-    return entity {
-        gen
-      , edef.id
-      , ipoint2 {0, 0}
-      , items
-      , entities
-    };
+    entity result;
+
+    result.id = id;
+    result.data.max_health = static_cast<health_t>(def.health(gen));
+    result.data.cur_health = result.data.max_health;
+    result.data.position = {0, 0};
+
+    auto const item_count = def.items(gen);
+    auto const table = loot_table {};
+    for (int i = 0; i < item_count; ++i) {
+        result.data.items.insert(
+            generate_item(gen, items, item_defs, table)
+        );
+    }
+
+    return result;
 }
