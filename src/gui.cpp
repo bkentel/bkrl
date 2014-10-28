@@ -7,6 +7,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 // gui::item_list
 ////////////////////////////////////////////////////////////////////////////////
+struct bkrl::gui::item_list::constants {
+    static constexpr int border  = 8;
+    static constexpr int padding = 4;
+};
 
 bkrl::gui::item_list::item_list(
     font_face&              face
@@ -42,31 +46,15 @@ bkrl::gui::item_list::add_item(
     name_buffer_.push_back(prefix_);
     name_buffer_.append({"\t-\t"});
 
-    //if (itm.count > 1) {
-    //    name_buffer_.append(std::to_string(itm.count));
-    //}
-
     name_buffer_.push_back('\t');
     name_buffer_.append(name.data(), name.size());
-
-    //if (itm.damage_min) {
-    //    BK_ASSERT_DBG(itm.damage_max);
-
-    //    name_buffer_.append({" ["});
-    //    name_buffer_.append(std::to_string(itm.damage_min));
-    //    name_buffer_.append({" - "});
-    //    name_buffer_.append(std::to_string(itm.damage_max));
-    //    name_buffer_.append({"]"});
-    //}
-
-    //////////
 
     items_.emplace_back(*face_, name_buffer_, 500, 32);
 
     auto const& back = items_.back();
 
-    width_  =  std::max(width_, back.actual_width());
-    height_ += back.actual_height();
+    row_w_ = std::max(row_w_, back.actual_width()  + constants::padding);
+    row_h_ = std::max(row_h_, back.actual_height() + constants::padding);
 
     prefix_++;
 }
@@ -77,20 +65,22 @@ bkrl::gui::item_list::render(
   , int const x
   , int const y
 ) {
-    if (empty()) {
+    auto const size = static_cast<int>(items_.size());
+
+    if (size == 0) {
         return;
     }
-
-    constexpr auto border = 8;
         
-    static auto color_background = make_color(50,  50,  50);
-    static auto color_highlight  = make_color(150, 150, 50);
+    static auto color_background = make_color(200,  200,  200);
+    static auto color_even       = make_color(60,  60,  60);
+    static auto color_odd        = make_color(80,  80,  80);
+    static auto color_highlight  = make_color(150, 150, 120);
 
-    auto cur_x = x + border;
-    auto cur_y = y + border;
+    auto cur_x = x + constants::border;
+    auto cur_y = y + constants::border;
 
-    auto const w = width_  + border * 2;
-    auto const h = height_ + border * 2;
+    auto const w = row_w_ + constants::border * 2;
+    auto const h = row_h_ * size + constants::border * 2;
 
     auto const restore = r.restore_view();
 
@@ -101,14 +91,17 @@ bkrl::gui::item_list::render(
     int i = 0;
     for (auto const& itm : items_) {
         if (i == selection_) {
-            //draw the selection highlight
             r.set_draw_color(color_highlight);
-            r.draw_filled_rect(make_rect_size(cur_x, cur_y, w - border * 2, itm.actual_height()));
-            r.set_draw_color(color_background);
+        } else if (i % 2 == 0) {
+            r.set_draw_color(color_even);
+        } else {
+            r.set_draw_color(color_odd);
         }
 
+        r.draw_filled_rect(make_rect_size(cur_x, cur_y, row_w_, row_h_));
+
         itm.render(r, *face_, cur_x, cur_y);
-        cur_y += itm.actual_height();
+        cur_y += row_h_;
         ++i;
     }
 }
@@ -117,8 +110,8 @@ void
 bkrl::gui::item_list::clear() {
     items_.clear();
     selection_ = 0;
-    width_     = 0;
-    height_    = 0;
+    row_w_     = 0;
+    row_h_     = 0;
     prefix_   = 'a';
 }
 

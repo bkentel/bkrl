@@ -2,7 +2,12 @@
 , "string_type": "ITEM"
 , "language":    "ja"
 , "definitions": [
-    { "id":   "WEAPON_SWORD_SHORT"
+    { "id":   "ARMOR_LEATHER_COAT"
+    , "name": "革羽織"
+    , "sort": "カワバオリ"
+    , "text": "耐久性が優れてとても丈夫な防具。"
+    }
+  , { "id":   "WEAPON_SWORD_SHORT"
     , "name": "短剣"
     , "sort": "タンケン"
     , "text": "A short sword suitable for, well, slashing."

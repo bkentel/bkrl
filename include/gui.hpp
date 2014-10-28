@@ -27,6 +27,8 @@ namespace gui {
 //==============================================================================
 class item_list {
 public:
+    struct constants;
+
     item_list(
         font_face&              face
       , item_definitions const& item_defs
@@ -58,8 +60,8 @@ private:
     item_store const*       item_store_ = nullptr;
 
     int  selection_ = 0;
-    int  width_     = 0;
-    int  height_    = 0;
+    int  row_w_     = 0;
+    int  row_h_     = 0;
     char prefix_    = 'a';
 
     utf8string name_buffer_;
