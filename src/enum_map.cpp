@@ -464,6 +464,7 @@ namespace {
         BK_ENUMMAP_ADD_STRING(result, command, get);
         BK_ENUMMAP_ADD_STRING(result, command, drop);
         BK_ENUMMAP_ADD_STRING(result, command, inventory);
+        BK_ENUMMAP_ADD_STRING(result, command, wield_wear);
 
         bkrl::sort(result, command_map_t::value_type::less_hash);
 
@@ -507,6 +508,10 @@ namespace {
         BK_ENUMMAP_ADD_STRING(result, message, drop_ok);
         BK_ENUMMAP_ADD_STRING(result, message, attack_regular);
         BK_ENUMMAP_ADD_STRING(result, message, kill_regular);
+        BK_ENUMMAP_ADD_STRING(result, message, title_inventory);
+        BK_ENUMMAP_ADD_STRING(result, message, title_wield_wear);
+        BK_ENUMMAP_ADD_STRING(result, message, title_get);
+        BK_ENUMMAP_ADD_STRING(result, message, title_drop);
 
         bkrl::sort(result, message_map_t::value_type::less_hash);
 

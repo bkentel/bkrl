@@ -41,6 +41,11 @@ enum class message_type : uint16_t {
   , attack_regular
   , kill_regular
 
+  , title_inventory
+  , title_wield_wear
+  , title_get
+  , title_drop
+
   , enum_size
 };
 

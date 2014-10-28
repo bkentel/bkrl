@@ -94,8 +94,8 @@ public:
 
     string_ref name(defs_t defs) const;
 
-    auto&       items()       { return data.items; }
-    auto const& items() const { return data.items; }
+    item_stack&       items()       { return data.items; }
+    item_stack const& items() const { return data.items; }
 
     auto position() const noexcept { return data.position; }
 

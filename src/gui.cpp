@@ -23,6 +23,12 @@ bkrl::gui::item_list::item_list(
 {
 }
 
+void bkrl::gui::item_list::set_title(string_ref const title) {
+    title_.reset(*face_, title);
+    row_w_ = std::max(row_w_, title_.actual_width()  + constants::padding);
+    row_h_ = std::max(row_h_, title_.actual_height() + constants::padding);
+}
+
 void
 bkrl::gui::item_list::reset(item_stack const& stack) {
     clear();
@@ -80,13 +86,16 @@ bkrl::gui::item_list::render(
     auto cur_y = y + constants::border;
 
     auto const w = row_w_ + constants::border * 2;
-    auto const h = row_h_ * size + constants::border * 2;
+    auto const h = row_h_ * (size + 1) + constants::border * 2;
 
     auto const restore = r.restore_view();
 
     //draw the background
     r.set_draw_color(color_background);
     r.draw_filled_rect(make_rect_size(x, y, w, h));
+
+    title_.render(r, *face_, cur_x, cur_y);
+    cur_y += row_h_;
 
     int i = 0;
     for (auto const& itm : items_) {
@@ -109,6 +118,8 @@ bkrl::gui::item_list::render(
 void
 bkrl::gui::item_list::clear() {
     items_.clear();
+    title_.clear();
+
     selection_ = 0;
     row_w_     = 0;
     row_h_     = 0;

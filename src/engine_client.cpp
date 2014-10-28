@@ -1577,6 +1577,10 @@ public:
     void draw_inspect_msg(renderer& r) {
         static auto const color_text_background = make_color(50, 50, 50, 180);
 
+        if (inspect_message_.empty()) {
+            return;
+        }
+
         auto const restore = r.restore_view();
 
         auto const actual_h = inspect_message_.actual_height();
@@ -1749,6 +1753,8 @@ public:
         
 
         item_list_.reset(stack);
+        auto const title = definitions_->get_messages()[message_type::title_get];
+        item_list_.set_title(title);
 
         input_mode_ = imode_selection_.enter_mode(item_list_, [this, p](bool const ok, int const i) {
             if (!ok) {
@@ -1923,6 +1929,8 @@ public:
         }
 
         item_list_.reset(stack);
+        auto const title = definitions_->get_messages()[message_type::title_drop];
+        item_list_.set_title(title);
 
         input_mode_ = imode_selection_.enter_mode(item_list_, [this, p](bool const ok, int const i) {            
             if (!ok) {
@@ -1948,6 +1956,35 @@ public:
         }
 
         item_list_.reset(items);
+        auto const title = definitions_->get_messages()[message_type::title_inventory];
+        item_list_.set_title(title);
+
+        input_mode_ = imode_selection_.enter_mode(item_list_, [this](bool const , int const ) {
+        });
+    }
+
+    //--------------------------------------------------------------------------
+    void do_wield_wear() {
+        auto const& items = player_.items();
+        if (items.empty()) {
+            return;
+        }
+
+        item_stack equipable;
+        for (auto iid : items) {
+            item const& itm = item_store_[iid];
+            
+            switch (itm.type) {
+            case item_type::armor :
+            case item_type::weapon :
+                equipable.insert(iid, definitions_->get_items(), item_store_);
+                break;
+            }
+        }
+
+        item_list_.reset(equipable);
+        auto const title = definitions_->get_messages()[message_type::title_wield_wear];
+        item_list_.set_title(title);
 
         input_mode_ = imode_selection_.enter_mode(item_list_, [this](bool const , int const ) {
         });
@@ -1970,32 +2007,37 @@ public:
             return input_mode_->on_command(cmd);
         }
 
+        using ct = command_type;
+
         switch (cmd) {
-        case command_type::inventory  : do_inventory(); break;
-        case command_type::open       : do_open(); break;
-        case command_type::close      : do_close(); break;
-        case command_type::get        : do_get(); break;
-        case command_type::drop       : do_drop(); break;
-        case command_type::scroll_n   : do_scroll( 0,  1, 0); break;
-        case command_type::scroll_s   : do_scroll( 0, -1, 0); break;
-        case command_type::scroll_e   : do_scroll(-1,  0, 0);  break;
-        case command_type::scroll_w   : do_scroll( 1,  0, 0);  break;
-        case command_type::here       : do_wait(); break;
-        case command_type::north      : do_move_player (0, -1); break;
-        case command_type::south      : do_move_player( 0,  1); break;
-        case command_type::east       : do_move_player( 1,  0); break;
-        case command_type::west       : do_move_player(-1,  0); break;
-        case command_type::north_west : do_move_player(-1, -1); break;
-        case command_type::north_east : do_move_player( 1, -1); break;
-        case command_type::south_west : do_move_player(-1,  1); break;
-        case command_type::south_east : do_move_player( 1,  1); break;
-        case command_type::up         : do_go_up(); break;
-        case command_type::down       : do_go_down(); break;
-        case command_type::zoom_in    : do_zoom_in(); break;
-        case command_type::zoom_out   : do_zoom_out(); break;
-        case command_type::zoom_reset : do_zoom_reset(); break;
-        default:
-            break;
+        case ct::wield_wear : do_wield_wear();        break;
+        case ct::inventory  : do_inventory();         break;
+        case ct::open       : do_open();              break;
+        case ct::close      : do_close();             break;
+        case ct::get        : do_get();               break;
+        case ct::drop       : do_drop();              break;
+        case ct::scroll_n   : do_scroll( 0,  1, 0);   break;
+        case ct::scroll_s   : do_scroll( 0, -1, 0);   break;
+        case ct::scroll_e   : do_scroll(-1,  0, 0);   break;
+        case ct::scroll_w   : do_scroll( 1,  0, 0);   break;
+        case ct::here       : do_wait();              break;
+        case ct::north      : do_move_player (0, -1); break;
+        case ct::south      : do_move_player( 0,  1); break;
+        case ct::east       : do_move_player( 1,  0); break;
+        case ct::west       : do_move_player(-1,  0); break;
+        case ct::north_west : do_move_player(-1, -1); break;
+        case ct::north_east : do_move_player( 1, -1); break;
+        case ct::south_west : do_move_player(-1,  1); break;
+        case ct::south_east : do_move_player( 1,  1); break;
+        case ct::up         : do_go_up();             break;
+        case ct::down       : do_go_down();           break;
+        case ct::zoom_in    : do_zoom_in();           break;
+        case ct::zoom_out   : do_zoom_out();          break;
+        case ct::zoom_reset : do_zoom_reset();        break;
+        case ct::cancel     :                         break;
+        case ct::accept     :                         break;
+        case ct::invalid    :                         break;
+        default             : BK_TODO_FAIL();         break;
         }
 
         return false;

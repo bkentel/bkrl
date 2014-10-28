@@ -20,5 +20,9 @@
       , ["drop_ok",          "You drop the %1%."]
       , ["attack_regular",   "You hit the %1% for %2% damage."]
       , ["kill_regular",     "You killed the %1%."]
+      , ["title_inventory",  "Inventory"]
+      , ["title_wield_wear", "Weild or wear"]
+      , ["title_get",        "Pick up"]
+      , ["title_drop",       "Drop"]
     ]
 }

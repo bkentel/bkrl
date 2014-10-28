@@ -35,6 +35,8 @@ public:
       , item_store       const& items
     );
 
+    void set_title(string_ref title);
+
     void reset(item_stack const& stack);
 
     void add_item(item_id id);
@@ -65,6 +67,7 @@ private:
     char prefix_    = 'a';
 
     utf8string name_buffer_;
+    transitory_text_layout              title_;
     std::vector<transitory_text_layout> items_;
 };
 

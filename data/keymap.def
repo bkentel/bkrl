@@ -37,5 +37,6 @@
       , ["get",   "kb_g"]
       , ["drop",  "kb_d"]
       , ["inventory", "kb_i"]
+      , ["wield_wear", "kb_w"]
     ]
 }

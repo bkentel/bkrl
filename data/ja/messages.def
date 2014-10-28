@@ -20,5 +20,9 @@
       , ["drop_ok",          "%1%を落とした。"]
       , ["attack_regular",   "%1%に%2%点のダメージを与えた."]
       , ["kill_regular",     "%1%を斃した。"]
+      , ["title_inventory",  "所持品"]
+      , ["title_wield_wear", "装備"]
+      , ["title_get",        "拾得"]
+      , ["title_drop",       "放棄"]
     ]
 }
