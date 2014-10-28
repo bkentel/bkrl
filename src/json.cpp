@@ -34,6 +34,8 @@ field_string const jc::field_trivial_seed     {"trivial_seed"};
 field_string const jc::field_window_size      {"window_size"};
 field_string const jc::field_window_pos       {"window_pos"};
 field_string const jc::field_font             {"font"};
+field_string const jc::field_type             {"type"};
+field_string const jc::field_slot             {"slot"};
 //------------------------------------------------------------------------------
 field_string const jc::filetype_config   {"CONFIG"};
 field_string const jc::filetype_locale   {"LOCALE"};

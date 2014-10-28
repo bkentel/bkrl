@@ -62,24 +62,135 @@ void placement_move(T& dst, T& src) {
 } //namespace
 ////////////////////////////////////////////////////////////////////////////////
 
+namespace bkrl {
+template <typename Enum>
+struct hashed_enum_string {
+    hashed_enum_string(string_ref const str, Enum const val)
+      : string {str}
+      , hash   {slash_hash32(str)}
+      , value  {val}
+    {
+    }
+
+    string_ref string;
+    hash_t     hash;
+    Enum       value;
+};
+
+//TODO make constexpr
+template <typename T, size_t N>
+inline size_t sizeof_array(T const (&)[N]) noexcept {
+    return N;
+}
+
+template <> bkrl::item_type
+bkrl::from_string(string_ref const str) {
+    using es_t = hashed_enum_string<item_type> const;
+
+    static es_t types[] = {
+        {"none",      item_type::none}
+      , {"weapon",    item_type::weapon}
+      , {"armor",     item_type::armor}
+      , {"scroll",    item_type::scroll}
+      , {"potion",    item_type::potion}
+      , {"container", item_type::container}
+    };
+
+    auto const hash = slash_hash32(str);
+
+    auto const sz  = sizeof_array(types);
+    auto const beg = types;
+    auto const end = types + sz;
+    
+    BK_ASSERT(sz == enum_value(item_type::enum_size));
+    
+    auto const it  = std::find_if(beg, end, [&](es_t const& x) {
+        return hash == x.hash;
+    });
+
+    return (it != end) ? it->value : item_type::none;
+}
+
+template <> bkrl::equip_slot
+bkrl::from_string(string_ref const str) {
+    using es_t = hashed_enum_string<equip_slot> const;
+
+    static es_t slots[] = {
+        {"none",         equip_slot::none}
+      , {"head",         equip_slot::head}
+      , {"arms_upper",   equip_slot::arms_upper}
+      , {"arms_lower",   equip_slot::arms_lower}
+      , {"hands",        equip_slot::hands}
+      , {"chest",        equip_slot::chest}
+      , {"waist",        equip_slot::waist}
+      , {"legs_upper",   equip_slot::legs_upper}
+      , {"legs_lower",   equip_slot::legs_lower}
+      , {"feet",         equip_slot::feet}
+      , {"finger_left",  equip_slot::finger_left}
+      , {"finger_right", equip_slot::finger_right}
+      , {"neck",         equip_slot::neck}
+      , {"back",         equip_slot::back}
+      , {"hand_main",    equip_slot::hand_main}
+      , {"hand_off",     equip_slot::hand_off}
+      , {"ammo",         equip_slot::ammo}
+    };
+
+    auto const hash = slash_hash32(str);
+
+    auto const sz  = sizeof_array(slots);
+    auto const beg = slots;
+    auto const end = slots + sz;
+    
+    BK_ASSERT(sz == enum_value(equip_slot::enum_size));
+    
+    auto const it  = std::find_if(beg, end, [&](es_t const& x) {
+        return hash == x.hash;
+    });
+
+    return (it != end) ? it->value : equip_slot::none;
+}
+
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // item_stack
 ////////////////////////////////////////////////////////////////////////////////
-//------------------------------------------------------------------------------
-void bkrl::item_stack::insert(item_id const id) {
-    items_.emplace_back(id);
-    
-    bkrl::sort(items_);
+namespace {
+
+template <typename T>
+static void sort_items(
+    T& container
+  , bkrl::item_definitions const& defs
+  , bkrl::item_store const& items
+) {
+    bkrl::sort(container, [&](bkrl::item_id const lhs, bkrl::item_id const rhs) {
+        auto const& lloc = get_item_locale(lhs, defs, items);
+        auto const& rloc = get_item_locale(rhs, defs, items);
+
+        auto const& left  = (!lloc.sort.empty() ? lloc.sort : lloc.name);
+        auto const& right = (!rloc.sort.empty() ? rloc.sort : rloc.name);
+
+        return left < right;
+    });
+}
+
 }
 
 //------------------------------------------------------------------------------
-void bkrl::item_stack::insert(item_stack&& other) {
+void bkrl::item_stack::insert(item_id const id, defs_t defs, items_t items) {
+    items_.emplace_back(id);
+    
+    sort_items(items_, defs, items);
+}
+
+//------------------------------------------------------------------------------
+void bkrl::item_stack::insert(item_stack&& other, defs_t defs, items_t items) {
     auto& result =  merge(items_, other.items_);
     if (&result != &items_) {
         items_ = std::move(result);
     }
 
-    bkrl::sort(items_);
+    sort_items(items_, defs, items);
 }
 
 //------------------------------------------------------------------------------
@@ -127,6 +238,7 @@ bkrl::item::item(item&& other)
     case it::container : placement_move(dst.stack,  src.stack);  break;
     case it::weapon    : placement_move(dst.weapon, src.weapon); break;
     case it::armor     : placement_move(dst.armor,  src.armor);  break;
+    case it::potion    : placement_move(dst.potion, src.potion); break;
     }
 }
 
@@ -140,6 +252,7 @@ bkrl::item::~item() {
     case it::container : call_destructor(data.stack);  break;
     case it::weapon    : call_destructor(data.weapon); break;
     case it::armor     : call_destructor(data.armor);  break;
+    case it::potion    : call_destructor(data.potion); break;
     }
 }
 
@@ -154,8 +267,7 @@ public:
     using key             = item_id; 
 
     key insert(rvalue value) {
-        auto const size = static_cast<key::value_type>(data_.size());
-        auto const result_key = key {size};
+        auto const result_key = key {next_id_++};
 
         auto const result = data_.insert(std::make_pair(result_key, std::move(value)));
         BK_ASSERT(result.second);
@@ -169,6 +281,7 @@ public:
     reference       operator[](key const id)       { return require_at(data_, id); }
     const_reference operator[](key const id) const { return require_at(data_, id); }
 private:
+    uint32_t next_id_ = 0x80000000;
     std::unordered_map<key, item> data_;
 };
 
@@ -180,6 +293,7 @@ bkrl::item_store::item_store()
 
 //------------------------------------------------------------------------------
 bkrl::item_store::~item_store() = default;
+bkrl::item_store::item_store(item_store&&) = default;
 
 //------------------------------------------------------------------------------
 bkrl::item_id
@@ -213,11 +327,14 @@ struct bkrl::item_definition {
     item_def_id id;
     utf8string  id_string;
 
-    //equip_slot_flags slot_flags;
+    equip_slot_flags slots;
 
-    int       max_stack;
-    dist_t    damage_min;
-    dist_t    damage_max;  
+    int max_stack;
+
+    dist_t damage_min;
+    dist_t damage_max;  
+
+    item_type type;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -232,6 +349,11 @@ public:
     using definition = item_definition;
     using locale     = item_locale;
     using cref = bkrl::json::cref;  
+
+    static utf8string const undefined_name;
+    static utf8string const undefined_sort;
+    static utf8string const undefined_text;
+    static locale     const undefined_locale;
 
     ////////////////////////////////////////////////////////////////////////////
     item_definitions_impl() {
@@ -249,7 +371,7 @@ public:
     locale const& get_locale(item_def_id const id) const {
         auto const it = current_locale_->find(id);
         if (it == std::end(*current_locale_)) {
-            BK_TODO_FAIL();
+            return undefined_locale;
         }
 
         return it->second;
@@ -281,6 +403,7 @@ public:
         rule_def_root(data);
     }
     
+    //--------------------------------------------------------------------------
     void rule_def_root(cref value) {
         json::require_object(value);
 
@@ -288,10 +411,12 @@ public:
         rule_def_definitions(value);
     }
 
+    //--------------------------------------------------------------------------
     void rule_def_filetype(cref value) {
         jc::get_filetype(value, jc::filetype_item);
     }
 
+    //--------------------------------------------------------------------------
     void rule_def_definitions(cref value) {
         auto const& defs  = json::require_array(value[jc::field_definitions]);
         auto const& array = defs.array_items();
@@ -303,15 +428,15 @@ public:
         }
     }
 
+    //--------------------------------------------------------------------------
     void rule_def_definition(cref value) {
         rule_def_id(value);
-        rule_def_stack(value);
-        rule_def_damage(value);
-        rule_def_slots(value);
+        rule_def_type(value);
 
         definitions_.emplace(cur_def_.id, std::move(cur_def_));
     }
 
+    //--------------------------------------------------------------------------
     void rule_def_id(cref value) {
         auto const str = json::require_string(value[jc::field_id]);
         if (str.length() < 1) {
@@ -322,6 +447,37 @@ public:
         cur_def_.id_string = str.to_string();
     }
 
+    //--------------------------------------------------------------------------
+    void rule_def_type(cref value) {
+        auto const& str  = json::require_string(value[jc::field_type]);
+        auto const  type = from_string<item_type>(str);
+
+        cur_def_.type = type;
+
+        using it = item_type;
+
+        switch (type) {
+        default : //fall through
+        case it::none   : BK_TODO_FAIL();         break;
+        case it::weapon : rule_def_weapon(value); break;
+        case it::armor  : rule_def_armor(value);  break;
+        case it::potion : rule_def_potion(value); break;
+        }
+    }
+
+    //--------------------------------------------------------------------------
+    void rule_def_weapon(cref value) {
+    }
+
+    //--------------------------------------------------------------------------
+    void rule_def_armor(cref value) {
+    }
+
+    //--------------------------------------------------------------------------
+    void rule_def_potion(cref value) {
+    }
+
+    //--------------------------------------------------------------------------
     void rule_def_stack(cref value) {
         auto const stack = json::default_int(value[jc::field_stack], 1);
         if (stack < 1) {
@@ -331,6 +487,7 @@ public:
         cur_def_.max_stack = stack;
     }
 
+    //--------------------------------------------------------------------------
     void rule_def_damage(cref value) {
         using dist_t = definition::dist_t;
 
@@ -350,62 +507,33 @@ public:
         cur_def_.damage_max = has_damage ? jc::get_random(dmg_max) : dist_t {};
     }
 
+    //--------------------------------------------------------------------------
     void rule_def_slots(cref value) {
-        //static string_ref const field_slots {"slot"};
+        auto& flags = cur_def_.slots;
+        flags.reset();
 
-        //auto& flags = cur_def_.slot_flags;
-        //flags.reset();
+        auto const& slots = json::has_field(value, jc::field_slot);
+        if (!slots) {
+            return;
+        }
+       
+        auto const& array = json::require_array(*slots, 1).array_items();
 
-        //if (!json::has_field(value, field_slots)) {
-        //    return;
-        //}
+        for (auto const& slot_str : array) {
+            auto const& str  = json::require_string(slot_str);
+            auto const  slot = from_string<equip_slot>(str);
+            auto const  flag = enum_value(slot);
 
-        //static hashed_string_ref const none {"none"};
-        //static hashed_string_ref const head {"head"};
-        //static hashed_string_ref const arms_upper {"arms_upper"};
-        //static hashed_string_ref const arms_lower {"arms_lower"};
-        //static hashed_string_ref const hands {"hands"};
-        //static hashed_string_ref const chest {"chest"};
-        //static hashed_string_ref const waist {"waist"};
-        //static hashed_string_ref const legs_upper {"legs_upper"};
-        //static hashed_string_ref const legs_lower {"legs_lower"};
-        //static hashed_string_ref const feet {"feet"};
-        //static hashed_string_ref const finger_left {"finger_left"};
-        //static hashed_string_ref const finger_right {"finger_right"};
-        //static hashed_string_ref const neck {"neck"};
-        //static hashed_string_ref const back {"back"};
-        //static hashed_string_ref const hand_main {"hand_main"};
-        //static hashed_string_ref const hand_off {"hand_off"};
-        //static hashed_string_ref const ammo {"ammo"};
+            if (slot == equip_slot::none && array.size() != 1) {
+                BK_TODO_FAIL();
+            }
 
-        //auto const slots = json::require_array(value[field_slots], 1);
+            if (flags.test(flag)) {
+                BK_TODO_FAIL();
+            }
 
-        //for (auto const& slot : slots.array_items()) {
-        //    hashed_string_ref const s = json::require_string(slot);
-
-        //    if (s == none) {
-        //        BK_ASSERT_DBG(slots.array_items().size() == 1);
-        //    }
-        //    else if (s == head) { flags.set(enum_value(equip_slot::head)); }
-        //    else if (s == arms_upper) { flags.set(enum_value(equip_slot::arms_upper)); }
-        //    else if (s == arms_lower) { flags.set(enum_value(equip_slot::arms_lower)); }
-        //    else if (s == hands) { flags.set(enum_value(equip_slot::hands)); }
-        //    else if (s == chest) { flags.set(enum_value(equip_slot::chest)); }
-        //    else if (s == waist) { flags.set(enum_value(equip_slot::waist)); }
-        //    else if (s == legs_upper) { flags.set(enum_value(equip_slot::legs_upper)); }
-        //    else if (s == legs_lower) { flags.set(enum_value(equip_slot::legs_lower)); }
-        //    else if (s == feet) { flags.set(enum_value(equip_slot::feet)); }
-        //    else if (s == finger_left) { flags.set(enum_value(equip_slot::finger_left)); }
-        //    else if (s == finger_right) { flags.set(enum_value(equip_slot::finger_right)); }
-        //    else if (s == neck) { flags.set(enum_value(equip_slot::neck)); }
-        //    else if (s == back) { flags.set(enum_value(equip_slot::back)); }
-        //    else if (s == hand_main) { flags.set(enum_value(equip_slot::hand_main)); }
-        //    else if (s == hand_off) { flags.set(enum_value(equip_slot::hand_off)); }
-        //    else if (s == ammo) { flags.set(enum_value(equip_slot::ammo)); }
-        //    else {
-        //        BK_TODO_FAIL();
-        //    }
-        //}
+            flags.set(flag);
+        }
 
     }
     ////////////////////////////////////////////////////////////////////////////
@@ -439,12 +567,10 @@ public:
     }
 
     void rule_loc_definition(cref value) {
-        static string_ref const undefined {"<undefined string>"};
-
         hashed_string_ref const id = json::require_string(value[jc::field_id]);
         
-        assign(cur_loc_.name, json::default_string(value[jc::field_name], undefined));
-        assign(cur_loc_.text, json::default_string(value[jc::field_text], undefined));
+        assign(cur_loc_.name, json::default_string(value[jc::field_name], undefined_name));
+        assign(cur_loc_.text, json::default_string(value[jc::field_text], undefined_text));
         
         auto const sort = json::optional_string(value[jc::field_sort]);
         if (sort) {
@@ -474,8 +600,19 @@ private:
     locale_map const* current_locale_ = nullptr;
 };
 
+bkrl::utf8string const bkrl::detail::item_definitions_impl::undefined_name {"{undefined name}"};
+bkrl::utf8string const bkrl::detail::item_definitions_impl::undefined_sort {"{undefined sort}"};
+bkrl::utf8string const bkrl::detail::item_definitions_impl::undefined_text {"{undefined text}"};
+
+bkrl::item_locale const bkrl::detail::item_definitions_impl::undefined_locale {
+    undefined_name
+  , undefined_sort
+  , undefined_text
+};
+
 //------------------------------------------------------------------------------
 bkrl::item_definitions::~item_definitions() = default;
+bkrl::item_definitions::item_definitions(item_definitions&&) = default;
 
 //------------------------------------------------------------------------------
 bkrl::item_definitions::item_definitions()
@@ -532,19 +669,162 @@ bkrl::generate_item(
   , item_store&             store
   , item_definitions const& item_defs
   , loot_table       const& table
+  , item_birthplace  const  origin
 ) {
     auto const size = item_defs.get_definitions_size();
     auto const i    = random::uniform_range(gen, 0, size - 1);
 
     auto const& def = item_defs.get_definition_at(i);
-    auto const& id  = def.id;
     
     item itm;
-    itm.id = id;;
-    itm.type = item_type::weapon;
-    itm.data.weapon.dmg_min  = 1;
-    itm.data.weapon.dmg_max  = 10;
-    itm.data.weapon.dmg_type = damage_type::slash;
+    itm.id     = def.id;;
+    itm.type   = def.type;
+    itm.origin = origin;
 
     return store.insert(std::move(itm));
+}
+
+#ifdef BK_TEST
+bkrl::item_id
+bkrl::generate_item(
+    item_def_id             id
+  , item_store&             store
+  , item_definitions const& defs
+) {
+    auto const& def = defs.get_definition(id);
+    
+    item itm;
+    itm.id = def.id;
+    itm.type = def.type;
+
+    return store.insert(std::move(itm));
+}
+#endif
+
+////////////////////////////////////////////////////////////////////////////////
+// equipment
+////////////////////////////////////////////////////////////////////////////////
+class bkrl::detail::equipment_impl {
+public:
+    using defs_t  = item_definitions const&;
+    using items_t = item_store const&;
+
+    bool can_equip(item_id const id, defs_t defs, items_t items) const {
+        auto const& def = get_item_definition(id, defs, items);
+
+        if (!def.slots.any() || (flags_ & def.slots).any()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    void equip(item_id const id, defs_t defs, items_t items) {
+        if (!can_equip(id, defs, items)) {
+            BK_TODO_FAIL();
+        }
+
+        auto const& def = get_item_definition(id, defs, items);
+
+        flags_ |= def.slots;
+
+        for (int i = 1; i < equip_size; ++i) {
+            if (!def.slots.test(i)) {
+                continue;
+            }
+
+            auto& slot = items_[i - 1];
+            BK_ASSERT_DBG(slot == item_id {});
+            slot = id;
+        }
+    }
+
+    optional<item_id> in_slot(equip_slot const slot) const {
+        if (!test_(slot)) {
+            return {};
+        }
+
+        auto const i  = slot_to_index_(slot);
+        auto const id = items_[i];
+
+        return {id};
+    }
+
+    optional<item_id> unequip(equip_slot const slot, defs_t defs, items_t items) {
+        auto const itm = in_slot(slot);
+        if (!itm) {
+            return itm;
+        }
+
+        auto const id = *itm;
+        auto const& def = get_item_definition(id, defs, items);
+
+        for (int i = 1; i < equip_size; ++i) {
+            if (!def.slots.test(i)) {
+                continue;
+            }
+
+            auto& s = items_[i - 1];
+            BK_ASSERT_DBG(s == id);
+            s = item_id {};
+        }
+
+        flags_ &= ~def.slots;
+
+        return itm;
+    }
+private:
+    static size_t slot_to_index_(equip_slot const slot) {
+        auto const result = static_cast<size_t>(enum_value(slot) - 1);
+        BK_ASSERT(result < equip_size);
+        return result;
+    }
+
+    bool test_(equip_slot const slot) const {
+        if (slot == equip_slot::invalid) {
+            return false;
+        }
+
+        auto const result = flags_.test(enum_value(slot));
+
+        BK_ASSERT(result
+          ? (items_[slot_to_index_(slot)] != item_id {})
+          : (items_[slot_to_index_(slot)] == item_id {})
+        );
+
+        return result;        
+    }
+
+    //TODO
+    enum { equip_size = static_cast<size_t>(equip_slot::enum_size) - 1 };
+
+    equip_slot_flags flags_;
+
+    std::array<item_id, equip_size> items_;
+};
+
+bkrl::equipment::equipment()
+  : impl_ {std::make_unique<detail::equipment_impl>()}
+{
+}
+
+bkrl::equipment::~equipment() = default;
+bkrl::equipment::equipment(equipment&&) = default;
+
+bool bkrl::equipment::can_equip(item_id id, defs_t defs, items_t items) const {
+    return impl_->can_equip(id, defs, items);
+}
+
+void bkrl::equipment::equip(item_id id, defs_t defs, items_t items) {
+    impl_->equip(id, defs, items);
+}
+
+bkrl::optional<bkrl::item_id>
+bkrl::equipment::unequip(equip_slot slot, defs_t defs, items_t items) {
+    return impl_->unequip(slot, defs, items);
+}
+
+bkrl::optional<bkrl::item_id>
+bkrl::equipment::in_slot(equip_slot const slot) const {
+    return impl_->in_slot(slot);
 }

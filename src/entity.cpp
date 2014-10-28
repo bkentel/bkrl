@@ -310,6 +310,7 @@ bkrl::generate_entity(
   , entity_definitions const& entity_defs
   , item_definitions   const& item_defs
   , item_store&               items
+  , spawn_table        const& table
 ) {
     auto const size  = entity_defs.get_definitions_size();
     auto const index = random::uniform_range(gen, 0, size - 1);
@@ -325,10 +326,22 @@ bkrl::generate_entity(
     result.data.position = {0, 0};
 
     auto const item_count = def.items(gen);
-    auto const table = loot_table {};
+
+    if (item_count == 0) {
+        return result;
+    }
+
+    item_birthplace origin;
+    origin.type = item_birthplace::entity;
+    origin.id   = id_to_value(id);
+
+    auto const ltable = loot_table {};
+
     for (int i = 0; i < item_count; ++i) {
         result.data.items.insert(
-            generate_item(gen, items, item_defs, table)
+            generate_item(gen, items, item_defs, ltable, origin)
+          , item_defs
+          , items
         );
     }
 

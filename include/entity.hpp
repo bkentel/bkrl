@@ -1,3 +1,8 @@
+//##############################################################################
+//! @file
+//! @author Brandon Kentel
+//! @todo copyright / licence
+//##############################################################################
 #pragma once
 
 #include "types.hpp"
@@ -18,8 +23,9 @@ namespace detail { class entity_definitions_impl; }
 
 using damage_t = int16_t;
 using health_t = int16_t;
+
 //==============================================================================
-//!
+//! Localized entity strings.
 //==============================================================================
 struct entity_locale {
     utf8string name;
@@ -27,7 +33,7 @@ struct entity_locale {
 };
 
 //==============================================================================
-//!
+//! A container of defintions used to generate entities.
 //==============================================================================
 class entity_definitions {
 public:
@@ -52,7 +58,7 @@ private:
 };
 
 //==============================================================================
-//!
+//! The data common to all entities.
 //==============================================================================
 struct entity_data_t {
     health_t   max_health;
@@ -62,7 +68,7 @@ struct entity_data_t {
 };
 
 //==============================================================================
-//!
+//! The data needed to render an entity.
 //==============================================================================
 struct entity_render_info_t {
     int16_t tile_x;     //!< tile x index
@@ -71,7 +77,7 @@ struct entity_render_info_t {
 };
 
 //==============================================================================
-//!
+//! An actual instance of a generated entity.
 //==============================================================================
 class entity {
 public:
@@ -105,6 +111,17 @@ public:
 };
 
 //==============================================================================
+//! @TODO
+//==============================================================================
+class spawn_table {
+public:
+    entity_def_id operator()(random_t&) const {
+        return entity_def_id {0};
+    }
+private:
+};
+
+//==============================================================================
 //!
 //==============================================================================
 entity generate_entity(
@@ -112,15 +129,17 @@ entity generate_entity(
   , entity_definitions const& entity_defs
   , item_definitions   const& item_defs
   , item_store&               items
+  , spawn_table        const& table
 );
 
 //==============================================================================
+//!
 //==============================================================================
 class player : public entity {
 public:
     using entity::entity;
 private:
-    //equipment equip_;
+    equipment equip_;
 };
 
 inline auto position(entity const& e) {

@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <memory>
 #include <vector>
+#include <bitset>
 
 #include "identifier.hpp"
 #include "types.hpp"
@@ -19,47 +20,44 @@ class item;
 class item_stack;
 class item_store;
 class item_definitions;
+class equipment;
 
 struct item_definition;
 struct item_locale;
 
 namespace detail { class item_store_impl; }
 namespace detail { class item_definitions_impl; }
+namespace detail { class equipment_impl; }
 ////////////////////////////////////////////////////////////////////////////////
+
+template <typename T>
+T from_string(string_ref str);
 
 //==============================================================================
 //! General item type.
 //==============================================================================
 enum class item_type : uint8_t {
-    none
+    invalid
+  
+  , none = 0
   , weapon
   , armor
   , scroll
   , potion
   , container
+
   , enum_size
 };
 
-//==============================================================================
-//! Damage type.
-//==============================================================================
-enum class damage_type : uint8_t {
-    none
-  , slash
-  , pierce
-  , blunt
-  , fire
-  , cold
-  , electric
-  , acid
-  , enum_size
-};
+extern template item_type from_string(string_ref str);
 
 //==============================================================================
-//! Equipment slots for items; can be combined in a bitmask.
+//! Item equipment slots.
 //==============================================================================
 enum class equip_slot : uint8_t {
-    none
+    invalid
+
+  , none = 0
   , head
   , arms_upper
   , arms_lower
@@ -76,6 +74,34 @@ enum class equip_slot : uint8_t {
   , hand_main
   , hand_off
   , ammo
+
+  , enum_size
+};
+
+extern template equip_slot from_string(string_ref str);
+
+//==============================================================================
+//! Slots occupied by an item.
+//==============================================================================
+using equip_slot_flags = std::bitset<
+    static_cast<size_t>(equip_slot::enum_size) - 1
+>;
+
+//==============================================================================
+//! Damage type.
+//==============================================================================
+enum class damage_type : uint8_t {
+    invalid
+
+  , none = 0
+  , slash
+  , pierce
+  , blunt
+  , fire
+  , cold
+  , electric
+  , acid
+
   , enum_size
 };
 
@@ -104,9 +130,12 @@ public:
 //==============================================================================
 class item_stack {
 public:
-    void insert(item_id const id);
+    using defs_t  = item_definitions const&;
+    using items_t = item_store const&;
 
-    void insert(item_stack&& other);
+    void insert(item_id const id, defs_t defs, items_t items);
+
+    void insert(item_stack&& other, defs_t defs, items_t items);
 
     item_id remove(item_id const id);
     item_id remove(int const index);
@@ -150,7 +179,7 @@ struct armor_data {
 //==============================================================================
 //!
 //==============================================================================
-struct consumable_data {
+struct potion_data {
     int16_t count = int16_t {0};
 };
 
@@ -164,11 +193,11 @@ struct consumable_data {
 union item_data_t {
     friend item;
 public:
-    item_stack      stack;
-    weapon_data     weapon;
-    armor_data      armor;
-    consumable_data consumable;
-    size_t          dummy;
+    item_stack  stack;
+    weapon_data weapon;
+    armor_data  armor;
+    potion_data potion;
+    size_t      dummy;
 
     ~item_data_t() { }
 private:
@@ -207,6 +236,7 @@ public:
     using const_reference = item const&;
     
     item_store();
+    item_store(item_store&&);
     ~item_store();
 
     item_id insert(rvalue value);
@@ -233,6 +263,7 @@ struct item_locale {
 class item_definitions {
 public:
     item_definitions();
+    item_definitions(item_definitions&&);
     ~item_definitions();
 
     void load_definitions(json::cref data);
@@ -261,6 +292,29 @@ private:
 };
 
 //==============================================================================
+//!
+//==============================================================================
+class equipment {
+public:
+    using defs_t  = item_definitions const&;
+    using items_t = item_store const&;
+
+    equipment();
+    equipment(equipment&&);
+    ~equipment();
+
+    bool can_equip(item_id id, defs_t defs, items_t items) const;
+
+    void equip(item_id id, defs_t defs, items_t items);
+
+    optional<item_id> unequip(equip_slot slot, defs_t defs, items_t items);
+
+    optional<item_id> in_slot(equip_slot slot) const;
+private:
+    std::unique_ptr<detail::equipment_impl> impl_;
+};
+
+//==============================================================================
 //! Generate an item instance.
 //==============================================================================
 item_id generate_item(
@@ -268,7 +322,40 @@ item_id generate_item(
   , item_store&             store
   , item_definitions const& defs
   , loot_table       const& table
+  , item_birthplace         origin
 );
+
+#ifdef BK_TEST
+//==============================================================================
+//! Generate an item instance from a definition id; for testing only.
+//==============================================================================
+item_id generate_item(
+    item_def_id             id
+  , item_store&             store
+  , item_definitions const& defs
+);
+#endif
+
+//==============================================================================
+//!
+//==============================================================================
+inline item_locale const&
+get_item_locale(
+    item_id const id
+  , item_definitions const& defs
+  , item_store const& items
+) {
+    return defs.get_locale(items[id].id);
+}
+
+inline item_definition const&
+get_item_definition(
+    item_id const id
+  , item_definitions const& defs
+  , item_store const& items
+) {
+    return defs.get_definition(items[id].id);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 } //namespace bkrl

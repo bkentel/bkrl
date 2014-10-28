@@ -456,10 +456,23 @@ public:
         return items_.at(p);
     }
 
+    void add_to_stack_(item_stack& stack, item_id const id) {
+        auto const& item_defs = definitions_->get_items();
+        auto const& items     = *item_store_;
+
+        stack.insert(id, item_defs, items);
+    }
+
+    void add_to_stack_(item_stack& stack, item_stack&& other) {
+        auto const& item_defs = definitions_->get_items();
+        auto const& items     = *item_store_;
+
+        stack.insert(std::move(other), item_defs, items);
+    }
+
     //--------------------------------------------------------------------------
     message_type drop_item_at(ipoint2 const p, item_id const id) {
-        make_stack_at_(p).insert(id);
-
+        add_to_stack_(make_stack_at_(p), id);
         return message_type::none;
     }
 
@@ -543,15 +556,7 @@ public:
         }
         
         if (!object.items().empty()) {
-            auto const& item_defs = definitions_->get_items();
-
-            auto const existing_stack = items_.at(p);
-            if (existing_stack) {
-                existing_stack->insert(std::move(object.items()));
-            } else {
-                items_.emplace(p, std::move(object.items()));
-                items_.sort();
-            }
+            add_to_stack_(make_stack_at_(p), std::move(object.items()));
         }
 
         mobs_.remove(p);
@@ -815,12 +820,16 @@ private:
     void place_player_(
         random::generator& //substantive //TODO
     ) {
+        player_->move_to(up_stair());
     }
 
     //--------------------------------------------------------------------------
     void place_items_(random::generator& substantive) {
         auto& items     = *item_store_;
         auto const& item_defs = definitions_->get_items();
+
+        item_birthplace origin;
+        origin.type = item_birthplace::floor;
 
         for (auto const& room : rooms_) {
             if (random::percent(substantive) < 70) {
@@ -839,9 +848,9 @@ private:
                 }
             }
 
-            auto& stack = make_stack_at_(p);
-            stack.insert(
-                generate_item(substantive, items, item_defs, loot_table {})
+            add_to_stack_(
+                make_stack_at_(p)
+              , generate_item(substantive, items, item_defs, loot_table {}, origin)
             );
         }
 
@@ -850,6 +859,8 @@ private:
 
     //--------------------------------------------------------------------------
     void place_entities_(random::generator& substantive) {
+        spawn_table stable {};
+
         for (auto const& room : rooms_) {
             if (random::uniform_range(substantive, 0, 100) < 20) {
                 continue;
@@ -863,7 +874,7 @@ private:
 
             BK_ASSERT_DBG(intersects(bounds, p));
 
-            auto mob = generate_entity(substantive, entities, items, *item_store_);
+            auto mob = generate_entity(substantive, entities, items, *item_store_, stable);
 
             while (!can_move_to(mob, p)) {
                 auto const v = random::direction(substantive);
@@ -902,9 +913,9 @@ private:
         connect_rooms_(substantive);
         generate_stairs_(substantive);
         place_items_(substantive);
-        place_entities_(substantive);
         place_player_(substantive);
-
+        place_entities_(substantive);
+        
         update_texture_type_();
         update_texture_id_();
     }
@@ -1546,7 +1557,6 @@ public:
         }
         
         level_number_ = level;
-        player_.move_to(cur_level_->up_stair());
         do_zoom_reset();
     }
 
@@ -1690,6 +1700,89 @@ public:
         );
     }
 
+    void do_auto_scroll_(ipoint2 const p) {
+        auto const border    = config_->auto_scroll_w;
+        auto const border_lo = border;
+        auto const border_hi = 1.0f - border;
+
+        auto const w = view_.width();
+        auto const h = view_.height();
+        auto const q = view_.grid_to_screen(p.x, p.y);
+        
+        auto const dist_x = w - q.x;
+        auto const dist_y = h - q.y;
+
+        auto const tw = tile_sheet_.tile_width();
+        auto const th = tile_sheet_.tile_height();
+
+        auto scroll_x = 0;
+        auto scroll_y = 0;
+
+        if (dist_x < (w * border_lo)) {
+            scroll_x = -tw;
+        } else if (dist_x > (w * border_hi)) {
+            scroll_x = tw;
+        }
+
+        if (dist_y < (h * border_lo)) {
+            scroll_y = -th;
+        } else if (dist_y > (h * border_hi)) {
+            scroll_y = th;
+        }
+
+        do_scroll(scroll_x, scroll_y);
+    }
+
+    //--------------------------------------------------------------------------
+    //! Choose an item from a stack.
+    //! Changes the input mode to input_mode_selection.
+    //--------------------------------------------------------------------------
+    void get_item_selection_(ipoint2 const p) {
+        auto const& stack = [&]() -> decltype(auto) {
+            auto const s = cur_level_->get_stack_at(p);
+            if (!s) {
+                BK_TODO_FAIL();
+            }
+
+            return s.get();
+        }();
+        
+
+        item_list_.reset(stack);
+
+        input_mode_ = imode_selection_.enter_mode(item_list_, [this, p](bool const ok, int const i) {
+            if (!ok) {
+                return;
+            }
+            
+            get_item_(p, i);
+        });
+    }
+    
+    //--------------------------------------------------------------------------
+    //! Get the item at @p index from the stack at @p p.
+    //--------------------------------------------------------------------------
+    void get_item_(ipoint2 const p, int const index = 0) {
+        auto const& item_defs   = definitions_->get_items();
+        auto const& msg_locale  = definitions_->get_messages();
+
+        auto const  id   = cur_level_->get_item(p, index);
+        auto const& item = item_store_[id];
+        auto const& loc  = item_defs.get_locale(item.id);
+
+        auto const& name = loc.name;
+        auto const& msg  = msg_locale[message_type::get_ok];
+
+        auto fmt = boost::format {msg.data()};
+        fmt % name;
+
+        print_message(boost::str(fmt));
+
+        player_.items().insert(id, item_defs, item_store_);
+        
+        advance();
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     // Commands
     ////////////////////////////////////////////////////////////////////////////
@@ -1703,6 +1796,7 @@ public:
         set_door_state(false);
     }
 
+    //--------------------------------------------------------------------------
     void do_attack(entity& object) {
         auto& subject = player_;
 
@@ -1732,60 +1826,35 @@ public:
             return;
         }
         
-        auto const w = view_.width();
-        auto const h = view_.height();
-        auto const q = view_.grid_to_screen(p.x, p.y);
-        
-        auto const dist_x = w - q.x;
-        auto const dist_y = h - q.y;
-
-        auto const tw = tile_sheet_.tile_width();
-        auto const th = tile_sheet_.tile_height();
-
-        constexpr auto border    = 0.1f;
-        constexpr auto border_lo = border;
-        constexpr auto border_hi = 1 - border;
-
-        if (dist_x < (w * border_lo)) {
-            view_.scroll_x(-tw);
-        } else if (dist_x > (w * border_hi)) {
-            view_.scroll_x(tw);
-        }
-
-        if (dist_y < (h * border_lo)) {
-            view_.scroll_y(-th);
-        } else if (dist_y > (h * border_hi)) {
-            view_.scroll_y(th);
-        }
-
-        player_.move_by(v);
-        //view_.scroll_by_tile(dx, dy);
-
-        clear_inspect_message();
+        do_auto_scroll_(p);
+        player_.move_to(p);
 
         advance();
     }
 
     //--------------------------------------------------------------------------
-    void do_scroll(int const dx, int const dy) {
-        constexpr auto delta = 4.0f;
+    void do_scroll(int const dx, int const dy, int factor = 1) {
+        if (factor == 0) {
+            factor = config_->scroll_delta;
+        }
 
-        auto const scroll_x = static_cast<float>(dx) * delta;
-        auto const scroll_y = static_cast<float>(dy) * delta;
-
-        //view_.scroll_by(scroll_x, scroll_y);
+        view_.scroll(dx * factor, dy * factor);
         clear_inspect_message();
     }
 
     //--------------------------------------------------------------------------
     void do_zoom_in() {
-        view_.zoom_by(1.1f);
+        auto const factor = 1.0f + config_->zoom_factor;
+
+        view_.zoom_by(factor);
         clear_inspect_message();
     }
 
     //--------------------------------------------------------------------------
     void do_zoom_out() {
-        view_.zoom_by(0.9f);
+        auto const factor = 1.0f - config_->zoom_factor;
+
+        view_.zoom_by(factor);
         clear_inspect_message();
     }
 
@@ -1828,58 +1897,6 @@ public:
 
     //--------------------------------------------------------------------------
     void do_wait() {
-        advance();
-    }
-    
-    //--------------------------------------------------------------------------
-    //! Choose an item from a stack.
-    //! Changes the input mode to input_mode_selection.
-    //--------------------------------------------------------------------------
-    void get_item_selection_(ipoint2 const p) {
-        auto const& stack = [&]() -> decltype(auto) {
-            auto const s = cur_level_->get_stack_at(p);
-            if (!s) {
-                BK_TODO_FAIL();
-            }
-
-            return s.get();
-        }();
-        
-
-        item_list_.reset(stack);
-
-        input_mode_ = imode_selection_.enter_mode(item_list_, [this, p](bool const ok, int const i) {
-            if (!ok) {
-                return;
-            }
-            
-            get_item_(p, i);
-        });
-    }
-    
-    //--------------------------------------------------------------------------
-    //! Get the item at @p index from the stack at @p p.
-    //--------------------------------------------------------------------------
-    void get_item_(ipoint2 const p, int const index = 0) {
-        auto const& items       = definitions_->get_items();
-        auto const& msg_locale  = definitions_->get_messages();
-
-        auto const  id   = cur_level_->get_item(p, index);
-        auto const& item = item_store_[id];
-        auto const& loc  = items.get_locale(item.id);
-
-        auto const& name = loc.name;
-        auto const& msg  = msg_locale[message_type::get_ok];
-
-        auto fmt = boost::format {msg.data()};
-        fmt % name;
-
-        print_message(boost::str(fmt));
-
-        auto const& itm_defs = definitions_->get_items();
-        player_.items().insert(id);
-        
-
         advance();
     }
 
@@ -1959,10 +1976,10 @@ public:
         case command_type::close      : do_close(); break;
         case command_type::get        : do_get(); break;
         case command_type::drop       : do_drop(); break;
-        case command_type::scroll_n   : do_scroll( 0,  1); break;
-        case command_type::scroll_s   : do_scroll( 0, -1); break;
-        case command_type::scroll_e   : do_scroll(-1,  0); break;
-        case command_type::scroll_w   : do_scroll( 1,  0); break;
+        case command_type::scroll_n   : do_scroll( 0,  1, 0); break;
+        case command_type::scroll_s   : do_scroll( 0, -1, 0); break;
+        case command_type::scroll_e   : do_scroll(-1,  0, 0);  break;
+        case command_type::scroll_w   : do_scroll( 1,  0, 0);  break;
         case command_type::here       : do_wait(); break;
         case command_type::north      : do_move_player (0, -1); break;
         case command_type::south      : do_move_player( 0,  1); break;

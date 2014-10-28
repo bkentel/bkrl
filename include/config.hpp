@@ -17,6 +17,12 @@ public:
     optional<int32_t>  window_x;
     optional<int32_t>  window_y;
     lang_id            language;
+
+    int                scroll_delta  = 4;
+    float              zoom_factor   = 0.1f;
+    float              zoom_min      = 0.1f;
+    float              zoom_max      = 5.0f;
+    float              auto_scroll_w = 0.1f;
 };
 
 config load_config(json::cref data);

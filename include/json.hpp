@@ -208,15 +208,33 @@ inline cref require_array(cref json, size_t const min_size = 0, size_t const max
 //==============================================================================
 //!
 //==============================================================================
-inline bool has_field(cref value, string_ref const field) {
-    return value.is_object() && !value[field].is_null();
+inline optional<cref> has_field(cref value, string_ref const field) {
+    if (!value.is_object()) {
+        return {};
+    }
+    
+    cref result = value[field];
+    if (result.is_null()) {
+        return {};
+    }
+
+    return result;
 }
 
 //==============================================================================
 //!
 //==============================================================================
-inline bool has_field(cref value, size_t const i) {
-    return value.is_array() && !value[i].is_null();
+inline optional<cref> has_field(cref value, size_t const i) {
+    if (!value.is_array()) {
+        return {};
+    }
+    
+    cref result = value[i];
+    if (result.is_null()) {
+        return {};
+    }
+
+    return result;
 }
 
 //==============================================================================
@@ -253,6 +271,8 @@ extern field_string const field_trivial_seed;
 extern field_string const field_window_size;
 extern field_string const field_window_pos;
 extern field_string const field_font;
+extern field_string const field_type;
+extern field_string const field_slot;
 //------------------------------------------------------------------------------
 extern field_string const filetype_config;
 extern field_string const filetype_locale;
