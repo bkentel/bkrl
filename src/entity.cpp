@@ -35,6 +35,11 @@ public:
     using locale     = entity_locale;
     using cref = bkrl::json::cref;  
 
+    static utf8string const undefined_name;
+    static utf8string const undefined_text;
+    static locale     const undefined_locale;
+
+    ////////////////////////////////////////////////////////////////////////////
     entity_definitions_impl() {
     }
 
@@ -157,14 +162,13 @@ public:
 
     //--------------------------------------------------------------------------
     void rule_loc_definition(cref value) {
-        static string_ref const undefined {"<undefined string>"};
+        auto const& str = json::require_string(value[jc::field_id]);
+        auto const  id  = slash_hash32(str);
 
-        hashed_string_ref const id = json::require_string(value[jc::field_id]);
-        
-        assign(cur_loc_.name, json::default_string(value[jc::field_name], undefined));
-        assign(cur_loc_.text, json::default_string(value[jc::field_text], undefined));
+        assign(cur_loc_.name, json::default_string(value[jc::field_name], undefined_name));
+        assign(cur_loc_.text, json::default_string(value[jc::field_text], undefined_text));
 
-        cur_loc_map_.emplace(id.hash, std::move(cur_loc_));
+        cur_loc_map_.emplace(id, std::move(cur_loc_));
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -180,7 +184,7 @@ public:
     locale const& get_locale(entity_def_id const id) const {
         auto const it = current_locale_->find(id);
         if (it == std::end(*current_locale_)) {
-            BK_TODO_FAIL();
+            return undefined_locale;
         }
 
         return it->second;
@@ -221,6 +225,14 @@ private:
     map_t<lang_id,       locale_map> locales_;
 
     locale_map const* current_locale_ = nullptr;
+};
+
+bkrl::utf8string const bkrl::detail::entity_definitions_impl::undefined_name {"{undefined name}"};
+bkrl::utf8string const bkrl::detail::entity_definitions_impl::undefined_text {"{undefined text}"};
+
+bkrl::entity_locale const bkrl::detail::entity_definitions_impl::undefined_locale {
+    undefined_name
+  , undefined_text
 };
 
 ////////////////////////////////////////////////////////////////////////////////

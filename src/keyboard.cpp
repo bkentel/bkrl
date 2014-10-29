@@ -3,6 +3,7 @@
 #include "command_type.hpp"
 #include "algorithm.hpp"
 #include "iterable.hpp"
+#include "hash.hpp"
 
 using namespace bkrl;
 
@@ -83,8 +84,8 @@ void keymap::impl_t::rule_mapping_value(cref value) {
     auto const command_hash = slash_hash32(command_name);
     auto const key_hash     = slash_hash32(key_name);
 
-    auto const command = enum_map<command_type>::get(command_hash);
-    if (command.value == command_type::invalid) {
+    auto const command = from_hash<command_type>(command_hash);
+    if (command == command_type::invalid) {
         BK_TODO_FAIL();
     }
 
@@ -107,10 +108,7 @@ void keymap::impl_t::rule_mapping_value(cref value) {
     }
 
     mappings_.emplace_back(
-        key_mapping {
-            key_combo {key.value, mods}
-          , command.value
-        }
+        key_mapping {key_combo {key.value, mods}, command}
     );
 }
 

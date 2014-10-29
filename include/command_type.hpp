@@ -5,7 +5,8 @@
 //! Game commands.
 //##############################################################################
 #pragma once
-#include "enum_map.hpp"
+#include "hash.hpp"
+#include "integers.hpp"
 
 namespace bkrl {
 
@@ -50,6 +51,6 @@ enum class command_type : uint16_t {
   , enum_size //!< last
 };
 
-extern template class enum_map<command_type>;
+extern template command_type from_hash(hash_t hash);
 
 } //namespace bkrl

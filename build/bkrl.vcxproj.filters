@@ -75,9 +75,6 @@
     <ClCompile Include="..\src\pch.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\item.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\config.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -188,9 +185,6 @@
     <ClInclude Include="..\include\detail\freetype_text.i.hpp">
       <Filter>include\detail</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\item.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\json.hpp">
       <Filter>include</Filter>
     </ClInclude>
@@ -234,6 +228,12 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\integers.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\string.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\hash.hpp">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

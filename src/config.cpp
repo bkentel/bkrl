@@ -1,6 +1,7 @@
 #include "config.hpp"
 #include "json.hpp"
 #include "random.hpp"
+#include "hash.hpp"
 
 namespace jc = bkrl::json::common;
 using namespace bkrl;

@@ -37,8 +37,6 @@ template class bkrl::enum_map<bkrl::key_modifier_type>;
 template class bkrl::enum_map<bkrl::scancode>;
 template class bkrl::enum_map<bkrl::tile_type>;
 template class bkrl::enum_map<bkrl::texture_type>;
-template class bkrl::enum_map<bkrl::command_type>;
-template class bkrl::enum_map<bkrl::message_type>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // enum_map<key_modifier_type>
@@ -422,119 +420,52 @@ namespace {
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// enum_map<command_type>
-////////////////////////////////////////////////////////////////////////////////
-namespace {
-    BK_DECLARE_ENUM_TYPES(command, command_type);
-
-    command_vector_t command_init_string_to_value() {
-        using command = bkrl::command_type;
-
-        command_vector_t result;
-
-        BK_ENUMMAP_ADD_STRING(result, command, invalid);
-        BK_ENUMMAP_ADD_STRING(result, command, cancel);
-        BK_ENUMMAP_ADD_STRING(result, command, accept);
-
-        BK_ENUMMAP_ADD_STRING(result, command, here);
-        BK_ENUMMAP_ADD_STRING(result, command, north);
-        BK_ENUMMAP_ADD_STRING(result, command, south);
-        BK_ENUMMAP_ADD_STRING(result, command, east);
-        BK_ENUMMAP_ADD_STRING(result, command, west);
-        BK_ENUMMAP_ADD_STRING(result, command, north_west);
-        BK_ENUMMAP_ADD_STRING(result, command, north_east);
-        BK_ENUMMAP_ADD_STRING(result, command, south_west);
-        BK_ENUMMAP_ADD_STRING(result, command, south_east);
-
-        BK_ENUMMAP_ADD_STRING(result, command, up);
-        BK_ENUMMAP_ADD_STRING(result, command, down);
-
-        BK_ENUMMAP_ADD_STRING(result, command, zoom_in);
-        BK_ENUMMAP_ADD_STRING(result, command, zoom_out);
-        BK_ENUMMAP_ADD_STRING(result, command, zoom_reset);
-
-        BK_ENUMMAP_ADD_STRING(result, command, scroll_n);
-        BK_ENUMMAP_ADD_STRING(result, command, scroll_s);
-        BK_ENUMMAP_ADD_STRING(result, command, scroll_e);
-        BK_ENUMMAP_ADD_STRING(result, command, scroll_w);
-
-        BK_ENUMMAP_ADD_STRING(result, command, open);
-        BK_ENUMMAP_ADD_STRING(result, command, close);
-        BK_ENUMMAP_ADD_STRING(result, command, get);
-        BK_ENUMMAP_ADD_STRING(result, command, drop);
-        BK_ENUMMAP_ADD_STRING(result, command, inventory);
-        BK_ENUMMAP_ADD_STRING(result, command, wield_wear);
-
-        bkrl::sort(result, command_map_t::value_type::less_hash);
-
-        return result;
-    }
-
-    //take a copy of string_to_value
-    command_vector_t command_init_value_to_string(command_vector_t string_to_value) {
-        bkrl::sort(string_to_value, command_map_t::value_type::less_enum);
-        return string_to_value;
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// enum_map<message_type>
-////////////////////////////////////////////////////////////////////////////////
-namespace {
-    BK_DECLARE_ENUM_TYPES(message, message_type);
-
-    message_vector_t message_init_string_to_value() {
-        using message = bkrl::message_type;
-
-        message_vector_t result;
-
-        BK_ENUMMAP_ADD_STRING(result, message, invalid);
-
-        BK_ENUMMAP_ADD_STRING(result, message, welcome);
-        BK_ENUMMAP_ADD_STRING(result, message, direction_prompt);
-        BK_ENUMMAP_ADD_STRING(result, message, canceled);
-        BK_ENUMMAP_ADD_STRING(result, message, door_no_door);
-        BK_ENUMMAP_ADD_STRING(result, message, door_is_open);
-        BK_ENUMMAP_ADD_STRING(result, message, door_is_closed);
-        BK_ENUMMAP_ADD_STRING(result, message, door_blocked);
-        BK_ENUMMAP_ADD_STRING(result, message, stairs_no_stairs);
-        BK_ENUMMAP_ADD_STRING(result, message, stairs_no_down);
-        BK_ENUMMAP_ADD_STRING(result, message, stairs_no_up);
-        BK_ENUMMAP_ADD_STRING(result, message, get_no_items);
-        BK_ENUMMAP_ADD_STRING(result, message, get_which_prompt);
-        BK_ENUMMAP_ADD_STRING(result, message, get_ok);
-        BK_ENUMMAP_ADD_STRING(result, message, drop_nothing);
-        BK_ENUMMAP_ADD_STRING(result, message, drop_ok);
-        BK_ENUMMAP_ADD_STRING(result, message, attack_regular);
-        BK_ENUMMAP_ADD_STRING(result, message, kill_regular);
-        BK_ENUMMAP_ADD_STRING(result, message, title_inventory);
-        BK_ENUMMAP_ADD_STRING(result, message, title_wield_wear);
-        BK_ENUMMAP_ADD_STRING(result, message, title_get);
-        BK_ENUMMAP_ADD_STRING(result, message, title_drop);
-
-        bkrl::sort(result, message_map_t::value_type::less_hash);
-
-        return result;
-    }
-
-    //take a copy of string_to_value
-    message_vector_t message_init_value_to_string(message_vector_t string_to_value) {
-        bkrl::sort(string_to_value, message_map_t::value_type::less_enum);
-        return string_to_value;
-    }
-}
-
 //------------------------------------------------------------------------------
 BK_DEFINE_ENUM_VARS(modifier, false);
 BK_DEFINE_ENUM_VARS(scancode, true);
 BK_DEFINE_ENUM_VARS(tile, false);
 BK_DEFINE_ENUM_VARS(texture, false);
-BK_DEFINE_ENUM_VARS(command, false);
-BK_DEFINE_ENUM_VARS(message, false);
 
 //------------------------------------------------------------------------------
 #undef BK_DEFINE_ENUM_VARS
 #undef BK_DECLARE_ENUM_TYPES
 #undef BK_ENUMMAP_ADD_STRING
 #undef BK_ENUMMAP_MAKE_STRING
+
+template <> bkrl::command_type
+bkrl::from_hash(hash_t const hash) {
+    using mapping_t = string_ref_mapping<command_type> const;
+    using ct = command_type;
+
+    static mapping_t mappings[] = {
+        {"invalid",    ct::invalid}
+      , {"cancel",     ct::cancel}
+      , {"accept",     ct::accept}
+      , {"here",       ct::here}
+      , {"north",      ct::north}
+      , {"south",      ct::south}
+      , {"east",       ct::east}
+      , {"west",       ct::west}
+      , {"north_west", ct::north_west}
+      , {"north_east", ct::north_east}
+      , {"south_west", ct::south_west}
+      , {"south_east", ct::south_east}
+      , {"up",         ct::up}
+      , {"down",       ct::down}
+      , {"zoom_in",    ct::zoom_in}
+      , {"zoom_out",   ct::zoom_out}
+      , {"zoom_reset", ct::zoom_reset}
+      , {"scroll_n",   ct::scroll_n}
+      , {"scroll_s",   ct::scroll_s}
+      , {"scroll_e",   ct::scroll_e}
+      , {"scroll_w",   ct::scroll_w}
+      , {"open",       ct::open}
+      , {"close",      ct::close}
+      , {"get",        ct::get}
+      , {"drop",       ct::drop}
+      , {"inventory",  ct::inventory}
+      , {"wield_wear", ct::wield_wear}
+    };
+
+    return find_mapping(mappings, hash, ct::invalid);
+}

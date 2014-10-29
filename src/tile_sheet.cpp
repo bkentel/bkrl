@@ -4,6 +4,7 @@
 #include "assert.hpp"
 #include "algorithm.hpp"
 #include "json.hpp"
+#include "hash.hpp"
 
 #include <utf8.h>
 

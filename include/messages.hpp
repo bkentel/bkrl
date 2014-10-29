@@ -7,10 +7,10 @@
 #pragma once
 
 #include <memory>
-#include "enum_map.hpp"
-#include "types.hpp"
 
+#include "types.hpp"
 #include "identifier.hpp"
+#include "hash.hpp"
 
 namespace bkrl {
 
@@ -49,7 +49,9 @@ enum class message_type : uint16_t {
   , enum_size
 };
 
-extern template class enum_map<message_type>;
+extern template message_type from_hash(hash_t hash);
+
+namespace detail { class message_map_impl; }
 
 class message_map {
 public:
@@ -62,8 +64,7 @@ public:
 
     void set_locale(lang_id lang);
 private:
-    class impl_t;
-    std::unique_ptr<impl_t> impl_;
+    std::unique_ptr<detail::message_map_impl> impl_;
 };
 
 } //namespace bkrl

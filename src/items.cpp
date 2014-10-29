@@ -62,32 +62,11 @@ void placement_move(T& dst, T& src) {
 } //namespace
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace bkrl {
-template <typename Enum>
-struct hashed_enum_string {
-    hashed_enum_string(string_ref const str, Enum const val)
-      : string {str}
-      , hash   {slash_hash32(str)}
-      , value  {val}
-    {
-    }
-
-    string_ref string;
-    hash_t     hash;
-    Enum       value;
-};
-
-//TODO make constexpr
-template <typename T, size_t N>
-inline size_t sizeof_array(T const (&)[N]) noexcept {
-    return N;
-}
-
 template <> bkrl::item_type
-bkrl::from_string(string_ref const str) {
-    using es_t = hashed_enum_string<item_type> const;
+bkrl::from_hash(hash_t const hash) {
+    using mapping_t = string_ref_mapping<item_type> const;
 
-    static es_t types[] = {
+    static mapping_t mappings[] = {
         {"none",      item_type::none}
       , {"weapon",    item_type::weapon}
       , {"armor",     item_type::armor}
@@ -96,26 +75,14 @@ bkrl::from_string(string_ref const str) {
       , {"container", item_type::container}
     };
 
-    auto const hash = slash_hash32(str);
-
-    auto const sz  = sizeof_array(types);
-    auto const beg = types;
-    auto const end = types + sz;
-    
-    BK_ASSERT(sz == enum_value(item_type::enum_size));
-    
-    auto const it  = std::find_if(beg, end, [&](es_t const& x) {
-        return hash == x.hash;
-    });
-
-    return (it != end) ? it->value : item_type::none;
+    return find_mapping(mappings, hash, item_type::none);
 }
 
 template <> bkrl::equip_slot
-bkrl::from_string(string_ref const str) {
-    using es_t = hashed_enum_string<equip_slot> const;
+bkrl::from_hash(hash_t const hash) {
+    using mapping_t = string_ref_mapping<equip_slot> const;
 
-    static es_t slots[] = {
+    static mapping_t mappings[] = {
         {"none",         equip_slot::none}
       , {"head",         equip_slot::head}
       , {"arms_upper",   equip_slot::arms_upper}
@@ -135,21 +102,7 @@ bkrl::from_string(string_ref const str) {
       , {"ammo",         equip_slot::ammo}
     };
 
-    auto const hash = slash_hash32(str);
-
-    auto const sz  = sizeof_array(slots);
-    auto const beg = slots;
-    auto const end = slots + sz;
-    
-    BK_ASSERT(sz == enum_value(equip_slot::enum_size));
-    
-    auto const it  = std::find_if(beg, end, [&](es_t const& x) {
-        return hash == x.hash;
-    });
-
-    return (it != end) ? it->value : equip_slot::none;
-}
-
+    return find_mapping(mappings, hash, equip_slot::none);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -567,7 +520,8 @@ public:
     }
 
     void rule_loc_definition(cref value) {
-        hashed_string_ref const id = json::require_string(value[jc::field_id]);
+        auto const& str = json::require_string(value[jc::field_id]);
+        auto const  id  = slash_hash32(str);
         
         assign(cur_loc_.name, json::default_string(value[jc::field_name], undefined_name));
         assign(cur_loc_.text, json::default_string(value[jc::field_text], undefined_text));
@@ -579,7 +533,7 @@ public:
             cur_loc_.sort.clear();
         }
 
-        cur_loc_map_.emplace(id.hash, std::move(cur_loc_));
+        cur_loc_map_.emplace(id, std::move(cur_loc_));
     }
 
     ////////////////////////////////////////////////////////////////////////////

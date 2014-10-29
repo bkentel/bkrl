@@ -102,17 +102,6 @@ inline std::underlying_type_t<Enum> enum_value(Enum const e) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-uint64_t slash_hash64(char const* s, size_t len);
-uint32_t slash_hash32(char const* s, size_t len);
-
-inline uint64_t slash_hash64(string_ref const ref) {
-    return slash_hash64(ref.data(), ref.length());
-}
-
-inline uint32_t slash_hash32(string_ref const ref) {
-    return slash_hash32(ref.data(), ref.length());
-}
-////////////////////////////////////////////////////////////////////////////////
 
 utf8string read_file(path_string_ref filename);
 
@@ -131,116 +120,6 @@ inline size_t string_len(T const (&)[N]) {
     return N - 1;
 }
 ////////////////////////////////////////////////////////////////////////////////
-
-//==============================================================================
-//==============================================================================
-struct string_id {
-    BK_DEFMOVE(string_id);
-    BK_DEFCOPY(string_id);
-
-    string_id(utf8string str, hash_t const hash)
-      : string (std::move(str))
-      , hash   {hash}
-    {
-    }
-    
-    string_id(utf8string str)
-      : string (std::move(str))
-      , hash   {slash_hash32(string)}
-    {
-    }
-
-    string_id(string_ref const ref)
-      : string (ref.to_string())
-      , hash   {slash_hash32(string)}
-    {
-    }
-
-    template <size_t N>
-    string_id(char const (&str)[N])
-      : string_id {string_ref(str, N - 1)}
-    {
-    }
-
-    string_id()
-      : string {}
-      , hash   {}
-    {
-    }
-
-    bool operator<(string_id const& rhs) const noexcept {
-        return hash < rhs.hash;
-    }
-
-    bool operator==(string_id const& rhs) const {
-        if (hash != rhs.hash) {
-            return false;
-        }
-        
-        BK_ASSERT_DBG(string == rhs.string);
-
-        return true;
-    }
-
-    bool operator!=(string_id const& rhs) const {
-        return !(*this == rhs);
-    }
-
-    operator hash_t() const noexcept {
-        return hash;
-    }
-
-    utf8string string;
-    hash_t     hash;
-};
-
-struct identifier {
-    BK_DEFCOPY(identifier);
-    BK_DEFMOVE(identifier);
-
-    identifier()
-      : string {}, hash {}
-    {
-    }
-
-    identifier(string_id const& id)
-      : string {id.string}, hash {id.hash}
-    {
-    }
-
-    identifier(string_ref const s, hash_t const h)
-      : string {s}, hash {h}
-    {
-    }
-
-    string_ref string;
-    hash_t     hash;
-
-    operator hash_t() const noexcept { return hash; }
-};
-
-struct hashed_string_ref {
-    hashed_string_ref(string_ref const str) noexcept
-        : string (str)
-        , hash   (bkrl::slash_hash32(str))
-    {
-    }
-
-    string_ref string = string_ref {};
-    hash_t     hash   = hash_t {0};
-};
-
-inline bool operator==(hashed_string_ref const lhs, hashed_string_ref const rhs) noexcept {
-    return lhs.hash == rhs.hash;
-}
-
-inline bool operator==(hashed_string_ref const lhs, string_ref const rhs) noexcept {
-    return lhs.string == rhs;
-}
-
-inline bool operator==(hashed_string_ref const lhs, hash_t const rhs) noexcept {
-    return lhs.hash == rhs;
-}
 
 template <size_t Bytes> struct unsigned_int {
     static_assert(Bytes >= 1, "");
@@ -262,8 +141,6 @@ template <size_t Bytes> struct unsigned_int {
 
 template <size_t Bytes>
 using unsigned_int_t = typename unsigned_int<Bytes>::type;
-
-//using lang_id = bkrl::tagged_type<uint32_t, struct lang_id_tag>;
 
 #define BK_MAKE_LANG_CODE3(a, b, c) bkrl::lang_id { \
   static_cast<uint32_t>((a & 0xFF) << 16) \

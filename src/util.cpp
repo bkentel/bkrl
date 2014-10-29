@@ -1,5 +1,6 @@
 #include "util.hpp"
 #include "types.hpp"
+#include "hash.hpp"
 
 #include <cstring>
 #include <cstdio>

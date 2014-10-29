@@ -1,4 +1,5 @@
 #include "json.hpp"
+#include "hash.hpp"
 
 #if BOOST_OS_WINDOWS
 #   include <utf8.h>
@@ -85,20 +86,27 @@ struct random_parser {
 
     //--------------------------------------------------------------------------
     void rule_type(cref value) {
-        using key_t = bkrl::hashed_string_ref const;
+        using mapping_t = bkrl::string_ref_mapping<int> const;
 
-        static key_t type_constant {"constant"};
-        static key_t type_uniform  {"uniform"};
-        static key_t type_dice     {"dice"};
-        static key_t type_normal   {"normal"};
+        static mapping_t mappings[] = {
+            {"constant", 0}
+          , {"uniform",  1}
+          , {"dice",     2}
+          , {"normal",   3}
+        };
 
-        key_t type = json::require_string(value[0]);
+        auto const& type = json::require_string(value[0]);
+        auto const  hash = bkrl::slash_hash32(type);
 
-        if      (type == type_constant) { rule_constant(value); }
-        else if (type == type_uniform)  { rule_uniform(value); }
-        else if (type == type_dice)     { rule_dice(value); }
-        else if (type == type_normal)   { rule_normal(value); }
-        else                            { BK_TODO_FAIL(); }
+        auto const which = find_mapping(mappings, hash, -1);
+
+        switch (which) {
+        case 0  : rule_constant(value); break;
+        case 1  : rule_uniform(value);  break;
+        case 2  : rule_dice(value);     break;
+        case 3  : rule_normal(value);   break;
+        default : BK_TODO_FAIL();       break;
+        }
     }
 
     //--------------------------------------------------------------------------

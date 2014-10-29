@@ -5,7 +5,44 @@
 
 namespace jc = bkrl::json::common;
 
-class bkrl::message_map::impl_t {
+template <> bkrl::message_type
+bkrl::from_hash(hash_t const hash) {
+    using mapping_t = string_ref_mapping<message_type> const;
+    using mt = message_type;
+
+    static mapping_t mappings[] = {
+        {"none",             mt::none}
+      , {"welcome",          mt::welcome}
+      , {"direction_prompt", mt::direction_prompt}
+      , {"canceled",         mt::canceled}
+      , {"door_no_door",     mt::door_no_door}
+      , {"door_is_open",     mt::door_is_open}
+      , {"door_is_closed",   mt::door_is_closed}
+      , {"door_blocked",     mt::door_blocked}
+      , {"stairs_no_stairs", mt::stairs_no_stairs}
+      , {"stairs_no_down",   mt::stairs_no_down}
+      , {"stairs_no_up",     mt::stairs_no_up}
+      , {"get_no_items",     mt::get_no_items}
+      , {"get_which_prompt", mt::get_which_prompt}
+      , {"get_ok",           mt::get_ok}
+      , {"drop_nothing",     mt::drop_nothing}
+      , {"drop_ok",          mt::drop_ok}
+      , {"attack_regular",   mt::attack_regular}
+      , {"kill_regular",     mt::kill_regular}
+      , {"title_inventory",  mt::title_inventory}
+      , {"title_wield_wear", mt::title_wield_wear}
+      , {"title_get",        mt::title_get}
+      , {"title_drop",       mt::title_drop}
+    };
+
+    return find_mapping(mappings, hash, mt::invalid);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// item_stack
+////////////////////////////////////////////////////////////////////////////////
+
+class bkrl::detail::message_map_impl {
 public:
     using cref = json::cref;
 
@@ -55,16 +92,14 @@ public:
         auto const id  = json::require_string(def[0]);
         auto const str = json::require_string(def[1]);
 
-        auto const hash   = slash_hash32(id);
-        auto const mapped = enum_map<message_type>::get(hash);
+        auto const hash = slash_hash32(id);
+        auto const msg  = from_hash<message_type>(hash);
 
-        if (mapped.value == message_type::invalid) {
-            BK_TODO_FAIL();
-        } else if (mapped.string != id) {
+        if (msg == message_type::invalid) {
             BK_TODO_FAIL();
         }
 
-        cur_loc_.emplace(mapped.value, str.to_string());
+        cur_loc_.emplace(msg, str.to_string());
     }
 
     //--------------------------------------------------------------------------
@@ -104,11 +139,12 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 // message_map
 ////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
 bkrl::message_map::~message_map() = default;
 
 //------------------------------------------------------------------------------
 bkrl::message_map::message_map()
-  : impl_ {std::make_unique<impl_t>()}
+  : impl_ {std::make_unique<detail::message_map_impl>()}
 {
 }
 

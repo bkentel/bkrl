@@ -12,6 +12,7 @@
 
 #include "identifier.hpp"
 #include "types.hpp"
+#include "hash.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
 namespace bkrl {
@@ -30,9 +31,6 @@ namespace detail { class item_definitions_impl; }
 namespace detail { class equipment_impl; }
 ////////////////////////////////////////////////////////////////////////////////
 
-template <typename T>
-T from_string(string_ref str);
-
 //==============================================================================
 //! General item type.
 //==============================================================================
@@ -49,7 +47,7 @@ enum class item_type : uint8_t {
   , enum_size
 };
 
-extern template item_type from_string(string_ref str);
+extern template item_type from_hash(hash_t hash);
 
 //==============================================================================
 //! Item equipment slots.
@@ -78,7 +76,7 @@ enum class equip_slot : uint8_t {
   , enum_size
 };
 
-extern template equip_slot from_string(string_ref str);
+extern template equip_slot from_hash(hash_t hash);
 
 //==============================================================================
 //! Slots occupied by an item.
