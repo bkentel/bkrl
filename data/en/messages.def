@@ -24,5 +24,6 @@
       , ["title_wield_wear", "Weild or wear"]
       , ["title_get",        "Pick up"]
       , ["title_drop",       "Drop"]
+      , ["wield_wear_fail",  "You can't equip the %1%; remove your %2% first."]
     ]
 }

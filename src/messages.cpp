@@ -33,6 +33,7 @@ bkrl::from_hash(hash_t const hash) {
       , {"title_wield_wear", mt::title_wield_wear}
       , {"title_get",        mt::title_get}
       , {"title_drop",       mt::title_drop}
+      , {"wield_wear_fail",  mt::wield_wear_fail}
     };
 
     return find_mapping(mappings, hash, mt::invalid);

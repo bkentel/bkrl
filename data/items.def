@@ -4,6 +4,18 @@
     , "type": "armor"
     , "slot": ["arms_upper", "arms_lower", "chest"]
     }
+  , { "id": "ARMOR_LEATHER_LEGGINGS"
+    , "type": "armor"
+    , "slot": ["legs_upper", "legs_lower", "waist"]
+    }
+  , { "id": "ARMOR_LEATHER_BOOTS"
+    , "type": "armor"
+    , "slot": ["feet"]
+    }
+  , { "id": "ARMOR_LEATHER_CAP"
+    , "type": "armor"
+    , "slot": ["head"]
+    }
   , { "id": "WEAPON_SWORD_SHORT"
     , "type": "weapon"
     , "slot": ["hand_main"]

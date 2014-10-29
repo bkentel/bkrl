@@ -9,6 +9,8 @@
 #include "items.hpp"
 #include "identifier.hpp"
 
+#include "random.hpp"
+
 ////////////////////////////////////////////////////////////////////////////////
 namespace bkrl {
 ////////////////////////////////////////////////////////////////////////////////
@@ -138,6 +140,40 @@ entity generate_entity(
 class player : public entity {
 public:
     using entity::entity;
+
+    using defs_t  = item_definitions const&;
+    using items_t = item_store const&;
+
+    equipment::result_t equip_item(item_id iid, defs_t defs, items_t istore) {
+        auto const try_equip = equip_.equip(iid, defs, istore);
+        if (!try_equip.second) {
+            return try_equip;
+        }
+
+        this->items().remove(iid);
+
+        return try_equip;
+    }
+
+    damage_t get_attack_value(random_t& gen, defs_t defs, items_t istore) {
+        auto const& main = equip_.in_slot(equip_slot::hand_main);
+        if (!main) {
+            return 1;
+        }
+
+        auto const iid = *main;
+        auto const& itm = istore[iid];
+
+        BK_ASSERT(itm.type == item_type::weapon);
+
+        auto const& w = itm.data.weapon;
+        
+        return random::uniform_range(gen, w.dmg_min, w.dmg_max);
+    }
+
+    equipment&       equip()       { return equip_; }
+    equipment const& equip() const { return equip_; }
+
 private:
     equipment equip_;
 };

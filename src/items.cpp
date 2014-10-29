@@ -663,22 +663,29 @@ bkrl::generate_item(
 ////////////////////////////////////////////////////////////////////////////////
 class bkrl::detail::equipment_impl {
 public:
-    using defs_t  = item_definitions const&;
-    using items_t = item_store const&;
+    using defs_t   = item_definitions const&;
+    using items_t  = item_store const&;
+    using result_t = std::pair<equip_slot_flags, bool>;
 
-    bool can_equip(item_id const id, defs_t defs, items_t items) const {
+    result_t can_equip(item_id const id, defs_t defs, items_t items) const {
         auto const& def = get_item_definition(id, defs, items);
 
-        if (!def.slots.any() || (flags_ & def.slots).any()) {
-            return false;
+        if (!def.slots.any()) {
+            return std::make_pair(equip_slot_flags {}, false);
         }
 
-        return true;
+        auto const result = flags_ & def.slots;
+        if (result.any()) {
+            return std::make_pair(result, false);
+        }
+
+        return std::make_pair(equip_slot_flags {}, true);
     }
 
-    void equip(item_id const id, defs_t defs, items_t items) {
-        if (!can_equip(id, defs, items)) {
-            BK_TODO_FAIL();
+    result_t equip(item_id const id, defs_t defs, items_t items) {
+        auto const try_equip = can_equip(id, defs, items);
+        if (!try_equip.second) {
+            return try_equip;
         }
 
         auto const& def = get_item_definition(id, defs, items);
@@ -694,6 +701,8 @@ public:
             BK_ASSERT_DBG(slot == item_id {});
             slot = id;
         }
+
+        return try_equip;
     }
 
     optional<item_id> in_slot(equip_slot const slot) const {
@@ -729,6 +738,24 @@ public:
         flags_ &= ~def.slots;
 
         return itm;
+    }
+
+    optional<item_id> match_any(equip_slot_flags const flags) const {
+        auto const result = flags & flags_;
+        if (result.none()) {
+            return {};
+        }
+
+        for (auto i = 0u; i < result.size(); ++i) {
+            if (result.test(i)) {
+                auto const itm = items_[i - 1];
+                BK_ASSERT(itm != item_id {});
+
+                return {itm};
+            }
+        }
+
+        return {};
     }
 private:
     static size_t slot_to_index_(equip_slot const slot) {
@@ -768,12 +795,14 @@ bkrl::equipment::equipment()
 bkrl::equipment::~equipment() = default;
 bkrl::equipment::equipment(equipment&&) = default;
 
-bool bkrl::equipment::can_equip(item_id id, defs_t defs, items_t items) const {
+bkrl::equipment::result_t
+bkrl::equipment::can_equip(item_id id, defs_t defs, items_t items) const {
     return impl_->can_equip(id, defs, items);
 }
 
-void bkrl::equipment::equip(item_id id, defs_t defs, items_t items) {
-    impl_->equip(id, defs, items);
+bkrl::equipment::result_t
+bkrl::equipment::equip(item_id id, defs_t defs, items_t items) {
+    return impl_->equip(id, defs, items);
 }
 
 bkrl::optional<bkrl::item_id>
@@ -784,4 +813,9 @@ bkrl::equipment::unequip(equip_slot slot, defs_t defs, items_t items) {
 bkrl::optional<bkrl::item_id>
 bkrl::equipment::in_slot(equip_slot const slot) const {
     return impl_->in_slot(slot);
+}
+
+bkrl::optional<bkrl::item_id>
+bkrl::equipment::match_any(equip_slot_flags const flags) const {
+    return impl_->match_any(flags);
 }

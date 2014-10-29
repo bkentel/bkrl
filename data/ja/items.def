@@ -7,6 +7,21 @@
     , "sort": "カワバオリ"
     , "text": "耐久性が優れてとても丈夫な防具。"
     }
+  , { "id": "ARMOR_LEATHER_LEGGINGS"
+    , "name": "革の脚宛"
+    , "sort": "カワノアシアテ"
+    , "text": "耐久性が優れてとても丈夫な防具。"
+    }
+  , { "id": "ARMOR_LEATHER_BOOTS"
+    , "name": "革靴"
+    , "sort": "カワグツ"
+    , "text": "耐久性が優れてとても丈夫な防具。"
+    }
+  , { "id": "ARMOR_LEATHER_CAP"
+    , "name": "革の帽子"
+    , "sort": "カワノボウシ"
+    , "text": "耐久性が優れてとても丈夫な防具。"
+    }
   , { "id":   "WEAPON_SWORD_SHORT"
     , "name": "短剣"
     , "sort": "タンケン"

@@ -1986,7 +1986,35 @@ public:
         auto const title = definitions_->get_messages()[message_type::title_wield_wear];
         item_list_.set_title(title);
 
-        input_mode_ = imode_selection_.enter_mode(item_list_, [this](bool const , int const ) {
+        input_mode_ = imode_selection_.enter_mode(item_list_, [this, equipable](bool const ok, int const i) {
+            if (!ok) {
+                return;
+            }
+        
+            auto const& idefs    = definitions_->get_items();
+            auto const& messages = definitions_->get_messages();
+            auto const& istore   = item_store_;
+
+            auto const& selected = equipable.at(i);
+            auto const& result   = player_.equip_item(selected, idefs, istore);
+
+            if (result.second) {
+                return;
+            }
+
+            auto const& equipped = player_.equip().match_any(result.first);
+            if (!equipped) {
+                BK_TODO_FAIL();
+            }
+
+            auto const& name0 = get_item_locale(selected, idefs, istore).name;
+            auto const& msg   = messages[message_type::wield_wear_fail];
+            auto const& name1 = get_item_locale(*equipped, idefs, istore).name;
+
+            auto fmt = boost::format {msg.data()};
+            fmt % name0 % name1;
+
+            print_message(boost::str(fmt));
         });
     }
 

@@ -299,20 +299,23 @@ private:
 //==============================================================================
 class equipment {
 public:
-    using defs_t  = item_definitions const&;
-    using items_t = item_store const&;
+    using defs_t   = item_definitions const&;
+    using items_t  = item_store const&;
+    using result_t = std::pair<equip_slot_flags, bool>;
 
     equipment();
     equipment(equipment&&);
     ~equipment();
 
-    bool can_equip(item_id id, defs_t defs, items_t items) const;
+    result_t can_equip(item_id id, defs_t defs, items_t items) const;
 
-    void equip(item_id id, defs_t defs, items_t items);
+    result_t equip(item_id id, defs_t defs, items_t items);
 
     optional<item_id> unequip(equip_slot slot, defs_t defs, items_t items);
 
     optional<item_id> in_slot(equip_slot slot) const;
+
+    optional<item_id> match_any(equip_slot_flags flags) const;
 private:
     std::unique_ptr<detail::equipment_impl> impl_;
 };
