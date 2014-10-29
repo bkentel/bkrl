@@ -149,7 +149,7 @@ void bkrl::item_stack::insert(item_stack&& other, defs_t defs, items_t items) {
 //------------------------------------------------------------------------------
 bkrl::item_id
 bkrl::item_stack::remove(item_id const id) {
-    auto const it = std::lower_bound(std::begin(items_), std::end(items_), id);
+    auto const it = std::find(std::begin(items_), std::end(items_), id);
     BK_ASSERT(it != std::end(items_));
 
     items_.erase(it);
@@ -420,10 +420,13 @@ public:
 
     //--------------------------------------------------------------------------
     void rule_def_weapon(cref value) {
+        rule_def_slots(value);
+        rule_def_damage(value);
     }
 
     //--------------------------------------------------------------------------
     void rule_def_armor(cref value) {
+        rule_def_slots(value);
     }
 
     //--------------------------------------------------------------------------

@@ -19,6 +19,9 @@
     <Filter Include="include\detail">
       <UniqueIdentifier>{43b39a0e-bd24-468f-a472-580ebb5aac42}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include\types">
+      <UniqueIdentifier>{ab00555a-df4b-49e4-9de0-8f0b7f869479}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\main.cpp">
@@ -113,9 +116,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\pch.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\engine_client.hpp">
       <Filter>include</Filter>
     </ClInclude>
@@ -123,9 +123,6 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\enum_map.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\types.hpp">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\algorithm.hpp">
@@ -230,11 +227,17 @@
     <ClInclude Include="..\include\integers.hpp">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\string.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\hash.hpp">
-      <Filter>include</Filter>
+      <Filter>include\types</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\types.hpp">
+      <Filter>include\types</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\string.hpp">
+      <Filter>include\types</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pch.hpp">
+      <Filter>include\types</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

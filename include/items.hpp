@@ -138,6 +138,11 @@ public:
     item_id remove(item_id const id);
     item_id remove(int const index);
 
+    item_id at(int const index) const {
+        BK_ASSERT(index >= 0);
+        return items_.at(static_cast<size_t>(index));
+    }
+
     auto empty() const noexcept { return items_.empty(); }
     
     auto size() const noexcept { return static_cast<int>(items_.size()); }
