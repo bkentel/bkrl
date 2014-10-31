@@ -1391,11 +1391,27 @@ public:
     }
     
     //--------------------------------------------------------------------------
-    void on_mouse_move(mouse_move_info const& ) override {
+    void on_mouse_move(mouse_move_info const& info) override {
+        auto const i = list_->index_at(info.x, info.y);
+        if (i == -1) {
+            return;
+        }
+
+        list_->set_selection(i);
     }
     
     //--------------------------------------------------------------------------
-    void on_mouse_button(mouse_button_info const& ) override {
+    void on_mouse_button(mouse_button_info const& info) override {
+        if (info.button != 1) {
+            return;
+        }
+
+        auto const i = list_->index_at(info.x, info.y);
+        if (i == -1) {
+            return;
+        }
+
+        exit_mode_(optional<item_id>{list_->selection()});
     }
 private:
     void exit_mode_(optional<item_id>&& iid) {
@@ -1451,6 +1467,7 @@ public:
         next_level(0);
         print_message(message_type::welcome);
 
+        item_list_.set_position(ipoint2 {24, 128});
         ////////////////////////////////////////////////////
         main();
     }
@@ -1612,7 +1629,7 @@ public:
 
     void draw_gui(renderer& r) {
         if (!item_list_.empty()) {
-            item_list_.render(r, 24, 128);
+            item_list_.render(r);
         }
 
         msg_log_.render(r, 0, 0);
@@ -1739,20 +1756,24 @@ public:
         do_scroll(scroll_x, scroll_y);
     }
 
-    void make_item_list_(string_ref const title, item_stack const& items) {
+    void make_item_list_(string_ref const title, item_list const& items) {
         item_list_.clear();
         item_list_.insert(items);
         item_list_.set_title(title);
     }
 
     void make_item_list_(message_type const title, item_stack const& items) {       
+        make_item_list_(definitions_->get_messages()[title], items.list());
+    }
+
+    void make_item_list_(message_type const title, item_list const& items) {       
         make_item_list_(definitions_->get_messages()[title], items);
     }
 
-    template <typename Handler>
+    template <typename List, typename Handler>
     void enter_item_select_mode_(
         message_type const  title
-      , item_stack   const& items
+      , List         const& items
       , Handler&&           handler
     ) {
         BK_ASSERT(input_mode_ != &imode_selection_);
@@ -1779,6 +1800,52 @@ public:
         msg_log_.print_line(message_type::get_ok, get_item_name_(iid));
         
         advance();
+    }
+
+    //--------------------------------------------------------------------------
+    string_ref get_item_name_(item_id const iid) const {
+        auto const& istore = item_store_;
+        auto const& idefs  = definitions_->get_items();
+
+        return get_item_loc(iid, idefs, istore).name;
+    }
+
+    //--------------------------------------------------------------------------
+    string_ref get_message_string_(message_type const msg) const {
+        auto const& messages = definitions_->get_messages();
+        return messages[msg];
+    }
+
+    //--------------------------------------------------------------------------
+    void equip_item_(item_id const iid) {
+        auto const& istore = item_store_;
+        auto const& idefs  = definitions_->get_items();
+
+        auto const& result = player_.equip_item(iid, idefs, istore);
+        if (result.second) {
+            msg_log_.print_line(message_type::wield_wear_ok, get_item_name_(iid));
+            return;
+        }
+
+        auto const& conflicting = player_.equip().match_any(result.first);
+        if (!conflicting) {
+            BK_TODO_FAIL();
+        }
+
+        msg_log_.print_line(message_type::wield_wear_conflict, get_item_name_(iid), get_item_name_(*conflicting));
+    }
+
+    //--------------------------------------------------------------------------
+    void drop_item_(item_id const iid) {
+        auto const p = player_.position();
+
+        auto const& istore = item_store_;
+        auto const& idefs  = definitions_->get_items();
+
+        player_.items().remove(iid);
+        cur_level_->drop_item_at(p, iid);
+
+        msg_log_.print_line(message_type::drop_ok, get_item_name_(iid));
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -1899,19 +1966,6 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    void drop_item_(item_id const iid) {
-        auto const p = player_.position();
-
-        auto const& istore = item_store_;
-        auto const& idefs  = definitions_->get_items();
-
-        player_.items().remove(iid);
-        cur_level_->drop_item_at(p, iid);
-
-        msg_log_.print_line(message_type::drop_ok, get_item_name_(iid));
-    }
-
-    //--------------------------------------------------------------------------
     void do_drop() {
         auto& stack = player_.items();
         if (stack.empty()) {
@@ -1966,39 +2020,6 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    string_ref get_item_name_(item_id const iid) const {
-        auto const& istore = item_store_;
-        auto const& idefs  = definitions_->get_items();
-
-        return get_item_loc(iid, idefs, istore).name;
-    }
-
-    //--------------------------------------------------------------------------
-    string_ref get_message_string_(message_type const msg) const {
-        auto const& messages = definitions_->get_messages();
-        return messages[msg];
-    }
-
-    //--------------------------------------------------------------------------
-    void equip_item_(item_id const iid) {
-        auto const& istore = item_store_;
-        auto const& idefs  = definitions_->get_items();
-
-        auto const& result = player_.equip_item(iid, idefs, istore);
-        if (result.second) {
-            msg_log_.print_line(message_type::wield_wear_ok, get_item_name_(iid));
-            return;
-        }
-
-        auto const& conflicting = player_.equip().match_any(result.first);
-        if (!conflicting) {
-            BK_TODO_FAIL();
-        }
-
-        msg_log_.print_line(message_type::wield_wear_conflict, get_item_name_(iid), get_item_name_(*conflicting));
-    }
-
-    //--------------------------------------------------------------------------
     void do_wield_wear() {
         auto const& istore = item_store_;
         auto const& idefs  = definitions_->get_items();
@@ -2017,6 +2038,20 @@ public:
             }
 
             equip_item_(*maybe_sel);
+        });
+    }
+
+    void do_equipment() {
+        auto const& list = player_.equip().list();
+        if (list.empty()) {
+            return; //TODO
+        }
+
+        auto const& title = message_type::title_wield_wear;
+        enter_item_select_mode_(title, list, [this](optional<item_id> maybe_sel) {
+            if (!maybe_sel) {
+                return;
+            }
         });
     }
 
@@ -2040,6 +2075,7 @@ public:
         using ct = command_type;
 
         switch (cmd) {
+        case ct::equipment  : do_equipment();         break;
         case ct::wield_wear : do_wield_wear();        break;
         case ct::inventory  : do_inventory();         break;
         case ct::open       : do_open();              break;
@@ -2080,6 +2116,10 @@ public:
 
     //--------------------------------------------------------------------------
     void on_mouse_move(application::mouse_move_info const& info) {
+        if (input_mode_) {
+            input_mode_->on_mouse_move(info);
+        }
+        
         mouse_pos_ = ipoint2 {info.x, info.y};
 
         auto const right = (info.state & (1<<2)) != 0;
@@ -2096,7 +2136,11 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    void on_mouse_button(application::mouse_button_info const& ) {
+    void on_mouse_button(application::mouse_button_info const& info) {
+        if (input_mode_) {
+            input_mode_->on_mouse_button(info);
+        }
+
         //if (info.state != application::mouse_button_info::state_t::pressed) {
         //    return;
         //}

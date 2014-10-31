@@ -21,6 +21,8 @@ class item_definitions;
 class item_stack;
 class item_store;
 
+using item_list = std::vector<item_id>;
+
 namespace gui {
 
 namespace detail { class item_list_impl; }
@@ -38,17 +40,19 @@ public:
       , item_store       const& items
     );
 
+    void set_position(ipoint2 p);
     void set_title(string_ref title);
-    void render(renderer& r, int x, int y);
+    void render(renderer& r);
     int  index_at(int x, int y) const;
 
     item_id at(int index);
     
     void insert(item_id id);
-    void insert(item_stack const& stack);
+    void insert(bkrl::item_list const& items);
 
     void clear();
 
+    void set_selection(int i);
     void select_next();
     void select_prev();
 

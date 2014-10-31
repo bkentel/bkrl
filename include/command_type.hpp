@@ -47,6 +47,7 @@ enum class command_type : uint16_t {
   , drop
   , inventory
   , wield_wear
+  , equipment
 
   , enum_size //!< last
 };

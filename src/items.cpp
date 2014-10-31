@@ -795,6 +795,20 @@ public:
 
         return {};
     }
+
+    item_list list() const {
+        item_list result;
+        result.reserve(equip_size);
+
+        std::copy_if(
+            std::begin(items_)
+          , std::end(items_)
+          , std::back_inserter(result)
+          , [](item_id const iid) { return iid != item_id {}; }
+        );
+
+        return result;
+    }
 private:
     static size_t slot_to_index_(equip_slot const slot) {
         auto const result = static_cast<size_t>(enum_value(slot) - 1);
@@ -856,4 +870,8 @@ bkrl::equipment::in_slot(equip_slot const slot) const {
 bkrl::optional<bkrl::item_id>
 bkrl::equipment::match_any(equip_slot_flags const flags) const {
     return impl_->match_any(flags);
+}
+
+bkrl::item_list bkrl::equipment::list() const {
+    return impl_->list();
 }

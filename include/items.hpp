@@ -31,6 +31,8 @@ namespace detail { class item_definitions_impl; }
 namespace detail { class equipment_impl; }
 ////////////////////////////////////////////////////////////////////////////////
 
+using item_list = std::vector<item_id>;
+
 //==============================================================================
 //! General item type.
 //==============================================================================
@@ -155,6 +157,8 @@ public:
 
     auto cbegin() const { return std::cbegin(items_); }
     auto cend()   const { return std::cend(items_); }
+
+    item_list const& list() const { return items_; }
 private:
     std::vector<item_id> items_;
 };
@@ -325,6 +329,8 @@ public:
     optional<item_id> in_slot(equip_slot slot) const;
 
     optional<item_id> match_any(equip_slot_flags flags) const;
+
+    item_list list() const;
 private:
     std::unique_ptr<detail::equipment_impl> impl_;
 };

@@ -23,23 +23,30 @@ public:
     {
     }
 
+    void set_position(ipoint2 const p) {
+        pos_ = p;
+    }
+
     void set_title(string_ref const title) {
         title_.reset(*face_, title);
         row_w_ = std::max(row_w_, title_.actual_width()  + padding);
         row_h_ = std::max(row_h_, title_.actual_height() + padding);
     }
 
-    void render(renderer& r, int const x, int const y) {
+    void render(renderer& r) {
         auto const size = static_cast<int>(items_.size());
 
         if (size == 0) {
             return;
         }
-        
-        static auto color_background = make_color(200,  200,  200);
-        static auto color_even       = make_color(60,  60,  60);
-        static auto color_odd        = make_color(80,  80,  80);
-        static auto color_highlight  = make_color(150, 150, 120);
+
+        static auto color_background = make_color(50,  50,  50);
+        static auto color_even       = make_color(13,  13,  13);
+        static auto color_odd        = make_color(25,  25,  25);
+        static auto color_highlight  = make_color(20, 20, 50);
+
+        auto const x = pos_.x;
+        auto const y = pos_.y;
 
         auto cur_x = x + border;
         auto cur_y = y + border;
@@ -74,12 +81,40 @@ public:
         }
     }
     
-    int index_at(int x, int y) const {
-        return 0;
+    int index_at(int const x, int const y) const {
+        auto const n = static_cast<int>(items_.size());
+
+        if (n == 0) {
+            return -1;
+        }
+
+        auto const left = pos_.x;
+        auto const top  = pos_.y;
+
+        if (x < left || y < top) {
+            return -1;
+        }
+
+        auto const w = row_w_ + border * 2;
+        auto const h = row_h_ * (n + 1) + border * 2;
+
+        auto const right  = left + w;
+        auto const bottom = top  + h;
+        
+        if (x >= right || y >= bottom) {
+            return -1;
+        }
+
+        auto const i = (y - top) / row_h_;
+        if (i < 1 || i > n) {
+            return -1;
+        }
+
+        return i - 1;
     }
 
     item_id at(int const index) {
-        BK_ASSERT(index >= 0 && index < items_.size());
+        BK_ASSERT(index >= 0 && index < size());
         return items_[index];
     }
 
@@ -107,12 +142,14 @@ public:
         prefix_++;
     }
 
-    void insert(item_stack const& stack) {
+    void insert(bkrl::item_list const& items) {
         clear();
 
-        for (auto&& iid : stack) {
+        for (auto&& iid : items) {
             insert(iid);
         }
+
+        BK_ASSERT(!empty());
     }
 
     void clear() {
@@ -124,6 +161,11 @@ public:
         row_w_     = 0;
         row_h_     = 0;
         prefix_   = 'a';
+    }
+
+    void set_selection(int i) {
+        BK_ASSERT(i < size());
+        selection_ = i;
     }
 
     void select_next() {
@@ -159,6 +201,8 @@ private:
     int  row_h_     = 0;
     char prefix_    = 'a';
 
+    ipoint2 pos_ = ipoint2 {0, 0};
+
     utf8string name_buffer_;
 
     transitory_text_layout              title_;
@@ -179,12 +223,16 @@ bkrl::gui::item_list::item_list(
 {
 }
 
+void bkrl::gui::item_list::set_position(ipoint2 const p) {
+    impl_->set_position(p);
+}
+
 void bkrl::gui::item_list::set_title(string_ref const title) {
     impl_->set_title(title);
 }
 
-void bkrl::gui::item_list::render(renderer& r, int const x, int const y) {
-    impl_->render(r, x, y);
+void bkrl::gui::item_list::render(renderer& r) {
+    impl_->render(r);
 }
 
 int bkrl::gui::item_list::index_at(int const x, int const y) const {
@@ -195,8 +243,8 @@ bkrl::item_id bkrl::gui::item_list::at(int const index) {
     return impl_->at(index);
 }
 
-void bkrl::gui::item_list::insert(item_stack const& stack) {
-    impl_->insert(stack);
+void bkrl::gui::item_list::insert(bkrl::item_list const& items) {
+    impl_->insert(items);
 }
 
 void bkrl::gui::item_list::insert(item_id const id) {
@@ -205,6 +253,10 @@ void bkrl::gui::item_list::insert(item_id const id) {
 
 void bkrl::gui::item_list::clear() {
     impl_->clear();
+}
+
+void bkrl::gui::item_list::set_selection(int const i) {
+    impl_->set_selection(i);
 }
 
 void bkrl::gui::item_list::select_next() {

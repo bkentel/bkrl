@@ -465,6 +465,7 @@ bkrl::from_hash(hash_t const hash) {
       , {"drop",       ct::drop}
       , {"inventory",  ct::inventory}
       , {"wield_wear", ct::wield_wear}
+      , {"equipment",  ct::equipment}
     };
 
     return find_mapping(mappings, hash, ct::invalid);

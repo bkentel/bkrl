@@ -38,5 +38,6 @@
       , ["drop",  "kb_d"]
       , ["inventory", "kb_i"]
       , ["wield_wear", "kb_w"]
+      , ["equipment", "kb_e", "shift"]
     ]
 }
