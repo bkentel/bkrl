@@ -23,11 +23,14 @@ class item_store;
 
 namespace gui {
 
+namespace detail { class item_list_impl; }
+
 //==============================================================================
 //==============================================================================
 class item_list {
 public:
-    struct constants;
+    item_list(item_list&&);
+    ~item_list();
 
     item_list(
         font_face&              face
@@ -36,39 +39,25 @@ public:
     );
 
     void set_title(string_ref title);
-
-    void reset(item_stack const& stack);
-
-    void add_item(item_id id);
-
     void render(renderer& r, int x, int y);
+    int  index_at(int x, int y) const;
+
+    item_id at(int index);
+    
+    void insert(item_id id);
+    void insert(item_stack const& stack);
 
     void clear();
 
     void select_next();
-
     void select_prev();
 
-    int size() const noexcept { return static_cast<int>(items_.size()); }
+    item_id selection() const noexcept;
 
-    int selection() const noexcept { return selection_; }
-    
-    bool empty() const noexcept { return items_.empty(); }
-
-    explicit operator bool() const noexcept { return !empty(); }
+    int  size()  const noexcept;
+    bool empty() const noexcept;
 private:
-    font_face*              face_       = nullptr;
-    item_definitions const* item_defs_  = nullptr;
-    item_store const*       item_store_ = nullptr;
-
-    int  selection_ = 0;
-    int  row_w_     = 0;
-    int  row_h_     = 0;
-    char prefix_    = 'a';
-
-    utf8string name_buffer_;
-    transitory_text_layout              title_;
-    std::vector<transitory_text_layout> items_;
+    std::unique_ptr<detail::item_list_impl> impl_;
 };
 
 //==============================================================================
@@ -89,10 +78,10 @@ public:
     void print_line(string_ref str);
 
     //--------------------------------------------------------------------------
-    template <typename Head, typename... Tail>
-    void print_line(message_type const msg, Head&& head, Tail&&... tail) {
+    template <typename... Params>
+    void print_line(message_type const msg, Params&&... params) {
         auto format = format_t {get_message_string_(msg).data()};
-        print_line_(format % head, std::forward<Tail>(tail)...);
+        print_line_(format, std::forward<Params>(params)...);
     }
 
     void render(renderer& r, int x, int y);
@@ -102,7 +91,8 @@ private:
     //--------------------------------------------------------------------------
     template <typename Head, typename... Tail>
     void print_line_(format_t& format, Head&& head, Tail&&... tail) {
-        print_line_(format, std::forward<Head>(head), std::forward<Tail>(tail)...);
+        format % head;
+        print_line_(format, std::forward<Tail>(tail)...);
     }
 
     //--------------------------------------------------------------------------

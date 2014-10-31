@@ -46,7 +46,9 @@ enum class message_type : uint16_t {
   , title_get
   , title_drop
 
-  , wield_wear_fail
+  , wield_wear_conflict
+  , wield_wear_nothing
+  , wield_wear_ok
 
   , enum_size
 };

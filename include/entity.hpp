@@ -144,6 +144,18 @@ public:
     using defs_t  = item_definitions const&;
     using items_t = item_store const&;
 
+    item_stack get_equippable(defs_t idefs, items_t istore) const {
+        item_stack result;
+
+        for (auto const iid : items()) {
+            if (istore[iid].can_equip(idefs)) {
+                result.insert(iid, idefs, istore);
+            }
+        }
+
+        return result;
+    }
+
     equipment::result_t equip_item(item_id iid, defs_t defs, items_t istore) {
         auto const try_equip = equip_.equip(iid, defs, istore);
         if (!try_equip.second) {
@@ -161,9 +173,9 @@ public:
             return 1;
         }
 
-        auto const iid = *main;
+        auto const  iid = *main;
         auto const& itm = istore[iid];
-
+        
         BK_ASSERT(itm.type == item_type::weapon);
 
         auto const& w = itm.data.weapon;

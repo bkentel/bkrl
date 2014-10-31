@@ -439,11 +439,10 @@ public:
     //--------------------------------------------------------------------------
     //! Get the item at @p index in the item stack at @p p, and remove it from the level.
     //--------------------------------------------------------------------------
-    item_id get_item(ipoint2 const p, int const index = 0) {
+    item_id get_item(ipoint2 const p, item_id const iid) {
         auto& stack = require_stack_at_(p);
 
-        BK_ASSERT_DBG(stack.size() > index);
-        auto result = stack.remove(index);
+        auto result = stack.remove(iid);
 
         if (stack.empty()) {
             items_.remove(p);
@@ -1349,7 +1348,7 @@ class input_mode_selection final : public input_mode_base {
 public:
     using input_mode_base::input_mode_base;
 
-    using completion_handler = std::function<void (bool ok, int index)>;
+    using completion_handler = std::function<void (optional<item_id> iid)>;
 
     //--------------------------------------------------------------------------
     input_mode_base* enter_mode(gui::item_list& list, completion_handler handler) {
@@ -1357,12 +1356,6 @@ public:
         handler_ = std::move(handler);
 
         return this;
-    }
-
-    void exit_mode(bool const ok, int const index) {
-        handler_(ok, index);
-        list_->clear();
-        do_on_exit_();
     }
 
     //--------------------------------------------------------------------------
@@ -1381,15 +1374,15 @@ public:
             return;
         }
 
-        exit_mode(true, i);
+        exit_mode_(optional<item_id>{list_->at(i)});
     }
 
     //--------------------------------------------------------------------------
     bool on_command(command_type cmd) override {
         switch (cmd) {
         default: break;
-        case command_type::accept : exit_mode(true,  list_->selection()); break;
-        case command_type::cancel : exit_mode(false, list_->selection()); break;
+        case command_type::accept : exit_mode_(optional<item_id>{list_->selection()}); break;
+        case command_type::cancel : exit_mode_(optional<item_id>{}); break;
         case command_type::north  : list_->select_prev(); break;
         case command_type::south  : list_->select_next(); break;
         }
@@ -1398,11 +1391,20 @@ public:
     }
     
     //--------------------------------------------------------------------------
-    void on_mouse_move(mouse_move_info const& ) override {}
+    void on_mouse_move(mouse_move_info const& ) override {
+    }
     
     //--------------------------------------------------------------------------
-    void on_mouse_button(mouse_button_info const& ) override {}
+    void on_mouse_button(mouse_button_info const& ) override {
+    }
 private:
+    void exit_mode_(optional<item_id>&& iid) {
+        handler_(iid);
+
+        list_->clear();
+        do_on_exit_();
+    }
+
     gui::item_list*    list_ = nullptr;
     completion_handler handler_;
 };
@@ -1609,7 +1611,7 @@ public:
     }
 
     void draw_gui(renderer& r) {
-        if (!!item_list_) {
+        if (!item_list_.empty()) {
             item_list_.render(r, 24, 128);
         }
 
@@ -1737,54 +1739,44 @@ public:
         do_scroll(scroll_x, scroll_y);
     }
 
-    //--------------------------------------------------------------------------
-    //! Choose an item from a stack.
-    //! Changes the input mode to input_mode_selection.
-    //--------------------------------------------------------------------------
-    void get_item_selection_(ipoint2 const p) {
-        auto const& stack = [&]() -> decltype(auto) {
-            auto const s = cur_level_->get_stack_at(p);
-            if (!s) {
-                BK_TODO_FAIL();
-            }
-
-            return s.get();
-        }();
-        
-
-        item_list_.reset(stack);
-        auto const title = definitions_->get_messages()[message_type::title_get];
+    void make_item_list_(string_ref const title, item_stack const& items) {
+        item_list_.clear();
+        item_list_.insert(items);
         item_list_.set_title(title);
-
-        input_mode_ = imode_selection_.enter_mode(item_list_, [this, p](bool const ok, int const i) {
-            if (!ok) {
-                return;
-            }
-            
-            get_item_(p, i);
-        });
     }
-    
+
+    void make_item_list_(message_type const title, item_stack const& items) {       
+        make_item_list_(definitions_->get_messages()[title], items);
+    }
+
+    template <typename Handler>
+    void enter_item_select_mode_(
+        message_type const  title
+      , item_stack   const& items
+      , Handler&&           handler
+    ) {
+        BK_ASSERT(input_mode_ != &imode_selection_);
+
+        make_item_list_(title, items);
+
+        input_mode_ = imode_selection_.enter_mode(
+            item_list_
+          , std::forward<Handler>(handler)
+        );
+    }
+
     //--------------------------------------------------------------------------
-    //! Get the item at @p index from the stack at @p p.
+    //! Get the item with id = iid
     //--------------------------------------------------------------------------
-    void get_item_(ipoint2 const p, int const index = 0) {
-        auto const& item_defs   = definitions_->get_items();
-        auto const& msg_locale  = definitions_->get_messages();
+    void get_item_(item_id const iid) {
+        auto const& p      = player_.position();
+        auto const& istore = item_store_;
+        auto const& idefs  = definitions_->get_items();
 
-        auto const  id   = cur_level_->get_item(p, index);
-        auto const& item = item_store_[id];
-        auto const& loc  = item_defs.get_locale(item.id);
+        cur_level_->get_item(p, iid);
+        player_.items().insert(iid, idefs, istore);
 
-        auto const& name = loc.name;
-        auto const& msg  = msg_locale[message_type::get_ok];
-
-        auto fmt = boost::format {msg.data()};
-        fmt % name;
-
-        print_message(boost::str(fmt));
-
-        player_.items().insert(id, item_defs, item_store_);
+        msg_log_.print_line(message_type::get_ok, get_item_name_(iid));
         
         advance();
     }
@@ -1907,44 +1899,57 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    void do_get() {
-        auto const p   = player_.position();
-        auto const msg = cur_level_->can_get_item(p);
+    void drop_item_(item_id const iid) {
+        auto const p = player_.position();
 
-        switch (msg) {
-        case message_type::get_which_prompt : get_item_selection_(p); break;
-        case message_type::none             : get_item_(p);           break;
-        default                             : print_message(msg);     break;
-        }
+        auto const& istore = item_store_;
+        auto const& idefs  = definitions_->get_items();
+
+        player_.items().remove(iid);
+        cur_level_->drop_item_at(p, iid);
+
+        msg_log_.print_line(message_type::drop_ok, get_item_name_(iid));
     }
 
     //--------------------------------------------------------------------------
     void do_drop() {
-        auto const p = player_.position();
-
         auto& stack = player_.items();
         if (stack.empty()) {
-            print_message(message_type::drop_nothing);
+            msg_log_.print_line(message_type::drop_nothing);
             return;
         }
 
-        item_list_.reset(stack);
-        auto const title = definitions_->get_messages()[message_type::title_drop];
-        item_list_.set_title(title);
-
-        input_mode_ = imode_selection_.enter_mode(item_list_, [this, p](bool const ok, int const i) {            
-            if (!ok) {
+        auto const& title = message_type::title_drop;
+        enter_item_select_mode_(title, stack, [this](optional<item_id> maybe_sel) {
+            if (!maybe_sel) {
                 return;
             }
 
-            auto const  id   = player_.items().remove(i);
-            auto const& itm  = item_store_[id];
-            auto const& loc  = definitions_->get_items().get_locale(itm.id);
-            auto const& name = loc.name;
-                
-            msg_log_.print_line(message_type::drop_ok, name);
+            drop_item_(*maybe_sel);
+        });
+    }
 
-            cur_level_->drop_item_at(p, id);
+    //--------------------------------------------------------------------------
+    void do_get() {
+        auto const& maybe_stack = cur_level_->get_stack_at(player_.position());
+        if (!maybe_stack) {
+            msg_log_.print_line(message_type::get_no_items);
+            return;
+        }
+
+        auto const& stack = *maybe_stack;
+        if (stack.size() == 1) {
+            get_item_(stack.at(0));
+            return;
+        }
+
+        auto const& title = message_type::title_get;
+        enter_item_select_mode_(title, stack, [this](optional<item_id> maybe_sel) {
+            if (!maybe_sel) {
+                return;
+            }
+
+            get_item_(*maybe_sel);
         });
     }
 
@@ -1952,69 +1957,66 @@ public:
     void do_inventory() {
         auto const& items = player_.items();
         if (items.empty()) {
-            return;
+            return; //TODO message
         }
 
-        item_list_.reset(items);
-        auto const title = definitions_->get_messages()[message_type::title_inventory];
-        item_list_.set_title(title);
-
-        input_mode_ = imode_selection_.enter_mode(item_list_, [this](bool const , int const ) {
+        auto const& title = message_type::title_inventory;
+        enter_item_select_mode_(title, items, [this](optional<item_id> maybe_sel) {
         });
     }
 
     //--------------------------------------------------------------------------
-    void do_wield_wear() {
-        auto const& items = player_.items();
-        if (items.empty()) {
+    string_ref get_item_name_(item_id const iid) const {
+        auto const& istore = item_store_;
+        auto const& idefs  = definitions_->get_items();
+
+        return get_item_loc(iid, idefs, istore).name;
+    }
+
+    //--------------------------------------------------------------------------
+    string_ref get_message_string_(message_type const msg) const {
+        auto const& messages = definitions_->get_messages();
+        return messages[msg];
+    }
+
+    //--------------------------------------------------------------------------
+    void equip_item_(item_id const iid) {
+        auto const& istore = item_store_;
+        auto const& idefs  = definitions_->get_items();
+
+        auto const& result = player_.equip_item(iid, idefs, istore);
+        if (result.second) {
+            msg_log_.print_line(message_type::wield_wear_ok, get_item_name_(iid));
             return;
         }
 
-        item_stack equipable;
-        for (auto iid : items) {
-            item const& itm = item_store_[iid];
-            
-            switch (itm.type) {
-            case item_type::armor :
-            case item_type::weapon :
-                equipable.insert(iid, definitions_->get_items(), item_store_);
-                break;
-            }
+        auto const& conflicting = player_.equip().match_any(result.first);
+        if (!conflicting) {
+            BK_TODO_FAIL();
         }
 
-        item_list_.reset(equipable);
-        auto const title = definitions_->get_messages()[message_type::title_wield_wear];
-        item_list_.set_title(title);
+        msg_log_.print_line(message_type::wield_wear_conflict, get_item_name_(iid), get_item_name_(*conflicting));
+    }
 
-        input_mode_ = imode_selection_.enter_mode(item_list_, [this, equipable](bool const ok, int const i) {
-            if (!ok) {
+    //--------------------------------------------------------------------------
+    void do_wield_wear() {
+        auto const& istore = item_store_;
+        auto const& idefs  = definitions_->get_items();
+
+        item_stack items = player_.get_equippable(idefs, istore);
+
+        if (items.empty()) {
+            msg_log_.print_line(message_type::wield_wear_nothing);
+            return;
+        }
+
+        auto const& title = message_type::title_wield_wear;
+        enter_item_select_mode_(title, items, [this](optional<item_id> maybe_sel) {
+            if (!maybe_sel) {
                 return;
             }
-        
-            auto const& idefs    = definitions_->get_items();
-            auto const& messages = definitions_->get_messages();
-            auto const& istore   = item_store_;
 
-            auto const& selected = equipable.at(i);
-            auto const& result   = player_.equip_item(selected, idefs, istore);
-
-            if (result.second) {
-                return;
-            }
-
-            auto const& equipped = player_.equip().match_any(result.first);
-            if (!equipped) {
-                BK_TODO_FAIL();
-            }
-
-            auto const& name0 = get_item_locale(selected, idefs, istore).name;
-            auto const& msg   = messages[message_type::wield_wear_fail];
-            auto const& name1 = get_item_locale(*equipped, idefs, istore).name;
-
-            auto fmt = boost::format {msg.data()};
-            fmt % name0 % name1;
-
-            print_message(boost::str(fmt));
+            equip_item_(*maybe_sel);
         });
     }
 

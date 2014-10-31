@@ -223,11 +223,20 @@ public:
     item(item&&);
     ~item();
 
+    using defs_t = item_definitions const&;
+
+    string_ref get_name(defs_t defs) const;
+
+    bool can_equip(defs_t defs) const;
+    bool can_equip(equipment const& eq, defs_t defs) const;
+
     item_def_id     id;
     item_birthplace origin;
     item_data_t     data;
     item_type       type;
 };
+
+
 
 //==============================================================================
 //! A container of all items.
@@ -342,26 +351,17 @@ item_id generate_item(
 );
 #endif
 
-//==============================================================================
-//!
-//==============================================================================
-inline item_locale const&
-get_item_locale(
+item_definition const& get_item_def(
     item_id const id
   , item_definitions const& defs
-  , item_store const& items
-) {
-    return defs.get_locale(items[id].id);
-}
+  , item_store const& store
+);
 
-inline item_definition const&
-get_item_definition(
+item_locale const& get_item_loc(
     item_id const id
   , item_definitions const& defs
-  , item_store const& items
-) {
-    return defs.get_definition(items[id].id);
-}
+  , item_store const& store
+);
 
 ////////////////////////////////////////////////////////////////////////////////
 } //namespace bkrl

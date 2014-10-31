@@ -12,28 +12,38 @@ bkrl::from_hash(hash_t const hash) {
 
     static mapping_t mappings[] = {
         {"none",             mt::none}
+
       , {"welcome",          mt::welcome}
       , {"direction_prompt", mt::direction_prompt}
       , {"canceled",         mt::canceled}
+
       , {"door_no_door",     mt::door_no_door}
       , {"door_is_open",     mt::door_is_open}
       , {"door_is_closed",   mt::door_is_closed}
       , {"door_blocked",     mt::door_blocked}
+
       , {"stairs_no_stairs", mt::stairs_no_stairs}
       , {"stairs_no_down",   mt::stairs_no_down}
       , {"stairs_no_up",     mt::stairs_no_up}
+
       , {"get_no_items",     mt::get_no_items}
       , {"get_which_prompt", mt::get_which_prompt}
       , {"get_ok",           mt::get_ok}
+
       , {"drop_nothing",     mt::drop_nothing}
       , {"drop_ok",          mt::drop_ok}
+
       , {"attack_regular",   mt::attack_regular}
       , {"kill_regular",     mt::kill_regular}
+
       , {"title_inventory",  mt::title_inventory}
       , {"title_wield_wear", mt::title_wield_wear}
       , {"title_get",        mt::title_get}
       , {"title_drop",       mt::title_drop}
-      , {"wield_wear_fail",  mt::wield_wear_fail}
+
+      , {"wield_wear_conflict", mt::wield_wear_conflict}
+      , {"wield_wear_nothing",  mt::wield_wear_nothing}
+      , {"wield_wear_ok",       mt::wield_wear_ok}
     };
 
     return find_mapping(mappings, hash, mt::invalid);

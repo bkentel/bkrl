@@ -24,6 +24,8 @@
       , ["title_wield_wear", "装備"]
       , ["title_get",        "拾得"]
       , ["title_drop",       "放棄"]
-      , ["wield_wear_fail",  "%1%を装備することができない。まず装備中の%2%を外して。"]
+      , ["wield_wear_conflict", "%1%を装備することができない。まず装備中の%2%を外して。"]
+      , ["wield_wear_nothing",  "装備できるものは持っていない。"]
+      , ["wield_wear_ok",       "%1%を装備した。"]
     ]
 }

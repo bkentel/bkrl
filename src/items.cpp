@@ -62,6 +62,25 @@ void placement_move(T& dst, T& src) {
 } //namespace
 ////////////////////////////////////////////////////////////////////////////////
 
+bkrl::item_definition const&
+bkrl::get_item_def(
+    item_id const id
+  , item_definitions const& defs
+  , item_store const& store
+) {
+    return defs.get_definition(store[id].id);
+}
+
+bkrl::item_locale const&
+bkrl::get_item_loc(
+    item_id const id
+  , item_definitions const& defs
+  , item_store const& store
+) {
+    return defs.get_locale(store[id].id);
+}
+
+
 template <> bkrl::item_type
 bkrl::from_hash(hash_t const hash) {
     using mapping_t = string_ref_mapping<item_type> const;
@@ -117,8 +136,8 @@ static void sort_items(
   , bkrl::item_store const& items
 ) {
     bkrl::sort(container, [&](bkrl::item_id const lhs, bkrl::item_id const rhs) {
-        auto const& lloc = get_item_locale(lhs, defs, items);
-        auto const& rloc = get_item_locale(rhs, defs, items);
+        auto const& lloc = get_item_loc(lhs, defs, items);
+        auto const& rloc = get_item_loc(rhs, defs, items);
 
         auto const& left  = (!lloc.sort.empty() ? lloc.sort : lloc.name);
         auto const& right = (!rloc.sort.empty() ? rloc.sort : rloc.name);
@@ -207,6 +226,25 @@ bkrl::item::~item() {
     case it::armor     : call_destructor(data.armor);  break;
     case it::potion    : call_destructor(data.potion); break;
     }
+}
+
+bkrl::string_ref
+bkrl::item::get_name(defs_t defs) const {
+    return defs.get_locale(id).name;
+}
+
+bool bkrl::item::can_equip(defs_t defs) const {
+    switch (type) {
+    case item_type::armor :
+    case item_type::weapon :
+        return true;
+    }
+
+    return false;
+}
+
+bool bkrl::item::can_equip(equipment const& eq, defs_t defs) const {
+    return false; //TODO
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -668,7 +706,7 @@ public:
     using result_t = std::pair<equip_slot_flags, bool>;
 
     result_t can_equip(item_id const id, defs_t defs, items_t items) const {
-        auto const& def = get_item_definition(id, defs, items);
+        auto const& def = get_item_def(id, defs, items);
 
         if (!def.slots.any()) {
             return std::make_pair(equip_slot_flags {}, false);
@@ -688,7 +726,7 @@ public:
             return try_equip;
         }
 
-        auto const& def = get_item_definition(id, defs, items);
+        auto const& def = get_item_def(id, defs, items);
 
         flags_ |= def.slots;
 
@@ -723,7 +761,7 @@ public:
         }
 
         auto const id = *itm;
-        auto const& def = get_item_definition(id, defs, items);
+        auto const& def = get_item_def(id, defs, items);
 
         for (int i = 1; i < equip_size; ++i) {
             if (!def.slots.test(i)) {
