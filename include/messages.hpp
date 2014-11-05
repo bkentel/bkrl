@@ -8,14 +8,17 @@
 
 #include <memory>
 
-#include "types.hpp"
+#include "json_forward.hpp"
 #include "identifier.hpp"
 #include "hash.hpp"
 
+////////////////////////////////////////////////////////////////////////////////
 namespace bkrl {
+////////////////////////////////////////////////////////////////////////////////
 
 enum class message_type : uint16_t {
     invalid = 0
+  
   , none = 0
 
   , welcome
@@ -60,7 +63,7 @@ namespace detail { class message_map_impl; }
 class message_map {
 public:
     message_map();
-     ~message_map();
+    ~message_map();
 
     void load(json::cref data);
 
@@ -71,4 +74,6 @@ private:
     std::unique_ptr<detail::message_map_impl> impl_;
 };
 
+////////////////////////////////////////////////////////////////////////////////
 } //namespace bkrl
+////////////////////////////////////////////////////////////////////////////////

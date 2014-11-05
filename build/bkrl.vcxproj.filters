@@ -19,7 +19,7 @@
     <Filter Include="include\detail">
       <UniqueIdentifier>{43b39a0e-bd24-468f-a472-580ebb5aac42}</UniqueIdentifier>
     </Filter>
-    <Filter Include="include\types">
+    <Filter Include="include\common">
       <UniqueIdentifier>{ab00555a-df4b-49e4-9de0-8f0b7f869479}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -119,9 +119,6 @@
     <ClInclude Include="..\include\engine_client.hpp">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\texture_type.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\enum_map.hpp">
       <Filter>include</Filter>
     </ClInclude>
@@ -135,9 +132,6 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\grid.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\tile_type.hpp">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\exception.hpp">
@@ -228,16 +222,28 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\hash.hpp">
-      <Filter>include\types</Filter>
+      <Filter>include\common</Filter>
     </ClInclude>
     <ClInclude Include="..\include\types.hpp">
-      <Filter>include\types</Filter>
+      <Filter>include\common</Filter>
     </ClInclude>
     <ClInclude Include="..\include\string.hpp">
-      <Filter>include\types</Filter>
+      <Filter>include\common</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pch.hpp">
-      <Filter>include\types</Filter>
+      <Filter>include\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\json_forward.hpp">
+      <Filter>include\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\tiles.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\enum_forward.hpp">
+      <Filter>include\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\render_types.hpp">
+      <Filter>include\common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

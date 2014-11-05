@@ -161,12 +161,12 @@ renderer::create_texture(path_string_ref const filename) {
 }
 
 texture
-renderer::create_texture(uint8_t const* buffer, size_t const width, size_t const height) {
+renderer::create_texture(void const* const buffer, tex_coord_i const width, tex_coord_i const height) {
     return impl_->create_texture(buffer, width, height);
 }
 
 texture
-renderer::create_texture(size_t const width, size_t const height) {
+renderer::create_texture(tex_coord_i const width, tex_coord_i const height) {
     return impl_->create_texture(width, height);
 }
 

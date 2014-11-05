@@ -1,103 +1,267 @@
 #include "tile_sheet.hpp"
-#include "texture_type.hpp"
-#include "util.hpp"
-#include "assert.hpp"
-#include "algorithm.hpp"
+#include "tiles.hpp"
 #include "json.hpp"
-#include "hash.hpp"
+#include "renderer.hpp"
 
-#include <utf8.h>
+#include <boost/container/flat_map.hpp>
 
-using namespace bkrl;
+namespace jc = bkrl::json::common;
 
-namespace {
-class tilemap_parser {
+class bkrl::detail::tile_map_impl {
 public:
-    using cref = json::cref;
+    using tile_pos = tile_map::tile_pos;
 
-    tilemap_parser(cref data) {
-        json::require_object(data);
-        rule_root(data);
+    tile_pos operator[](texture_type const type) const {
+        auto const it = mappings_.find(type);
+        if (it == std::cend(mappings_)) {
+            BK_TODO_FAIL();
+        }
+
+        return it->second;
     }
 
-    void rule_root(cref value) {
-        json::common::get_filetype(value, json::common::filetype_tilemap);
+    path_string_ref filename() const noexcept { return info().filename; }
+
+    tex_coord_i tile_w() const noexcept { return info().tile_w; }
+    tex_coord_i tile_h() const noexcept { return info().tile_h; }
+
+    tile_map_info const& info() const noexcept {
+        return info_;
+    }
+
+    void load(json::cref data) {
+        reset_();
+        rule_root(data);
+    }
+    
+    void rule_root(json::cref value) {
+        jc::get_filetype(value, jc::filetype_tilemap);
+
         rule_tile_size(value);
         rule_filename(value);
         rule_mappings(value);
-
-        map_.reset(std::move(mappings_));
     }
 
-    void rule_tile_size(cref value) {
-        auto const size = json::require_array(value[json::common::field_tile_size], 2, 2);
+    void rule_tile_size(json::cref value) {
+        auto const& size = json::require_array(value[jc::field_tile_size], 2, 2);
 
-        map_.tile_w = json::require_int(size[0]);
-        map_.tile_h = json::require_int(size[1]);
+        info_.tile_w = json::require_int<int16_t>(size[0]);
+        info_.tile_h = json::require_int<int16_t>(size[1]);
+
+        if (info_.tile_w <= 0) {
+            BK_TODO_FAIL();
+        }
+
+        if (info_.tile_h <= 0) {
+            BK_TODO_FAIL();
+        }
     }
 
-    void rule_filename(cref value) {
-        map_.filename = json::common::get_filename(value);
+    void rule_filename(json::cref value) {
+        info_.filename = jc::get_filename(value);
     }
 
-    void rule_mappings(cref value) {
-        auto const mappings = json::require_array(value[json::common::field_mappings]);
+    void rule_mappings(json::cref value) {
+        auto const& mappings = json::require_array(value[jc::field_mappings]);
+
         for (auto const& mapping : mappings.array_items()) {
             rule_mapping(mapping);
         }
     }
 
-    void rule_mapping(cref value) {
-        json::require_array(value, 2, 2);
+    void rule_mapping(json::cref value) {
+        json::require_array(value, 3, 3);
 
-        auto const type_str  = json::require_string(value[0]);
-        auto const id        = json::require_int(value[1]);
-
-        auto const type_hash = slash_hash32(type_str);
-
-        auto const type = enum_map<texture_type>::get(type_hash);
-        if (type.value == texture_type::invalid) {
-            if (type_hash != type.hash) {
-                BK_TODO_FAIL();
-            }
+        auto const texture = json::require_string(value[0]);
+        auto const ix      = json::require_int<int16_t>(value[1]);
+        auto const iy      = json::require_int<int16_t>(value[2]);
+        
+        if (ix < 0 || iy < 0) {
+            BK_TODO_FAIL();
         }
 
-        auto const result = mappings_.emplace(type.value, id);
+        auto const hash = slash_hash32(texture);
+        auto const type = from_hash<texture_type>(hash);
+
+        if (type == texture_type::invalid
+         && hash != slash_hash32("invalid")
+        ) {
+            BK_TODO_FAIL();
+        }
+
+        auto const id = tile_pos {ix * info_.tile_w, iy * info_.tile_h};
+
+        auto const result = mappings_.emplace(type, id);
         if (!result.second) {
             BK_TODO_FAIL();
         }
     }
-
-    operator tilemap&&() && {
-        return std::move(map_);
-    }
 private:
-    tilemap::map_t mappings_;
-    tilemap map_;
+    void reset_() {
+        info_.tile_w = 0;
+        info_.tile_h = 0;
+        info_.filename.clear();
+        mappings_.clear();
+    }
+
+    tile_map_info info_;
+
+    boost::container::flat_map<texture_type, tile_pos> mappings_;
 };
 
-}
+class bkrl::detail::tile_sheet_impl {
+public:
+    using tile_pos = tile_sheet::tile_pos;
 
-tilemap bkrl::load_tilemap(json::cref data) {
-    return tilemap_parser {data};
-}
+    tile_sheet_impl(renderer& r, tile_map const& map)
+      : tile_map_  {&map}
+      , tile_info_ {&map.info()}
+      , texture_   {r.create_texture(map.filename())}
+      , tiles_x_   {texture_.width()  / map.tile_w()}
+      , tiles_y_   {texture_.height() / map.tile_h()}
+    {
+    }
+
+    tile_sheet_impl(renderer& r, tile_map_info const& info)
+      : texture_   {r.create_texture(info.filename)}
+      , tile_info_ {&info_}
+      , info_      {info}
+      , tiles_x_   {texture_.width()  / info.tile_w}
+      , tiles_y_   {texture_.height() / info.tile_h}
+    {
+    }
+
+    tex_coord_i sheet_w() const noexcept { return texture_.width(); }
+    tex_coord_i sheet_h() const noexcept { return texture_.height(); }
+
+    tex_coord_i tile_w() const noexcept { return tile_info_->tile_w; }
+    tex_coord_i tile_h() const noexcept { return tile_info_->tile_h; }
+
+    tex_coord_i tile_count_x() const noexcept { return tiles_x_; }
+    tex_coord_i tile_count_y() const noexcept { return tiles_y_; }
+
+    tile_map const& get_map() const noexcept {
+        return *tile_map_;
+    }
+
+    texture& get_texture() noexcept { return texture_; }
+    texture const& get_texture() const noexcept { return texture_; }
+
+    void render(renderer& r, tile_pos const tp, int const x, int const y) const {
+        auto const w = tile_w();
+        auto const h = tile_h();
+
+        auto const src = bkrl::make_rect_size<int>(tp.x,  tp.y,  w, h);
+        auto const dst = bkrl::make_rect_size<int>(x * w, y * w, w, h);
+        
+        r.draw_texture(texture_, src, dst);
+    }
+    
+    void render(renderer& r, tile_pos const tp, ipoint2 const p) const {
+        render(r, tp, p.x, p.y);
+    }
+private:
+    tile_map const*      tile_map_  = nullptr;
+    tile_map_info const* tile_info_ = nullptr;
+
+    tile_map_info info_;
+    texture       texture_;
+
+    tex_coord_i tiles_x_   = 0;
+    tex_coord_i tiles_y_   = 0;
+};
 
 ////////////////////////////////////////////////////////////////////////////////
-// bkrl::tile_sheet implementation
+// tile_map
 ////////////////////////////////////////////////////////////////////////////////
-tile_sheet::tile_sheet(tilemap const& map, renderer& render)
-  : map_ {&map}
-  , tile_size_ (ipoint2 {map.tile_w, map.tile_h})
-  , tile_texture_ {render.create_texture(map.filename)}
-  , tile_x_ {tile_texture_.width()  / map.tile_w}
-  , tile_y_ {tile_texture_.height() / map.tile_h}
+bkrl::tile_map::tile_map()
+  : impl_ {std::make_unique<detail::tile_map_impl>()}
 {
 }
 
-tile_sheet::tile_sheet(renderer& render, path_string_ref const filename, ipoint2 const size)
-  : tile_texture_ {render.create_texture(filename)}
-  , tile_size_ (size)
-  , tile_x_ {tile_texture_.width()  / tile_size_.x}
-  , tile_y_ {tile_texture_.height() / tile_size_.y}
+bkrl::tile_map::tile_map(tile_map&&) = default;
+bkrl::tile_map::~tile_map() = default;
+
+bkrl::tile_map::tile_pos bkrl::tile_map::operator[](texture_type const type) const {
+    return (*impl_)[type];
+}
+
+void bkrl::tile_map::load(json::cref data) {
+    impl_->load(data);
+}
+
+bkrl::path_string_ref bkrl::tile_map::filename() const noexcept {
+    return impl_->filename();
+}
+
+bkrl::tex_coord_i bkrl::tile_map::tile_w() const noexcept {
+    return impl_->tile_w();
+}
+
+bkrl::tex_coord_i bkrl::tile_map::tile_h() const noexcept {
+    return impl_->tile_h();
+}
+
+bkrl::tile_map_info const& bkrl::tile_map::info() const noexcept {
+    return impl_->info();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// tile_sheet
+////////////////////////////////////////////////////////////////////////////////
+bkrl::tile_sheet::tile_sheet(renderer& r, tile_map const& map)
+  : impl_ {std::make_unique<detail::tile_sheet_impl>(r, map)}
 {
+}
+
+bkrl::tile_sheet::tile_sheet(renderer& r, tile_map_info const& info)
+  : impl_ {std::make_unique<detail::tile_sheet_impl>(r, info)}
+{
+}
+
+bkrl::tile_sheet::tile_sheet(tile_sheet&&) = default;
+bkrl::tile_sheet::~tile_sheet() = default;
+
+bkrl::tex_coord_i bkrl::tile_sheet::sheet_w() const noexcept {
+    return impl_->sheet_w();
+}
+
+bkrl::tex_coord_i bkrl::tile_sheet::sheet_h() const noexcept {
+    return impl_->sheet_h();
+}
+
+bkrl::tex_coord_i bkrl::tile_sheet::tile_w() const noexcept {
+    return impl_->tile_w();
+}
+
+bkrl::tex_coord_i bkrl::tile_sheet::tile_h() const noexcept {
+    return impl_->tile_h();
+}
+
+bkrl::tex_coord_i bkrl::tile_sheet::tile_count_x() const noexcept {
+    return impl_->tile_count_x();
+}
+
+bkrl::tex_coord_i bkrl::tile_sheet::tile_count_y() const noexcept {
+    return impl_->tile_count_y();
+}
+
+void bkrl::tile_sheet::render(renderer& r, tile_pos tp, int x, int y) const {
+    impl_->render(r, tp, x, y);
+}
+
+void bkrl::tile_sheet::render(renderer& r, tile_pos tp, ipoint2 p) const {
+    impl_->render(r, tp, p);
+}
+
+bkrl::tile_map const& bkrl::tile_sheet::get_map() const noexcept {
+    return impl_->get_map();
+}
+
+bkrl::texture& bkrl::tile_sheet::get_texture() noexcept {
+    return impl_->get_texture();
+}
+
+bkrl::texture const& bkrl::tile_sheet::get_texture() const noexcept {
+    return impl_->get_texture();
 }

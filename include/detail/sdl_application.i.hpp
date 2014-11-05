@@ -476,8 +476,8 @@ public:
     ////////////////////////////////////////////////////////////////////////////
 
     texture create_texture(path_string_ref filename);
-    texture create_texture(uint8_t const* buffer, size_t width, size_t height);
-    texture create_texture(size_t width, size_t height);
+    texture create_texture(void const* buffer, tex_coord_i width, tex_coord_i height);
+    texture create_texture(tex_coord_i width, tex_coord_i height);
     void delete_texture(texture& tex);
 
     void update_texture(texture& tex, void const* data, int pitch, int x, int y, int w, int h);
@@ -641,7 +641,10 @@ renderer_impl::create_texture_(SDL_Surface* const surface) {
         sdl_unique<SDL_Texture> {result}
     );
 
-    return texture {handle, id, surface->w, surface->h};
+    auto const w = static_cast<tex_coord_i>(surface->w);
+    auto const h = static_cast<tex_coord_i>(surface->h);
+
+    return texture {handle, id, w, h};
 }
 
 texture
@@ -667,8 +670,8 @@ renderer_impl::create_texture(path_string_ref const filename) {
 
 texture
 renderer_impl::create_texture(
-    size_t const width
-  , size_t const height
+    tex_coord_i const width
+  , tex_coord_i const height
 ) {
     auto const result = SDL_CreateTexture(
         renderer_.get()
@@ -697,13 +700,13 @@ renderer_impl::create_texture(
 //------------------------------------------------------------------------------
 texture
 renderer_impl::create_texture(
-    uint8_t const* const buffer
-  , size_t         const width
-  , size_t         const height
+    void const* const buffer
+  , tex_coord_i const width
+  , tex_coord_i const height
 ) {
     //HACK TODO is SDL broken here wrt to constness?
     auto const result = SDL_CreateRGBSurfaceFrom(
-        const_cast<uint8_t*>(buffer)
+        const_cast<void*>(buffer)
       , width
       , height
       , 32

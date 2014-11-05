@@ -11,8 +11,8 @@
 
 #include "math.hpp"
 #include "types.hpp"
-#include "texture_type.hpp"
-#include "tile_type.hpp"
+#include "tiles.hpp"
+#include "render_types.hpp"
 
 namespace bkrl {
 //==============================================================================
@@ -51,11 +51,11 @@ namespace attribute {
     };
 
     template <> struct traits<texture_id_t> {
-        using type = bkrl::texture_id;
+        using type = bkrl::tex_point_i;
     };
 
     template <> struct traits<room_id_t> {
-        using type = bkrl::room_id;
+        using type = bkrl::room_id; //TODO change to a tagged type
     };
 
     template <> struct traits<data_t> {
@@ -203,7 +203,7 @@ private:
     //--------------------------------------------------------------------------
     // room_id
     //--------------------------------------------------------------------------
-    texture_id_t get_(attribute::room_id_t, grid_index const x, grid_index const y) const {
+    room_id_t get_(attribute::room_id_t, grid_index const x, grid_index const y) const {
         auto const i = linearize(width_, height_, x, y);
         return room_id_[i];
     }

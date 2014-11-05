@@ -773,7 +773,7 @@ public:
     //--------------------------------------------------------------------------
     //!
     //--------------------------------------------------------------------------
-    ipoint2 get_required_texture_size() const {
+    tex_point_i get_required_texture_size() const {
         return {1024, 1024};
     }
 private:

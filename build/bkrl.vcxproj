@@ -194,6 +194,7 @@
     <ClInclude Include="..\include\detail\freetype_text.i.hpp" />
     <ClInclude Include="..\include\detail\sdl_application.i.hpp" />
     <ClInclude Include="..\include\engine_client.hpp" />
+    <ClInclude Include="..\include\enum_forward.hpp" />
     <ClInclude Include="..\include\enum_map.hpp" />
     <ClInclude Include="..\include\exception.hpp" />
     <ClInclude Include="..\include\font.hpp" />
@@ -206,6 +207,7 @@
     <ClInclude Include="..\include\items.hpp" />
     <ClInclude Include="..\include\iterable.hpp" />
     <ClInclude Include="..\include\json.hpp" />
+    <ClInclude Include="..\include\json_forward.hpp" />
     <ClInclude Include="..\include\keyboard.hpp" />
     <ClInclude Include="..\include\macros.hpp" />
     <ClInclude Include="..\include\math.hpp" />
@@ -214,13 +216,13 @@
     <ClInclude Include="..\include\entity.hpp" />
     <ClInclude Include="..\include\random.hpp" />
     <ClInclude Include="..\include\renderer.hpp" />
+    <ClInclude Include="..\include\render_types.hpp" />
     <ClInclude Include="..\include\scancode.hpp" />
     <ClInclude Include="..\include\scope_exit.hpp" />
     <ClInclude Include="..\include\spatial_map.hpp" />
     <ClInclude Include="..\include\string.hpp" />
-    <ClInclude Include="..\include\texture_type.hpp" />
     <ClInclude Include="..\include\tile_sheet.hpp" />
-    <ClInclude Include="..\include\tile_type.hpp" />
+    <ClInclude Include="..\include\tiles.hpp" />
     <ClInclude Include="..\include\time.hpp" />
     <ClInclude Include="..\include\types.hpp" />
     <ClInclude Include="..\include\util.hpp" />

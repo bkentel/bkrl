@@ -12,6 +12,7 @@
 #include "types.hpp"
 #include "math.hpp"
 #include "util.hpp"
+#include "render_types.hpp"
 
 namespace bkrl {
 
@@ -127,26 +128,28 @@ public:
     {
     }
 
-    texture(handle_t handle, unsigned id, int width, int height)
+    texture(handle_t handle, unsigned id, tex_coord_i width, tex_coord_i height)
       : handle_ {handle}
       , id_     {id}
       , width_  {width}
       , height_ {height}
     {
+        BK_ASSERT_DBG(width  >= 0);
+        BK_ASSERT_DBG(height >= 0);
     }
 
     handle_t handle() const { return handle_; }
 
     unsigned id() const { return id_; }
 
-    int width()  const { return width_; }
-    int height() const { return height_; }
+    tex_coord_i width()  const { return width_; }
+    tex_coord_i height() const { return height_; }
 private:
     handle_t handle_;
     unsigned id_;
 
-    int width_;
-    int height_;
+    tex_coord_i width_;
+    tex_coord_i height_;
 };
 
 //==============================================================================
@@ -253,11 +256,11 @@ public:
 
     texture create_texture(path_string_ref filename);
     
-    texture create_texture(uint8_t const* buffer, size_t width, size_t height);
+    texture create_texture(void const* buffer, tex_coord_i width, tex_coord_i height);
     
-    texture create_texture(size_t width, size_t height);
+    texture create_texture(tex_coord_i width, tex_coord_i height);
     
-    texture create_texture(ipoint2 const size) {
+    texture create_texture(tex_point_i const size) {
         return create_texture(size.x, size.y);
     }
 

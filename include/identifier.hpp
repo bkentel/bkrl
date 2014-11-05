@@ -33,12 +33,12 @@ class tagged_id {
 public:
     using value_type = T;
 
-    tagged_id() noexcept : value_ {0} {}
-    explicit tagged_id(T const value) noexcept : value_ {value} {}
+    inline tagged_id() noexcept : value_ {0} {}
+    inline explicit tagged_id(T const value) noexcept : value_ {value} {}
 
-    bool operator< (tagged_id const rhs) const noexcept { return value_ <  rhs.value_; }
-    bool operator==(tagged_id const rhs) const noexcept { return value_ == rhs.value_; }
-    bool operator!=(tagged_id const rhs) const noexcept { return value_ != rhs.value_; }
+    inline bool operator< (tagged_id const rhs) const noexcept { return value_ <  rhs.value_; }
+    inline bool operator==(tagged_id const rhs) const noexcept { return value_ == rhs.value_; }
+    inline bool operator!=(tagged_id const rhs) const noexcept { return value_ != rhs.value_; }
 private:
     T value_;
 };

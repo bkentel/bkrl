@@ -73,7 +73,7 @@ bkrl::data_definitions::load_config(json::cref value) {
 
 void
 bkrl::data_definitions::load_texmap(json::cref value) {
-    tilemap_ = bkrl::load_tilemap(value);
+    tilemap_.load(value);
 }
 
 void

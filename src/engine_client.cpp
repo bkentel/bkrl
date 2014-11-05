@@ -276,10 +276,10 @@ public:
       , data_definitions const& definitions
       , item_store&        items
       , player&            player
-      , tile_sheet const&  tiles_sheet
-      , tile_sheet const&  entities_sheet
-      , grid_size const    width
-      , grid_size const    height
+      , tile_sheet&  tiles_sheet
+      , tile_sheet&  entities_sheet
+      , grid_size const width
+      , grid_size const height
     )
       : definitions_ {&definitions}
       , item_store_ {&items}
@@ -325,7 +325,7 @@ public:
         auto const w = grid_.width();
         auto const h = grid_.height();
 
-        auto const& sheet = *tiles_sheet_;
+        auto& sheet = *tiles_sheet_;
         
         //set to default color
         r.set_color_mod(sheet.get_texture());
@@ -340,14 +340,17 @@ public:
 
     //--------------------------------------------------------------------------
     void draw_entities(renderer& r) {
-        auto const& sheet = *entities_sheet_;
-        auto&       tex   = sheet.get_texture();
+        auto& sheet = *entities_sheet_;
+        auto& tex   = sheet.get_texture();
+
+        auto const tile_w = sheet.tile_w();
+        auto const tile_h = sheet.tile_h();
 
         auto const& entities = definitions_->get_entities();
         
         r.set_color_mod(tex, make_color(255, 255, 255));
         auto const player_pos = player_->position();
-        sheet.render(r, 13, 13, player_pos.x, player_pos.y);
+        sheet.render(r, tile_sheet::tile_pos {13 * tile_w, 13 * tile_h}, player_pos);
 
         for (auto const& mob : mobs_) {
             auto const p = mob.position();
@@ -358,24 +361,22 @@ public:
 
             auto const tx = rinfo.tile_x;
             auto const ty = rinfo.tile_y;
+            auto const tp = tile_sheet::tile_pos {tx * tile_w, ty * tile_h};
 
             auto const color = make_color(rinfo.r, rinfo.g, rinfo.b);
 
             r.set_color_mod(tex, color);
-            sheet.render(r, tx, ty, p.x, p.y);
+            sheet.render(r, tp, p);
 
             auto const health = mob.health();
             if (health.size() != 0) {
-                auto const tw = sheet.tile_width();
-                auto const th = sheet.tile_height();
-
                 constexpr auto bar_border = 1;
                 constexpr auto bar_size   = 2;
                 constexpr auto bar_h      = bar_size + bar_border * 2;
 
-                auto const x = p.x * tw;
-                auto const y = p.y * th - bar_h;
-                auto const w = tw;
+                auto const x = p.x * tile_w;
+                auto const y = p.y * tile_h - bar_h;
+                auto const w = tile_w;
                 auto const h = bar_size;
 
                 auto const percent = static_cast<float>(health.hi - health.size()) / health.hi;
@@ -402,9 +403,12 @@ public:
     void draw_items(renderer& r) {
         auto const& sheet = *tiles_sheet_;
 
+        auto const tile_w = sheet.tile_w();
+        auto const tile_h = sheet.tile_h();
+
         for (auto const& i : items_) {
             auto const p = i.first;
-            sheet.render(r, 15, 0, p.x, p.y);
+            sheet.render(r, tile_sheet::tile_pos {15 * tile_w, 0 * tile_h}, p);
         }
     }
 
@@ -645,7 +649,8 @@ public:
         }
 
         auto const type = grid_.get(attribute::tile_type, p);
-        auto result = enum_map<tile_type>::get(type).string.to_string();
+        //auto result = enum_map<tile_type>::get(type).string.to_string();
+        auto result = utf8string {"Here:\n"};
 
         auto const stack = items_.at(p);
         if (stack) {
@@ -1051,18 +1056,18 @@ private:
     }
 
     //--------------------------------------------------------------------------
-    tilemap const& get_tile_map_() const {
+    tile_map const& get_tile_map_() const {
         BK_ASSERT_DBG(tiles_sheet_);
-        return tiles_sheet_->map();
+        return tiles_sheet_->get_map();
     }
 private:
     //--------------------------------------------------------------------------
     data_definitions const* definitions_;
 
-    item_store* item_store_ = nullptr;
+    item_store* item_store_     = nullptr;
 
-    tile_sheet const* tiles_sheet_ = nullptr;
-    tile_sheet const* entities_sheet_ = nullptr;
+    tile_sheet* tiles_sheet_    = nullptr;
+    tile_sheet* entities_sheet_ = nullptr;
 
     player*           player_;
 
@@ -1165,8 +1170,8 @@ public:
     }
 
     void center_on_grid(int const x, int const y) noexcept {
-        auto const tw = sheet_->tile_width();
-        auto const th = sheet_->tile_height();
+        auto const tw = sheet_->tile_w();
+        auto const th = sheet_->tile_h();
 
         auto const px = (x + 0.5f) * tw;
         auto const py = (y + 0.5f) * th;
@@ -1210,8 +1215,8 @@ public:
     ipoint2 screen_to_grid(int const x, int const y) const {
         auto const p = screen_to_point(x, y);
 
-        auto const tw = sheet_->tile_width();
-        auto const th = sheet_->tile_height();
+        auto const tw = sheet_->tile_w();
+        auto const th = sheet_->tile_h();
 
         auto const gx = std::trunc(p.x / tw);
         auto const gy = std::trunc(p.y / th);
@@ -1220,8 +1225,8 @@ public:
     }
 
     ipoint2 grid_to_screen(int const x, int const y) const {
-        auto const tw = sheet_->tile_width();
-        auto const th = sheet_->tile_height();
+        auto const tw = sheet_->tile_w();
+        auto const th = sheet_->tile_h();
 
         return {
             static_cast<int>(x * tw * zoom_ + scroll_x_)
@@ -1437,6 +1442,16 @@ public:
       , font_size = 20
     };
 
+    static tile_sheet make_entities_sheet_(renderer& r) {
+        tile_map_info const info {
+            static_cast<int16_t>(entity_definitions::tile_size().x)
+          , static_cast<int16_t>(entity_definitions::tile_size().y)
+          , entity_definitions::tile_filename()
+        };
+
+        return tile_sheet {r, info};
+    }
+
     explicit impl_t(data_definitions& defs)
       : definitions_        {&defs}
       , config_             {&defs.get_config()}
@@ -1447,8 +1462,8 @@ public:
       , font_lib_           {}
       , font_face_          {renderer_, font_lib_, config_->font_name, font_size}
       , last_message_       {}
-      , tile_sheet_         {defs.get_tilemap(), renderer_}
-      , entities_sheet_     {renderer_, entity_definitions::tile_filename(), entity_definitions::tile_size()}
+      , tile_sheet_         {renderer_, defs.get_tilemap()}
+      , entities_sheet_     {make_entities_sheet_(renderer_)}
       , view_               {tile_sheet_, app_.client_width(), app_.client_height()}
       , cur_level_          {nullptr}
       , player_             {}
@@ -1735,8 +1750,8 @@ public:
         auto const dist_x = w - q.x;
         auto const dist_y = h - q.y;
 
-        auto const tw = tile_sheet_.tile_width();
-        auto const th = tile_sheet_.tile_height();
+        auto const tw = tile_sheet_.tile_w();
+        auto const th = tile_sheet_.tile_h();
 
         auto scroll_x = 0;
         auto scroll_y = 0;

@@ -51,7 +51,7 @@ public:
 
     config             const& get_config()   const { return config_; }
     keymap             const& get_keymap()   const { return keymap_; }
-    tilemap            const& get_tilemap()  const { return tilemap_; }
+    tile_map           const& get_tilemap()  const { return tilemap_; }
     message_map        const& get_messages() const { return messages_; }
     item_definitions   const& get_items()    const { return item_defs_; }
     entity_definitions const& get_entities() const { return entity_defs_; }
@@ -60,7 +60,7 @@ private:
 
     config             config_;
     keymap             keymap_;
-    tilemap            tilemap_;
+    tile_map           tilemap_;
     message_map        messages_;
     item_definitions   item_defs_;
     entity_definitions entity_defs_;

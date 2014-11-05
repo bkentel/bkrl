@@ -1,72 +1,92 @@
 { "file_type": "ITEM"
+, "file_name": "./data/items.bmp"
+, "tile_size": [18, 18]
+, "stack_tiles": [
+    [0, [15, 0]]
+  , [5, [10, 2]]
+  ]
 , "definitions": [
     { "id": "ARMOR_LEATHER_COAT"
+    , "tile": [15, 0]
     , "type": "armor"
     , "slot": ["arms_upper", "arms_lower", "chest"]
     }
   , { "id": "ARMOR_LEATHER_LEGGINGS"
+    , "tile": [15, 0]
     , "type": "armor"
     , "slot": ["legs_upper", "legs_lower", "waist"]
     }
   , { "id": "ARMOR_LEATHER_BOOTS"
+    , "tile": [15, 0]
     , "type": "armor"
     , "slot": ["feet"]
     }
   , { "id": "ARMOR_LEATHER_CAP"
+    , "tile": [15, 0]
     , "type": "armor"
     , "slot": ["head"]
     }
   , { "id": "WEAPON_SWORD_SHORT"
+    , "tile": [15, 0]
     , "type": "weapon"
     , "slot": ["hand_main"]
     , "damage_min": ["uniform", 1, 3]
     , "damage_max": ["constant", 6]
     }
   , { "id": "WEAPON_LONG_SWORD"
+    , "tile": [15, 2]
     , "type": "weapon"
     , "slot": ["hand_main"]
     , "damage_min": ["uniform", 1, 3]
     , "damage_max": ["constant", 10]
     }
   , { "id": "WEAPON_HAMMER"
+    , "tile": [15, 2]
     , "type": "weapon"
     , "slot": ["hand_main"]
     , "damage_min": ["uniform", 3, 4]
     , "damage_max": ["constant", 6]
     }
   , { "id": "WEAPON_STAFF"
+    , "tile": [15, 2]
     , "type": "weapon"
     , "slot": ["hand_main", "hand_off"]
     , "damage_min": ["uniform", 1, 2]
     , "damage_max": ["constant", 5]
     }
   , { "id": "WEAPON_SHORT_BOW"
+    , "tile": [4, 14]
     , "type": "weapon"
     , "slot": ["hand_main", "hand_off"]
     , "damage_min": ["normal", 2, 0.5]
     , "damage_max": ["normal", 2, 0.5]
     }
   , { "id": "WEAPON_DAGGER"
+    , "tile": [15, 2]
     , "type": "weapon"
     , "slot": ["hand_main"]
     , "damage_min": ["uniform", 2, 3]
     , "damage_max": ["constant", 4]
     }
   , { "id": "WEAPON_AXE"
+    , "tile": [15, 2]
     , "type": "weapon"
     , "slot": ["hand_main"]
     , "damage_min": ["uniform", 1, 4]
     , "damage_max": ["constant", 10]
     }
   , { "id": "POTION_HEALTH_MINOR"
+    , "tile": [13, 10]
     , "type": "potion"
     , "stack": 25
     }
   , { "id": "POTION_HEALTH_MEDIUM"
+    , "tile": [13, 10]
     , "type": "potion"
     , "stack": 25
     }
   , { "id": "POTION_HEALTH_MAJOR"
+    , "tile": [13, 10]
     , "type": "potion"
     , "stack": 25
     }

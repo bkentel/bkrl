@@ -2,8 +2,7 @@
 #include "algorithm.hpp"
 
 #include "command_type.hpp"
-#include "texture_type.hpp"
-#include "tile_type.hpp"
+#include "tiles.hpp"
 #include "scancode.hpp"
 #include "keyboard.hpp"
 #include "messages.hpp"
@@ -35,8 +34,8 @@ using PREFIX##_vector_t = std::vector<PREFIX##_map_t::value_type>
 //------------------------------------------------------------------------------
 template class bkrl::enum_map<bkrl::key_modifier_type>;
 template class bkrl::enum_map<bkrl::scancode>;
-template class bkrl::enum_map<bkrl::tile_type>;
-template class bkrl::enum_map<bkrl::texture_type>;
+//template class bkrl::enum_map<bkrl::tile_type>;
+//template class bkrl::enum_map<bkrl::texture_type>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // enum_map<key_modifier_type>
@@ -340,91 +339,91 @@ namespace {
 ////////////////////////////////////////////////////////////////////////////////
 // enum_map<tile_type>
 ////////////////////////////////////////////////////////////////////////////////
-namespace {
-    BK_DECLARE_ENUM_TYPES(tile, tile_type);
-
-    tile_vector_t tile_init_string_to_value() {
-        using tile_type = bkrl::tile_type;
-
-        tile_vector_t result;
-
-        BK_ENUMMAP_ADD_STRING(result, tile_type, invalid);
-        BK_ENUMMAP_ADD_STRING(result, tile_type, empty);
-        BK_ENUMMAP_ADD_STRING(result, tile_type, floor);
-        BK_ENUMMAP_ADD_STRING(result, tile_type, wall);
-        BK_ENUMMAP_ADD_STRING(result, tile_type, door);
-        BK_ENUMMAP_ADD_STRING(result, tile_type, stair);
-        BK_ENUMMAP_ADD_STRING(result, tile_type, corridor);
-
-        bkrl::sort(result, tile_map_t::value_type::less_hash);
-
-        return result;
-    }
-
-    //take a copy of string_to_value
-    tile_vector_t tile_init_value_to_string(tile_vector_t string_to_value) {
-        bkrl::sort(string_to_value, tile_map_t::value_type::less_enum);
-        return string_to_value;
-    }
-}
+//namespace {
+//    BK_DECLARE_ENUM_TYPES(tile, tile_type);
+//
+//    tile_vector_t tile_init_string_to_value() {
+//        using tile_type = bkrl::tile_type;
+//
+//        tile_vector_t result;
+//
+//        BK_ENUMMAP_ADD_STRING(result, tile_type, invalid);
+//        BK_ENUMMAP_ADD_STRING(result, tile_type, empty);
+//        BK_ENUMMAP_ADD_STRING(result, tile_type, floor);
+//        BK_ENUMMAP_ADD_STRING(result, tile_type, wall);
+//        BK_ENUMMAP_ADD_STRING(result, tile_type, door);
+//        BK_ENUMMAP_ADD_STRING(result, tile_type, stair);
+//        BK_ENUMMAP_ADD_STRING(result, tile_type, corridor);
+//
+//        bkrl::sort(result, tile_map_t::value_type::less_hash);
+//
+//        return result;
+//    }
+//
+//    //take a copy of string_to_value
+//    tile_vector_t tile_init_value_to_string(tile_vector_t string_to_value) {
+//        bkrl::sort(string_to_value, tile_map_t::value_type::less_enum);
+//        return string_to_value;
+//    }
+//}
 
 ////////////////////////////////////////////////////////////////////////////////
 // enum_map<texture_type>
 ////////////////////////////////////////////////////////////////////////////////
-namespace {
-    BK_DECLARE_ENUM_TYPES(texture, texture_type);
-
-    texture_vector_t texture_init_string_to_value() {
-        using texture_type = bkrl::texture_type;
-
-        texture_vector_t result;
-
-        BK_ENUMMAP_ADD_STRING(result, texture_type, invalid);
-
-        BK_ENUMMAP_ADD_STRING(result, texture_type, floor);
-
-        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_none);
-        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_n);
-        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_s);
-        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_e);
-        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_w);
-        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_ns);
-        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_ew);
-        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_se);
-        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_sw);
-        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_ne);
-        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_nw);
-        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_nse);
-        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_nsw);
-        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_sew);
-        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_new);
-        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_nsew);
-
-        BK_ENUMMAP_ADD_STRING(result, texture_type, door_closed);
-        BK_ENUMMAP_ADD_STRING(result, texture_type, door_opened);
-
-        BK_ENUMMAP_ADD_STRING(result, texture_type, corridor);
-
-        BK_ENUMMAP_ADD_STRING(result, texture_type, stair_up);
-        BK_ENUMMAP_ADD_STRING(result, texture_type, stair_down);
-
-        bkrl::sort(result, texture_map_t::value_type::less_hash);
-
-        return result;
-    }
-
-    //take a copy of string_to_value
-    texture_vector_t texture_init_value_to_string(texture_vector_t string_to_value) {
-        bkrl::sort(string_to_value, texture_map_t::value_type::less_enum);
-        return string_to_value;
-    }
-}
+//namespace {
+//    BK_DECLARE_ENUM_TYPES(texture, texture_type);
+//
+//    texture_vector_t texture_init_string_to_value() {
+//        using texture_type = bkrl::texture_type;
+//
+//        texture_vector_t result;
+//
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, invalid);
+//
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, floor);
+//
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_none);
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_n);
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_s);
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_e);
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_w);
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_ns);
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_ew);
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_se);
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_sw);
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_ne);
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_nw);
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_nse);
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_nsw);
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_sew);
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_new);
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, wall_nsew);
+//
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, door_closed);
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, door_opened);
+//
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, corridor);
+//
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, stair_up);
+//        BK_ENUMMAP_ADD_STRING(result, texture_type, stair_down);
+//
+//        bkrl::sort(result, texture_map_t::value_type::less_hash);
+//
+//        return result;
+//    }
+//
+//    //take a copy of string_to_value
+//    texture_vector_t texture_init_value_to_string(texture_vector_t string_to_value) {
+//        bkrl::sort(string_to_value, texture_map_t::value_type::less_enum);
+//        return string_to_value;
+//    }
+//}
 
 //------------------------------------------------------------------------------
 BK_DEFINE_ENUM_VARS(modifier, false);
 BK_DEFINE_ENUM_VARS(scancode, true);
-BK_DEFINE_ENUM_VARS(tile, false);
-BK_DEFINE_ENUM_VARS(texture, false);
+//BK_DEFINE_ENUM_VARS(tile, false);
+//BK_DEFINE_ENUM_VARS(texture, false);
 
 //------------------------------------------------------------------------------
 #undef BK_DEFINE_ENUM_VARS
@@ -469,4 +468,64 @@ bkrl::from_hash(hash_t const hash) {
     };
 
     return find_mapping(mappings, hash, ct::invalid);
+}
+
+template <> bkrl::tile_type
+bkrl::from_hash(hash_t const hash) {
+    using mapping_t = string_ref_mapping<tile_type> const;
+    using tt = tile_type;
+
+    static mapping_t mappings[] = {
+        {"invalid",  tt::invalid}
+      , {"empty",    tt::empty}
+      , {"floor",    tt::floor}
+      , {"wall",     tt::wall}
+      , {"door",     tt::door}
+      , {"stair",    tt::stair}
+      , {"corridor", tt::corridor}
+    };
+
+    return find_mapping(mappings, hash, tt::invalid);
+}
+
+template <> bkrl::texture_type
+bkrl::from_hash(hash_t const hash) {
+    using mapping_t = string_ref_mapping<texture_type> const;
+    using tt = texture_type;
+
+    static mapping_t mappings[] = {
+        {"invalid",     tt::invalid}
+      , {"floor",       tt::floor}
+
+      , {"wall_none",   tt::wall_none}
+
+      , {"wall_n",      tt::wall_n}
+      , {"wall_s",      tt::wall_s}
+      , {"wall_e",      tt::wall_e}
+      , {"wall_w",      tt::wall_w}
+
+      , {"wall_ns",     tt::wall_ns}
+      , {"wall_ew",     tt::wall_ew}
+      , {"wall_se",     tt::wall_se}
+      , {"wall_sw",     tt::wall_sw}
+      , {"wall_ne",     tt::wall_ne}
+      , {"wall_nw",     tt::wall_nw}
+
+      , {"wall_nse",    tt::wall_nse}
+      , {"wall_nsw",    tt::wall_nsw}
+      , {"wall_sew",    tt::wall_sew}
+      , {"wall_new",    tt::wall_new}
+      
+      , {"wall_nsew",   tt::wall_nsew}
+
+      , {"door_closed", tt::door_closed}
+      , {"door_opened", tt::door_opened}
+
+      , {"corridor",    tt::corridor}
+
+      , {"stair_up",    tt::stair_up}
+      , {"stair_down",  tt::stair_down}
+    };
+
+    return find_mapping(mappings, hash, tt::invalid);
 }
