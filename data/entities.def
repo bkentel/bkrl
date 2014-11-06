@@ -1,6 +1,7 @@
 { "file_type": "ENTITY"
 , "file_name": "./data/entities.bmp"
 , "tile_size": [18, 18]
+, "player" : [13, 13]
 , "definitions": [
     { "id": "SKELETON"
     , "items": ["uniform", 0, 2]

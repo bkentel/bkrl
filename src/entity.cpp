@@ -12,19 +12,18 @@ struct bkrl::entity_definition {
     using dist_t = random::random_dist;
 
     static path_string tile_filename;
-    static ipoint2     tile_size;
+    static tex_point_i tile_size;
 
     entity_def_id id;      //!< entity id
     utf8string    id_string;
     dist_t        items;   //!< number of carried items
-    int16_t       tile_x;  //!< tile x index
-    int16_t       tile_y;  //!< tile y index
-    uint8_t       r, g, b; //!< color
+    tex_point_i   tile_position = tex_point_i {0, 0};
+    rgba8         tile_color = rgba8 {255, 255, 255, 255};
     dist_t        health;  //!< health
 };
 
 bkrl::path_string bkrl::entity_definition::tile_filename {};
-bkrl::ipoint2     bkrl::entity_definition::tile_size     {0, 0};
+bkrl::tex_point_i bkrl::entity_definition::tile_size     {0, 0};
 
 //==============================================================================
 //!
@@ -38,6 +37,8 @@ public:
     static utf8string const undefined_name;
     static utf8string const undefined_text;
     static locale     const undefined_locale;
+
+    static tex_point_i player_tile;
 
     ////////////////////////////////////////////////////////////////////////////
     entity_definitions_impl() {
@@ -53,16 +54,27 @@ public:
         jc::get_filetype(value, jc::filetype_entity);
 
         rule_ent_tiles(value);
+        rule_ent_player_tile(value);
         rule_ent_definitions(value);
     }
 
     //--------------------------------------------------------------------------
     void rule_ent_tiles(cref value) {
-        definition::tile_filename = json::common::get_filename(value); //TODO
+        //TODO
+        definition::tile_filename = jc::get_filename(value);
+        definition::tile_size = jc::get_positive_int_pair<tex_coord_i>(
+            value[jc::field_tile_size]
+        );
+    }
 
-        auto const size = json::require_array(value[jc::field_tile_size], 2, 2);
-        definition::tile_size.x = json::require_int(size[0]);
-        definition::tile_size.y = json::require_int(size[1]);
+    //--------------------------------------------------------------------------
+    void rule_ent_player_tile(cref value) {
+        auto const w = entity_definition::tile_size.x;
+        auto const h = entity_definition::tile_size.y;
+        
+        auto const p = jc::get_positive_int_pair<tex_coord_i>(value[jc::field_player]);
+        player_tile.x = w * p.x;
+        player_tile.y = h * p.y;
     }
 
     //--------------------------------------------------------------------------
@@ -100,23 +112,25 @@ public:
 
     //--------------------------------------------------------------------------
     void rule_ent_tile(cref value) {
-        auto const tile = json::require_array(value[jc::field_tile], 2, 2);
-        
-        cur_def_.tile_x = json::require_int<int16_t>(tile[0]);
-        cur_def_.tile_y = json::require_int<int16_t>(tile[1]);
+        auto const w = entity_definition::tile_size.x;
+        auto const h = entity_definition::tile_size.y;
 
-        if (cur_def_.tile_x < 0 || cur_def_.tile_y < 0) {
-            BK_TODO_FAIL();
-        }
+        auto const p = jc::get_tile_index(value);
+        
+        cur_def_.tile_position.x = w * p.x;
+        cur_def_.tile_position.y = h * p.y;
     }
 
     //--------------------------------------------------------------------------
     void rule_ent_color(cref value) {
         auto const color = json::require_array(value[jc::field_color], 3, 3);
         
-        cur_def_.r = json::require_int<uint8_t>(color[0]);
-        cur_def_.g = json::require_int<uint8_t>(color[1]);
-        cur_def_.b = json::require_int<uint8_t>(color[2]);
+        cur_def_.tile_color = make_color(
+            json::require_int<uint8_t>(color[0])
+          , json::require_int<uint8_t>(color[1])
+          , json::require_int<uint8_t>(color[2])
+          , 255
+        );
     }
 
     //--------------------------------------------------------------------------
@@ -235,6 +249,8 @@ bkrl::entity_locale const bkrl::detail::entity_definitions_impl::undefined_local
   , undefined_text
 };
 
+bkrl::tex_point_i bkrl::detail::entity_definitions_impl::player_tile {0, 0};
+
 ////////////////////////////////////////////////////////////////////////////////
 // entity
 ////////////////////////////////////////////////////////////////////////////////
@@ -243,8 +259,8 @@ bkrl::entity::render_info(entity_definitions const& defs) const {
     auto const& def = defs.get_definition(id);
     
     return entity_render_info_t {
-        def.tile_x, def.tile_y
-      , def.r, def.g, def.b, 255 //TODO
+        def.tile_position
+      , def.tile_color
     };
 }
 
@@ -258,12 +274,18 @@ bool bkrl::entity::apply_damage(damage_t const delta) {
 ////////////////////////////////////////////////////////////////////////////////
 // entity_definitions
 ////////////////////////////////////////////////////////////////////////////////
-bkrl::path_string const& bkrl::entity_definitions::tile_filename() {
+bkrl::path_string_ref bkrl::entity_definitions::tile_filename() {
     return entity_definition::tile_filename;
 }
 
-bkrl::ipoint2 bkrl::entity_definitions::tile_size() {
+//------------------------------------------------------------------------------
+bkrl::tex_point_i bkrl::entity_definitions::tile_size() {
     return entity_definition::tile_size;
+}
+
+//------------------------------------------------------------------------------
+bkrl::tex_point_i bkrl::entity_definitions::player_tile() {
+    return detail::entity_definitions_impl::player_tile;
 }
 
 //------------------------------------------------------------------------------

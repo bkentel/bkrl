@@ -7,22 +7,22 @@
   ]
 , "definitions": [
     { "id": "ARMOR_LEATHER_COAT"
-    , "tile": [15, 0]
+    , "tile": [14, 9]
     , "type": "armor"
     , "slot": ["arms_upper", "arms_lower", "chest"]
     }
   , { "id": "ARMOR_LEATHER_LEGGINGS"
-    , "tile": [15, 0]
+    , "tile": [14, 3]
     , "type": "armor"
     , "slot": ["legs_upper", "legs_lower", "waist"]
     }
   , { "id": "ARMOR_LEATHER_BOOTS"
-    , "tile": [15, 0]
+    , "tile": [6, 1]
     , "type": "armor"
     , "slot": ["feet"]
     }
   , { "id": "ARMOR_LEATHER_CAP"
-    , "tile": [15, 0]
+    , "tile": [15, 8]
     , "type": "armor"
     , "slot": ["head"]
     }

@@ -8,6 +8,7 @@
 #include "types.hpp"
 #include "items.hpp"
 #include "identifier.hpp"
+#include "render_types.hpp"
 
 #include "random.hpp"
 
@@ -39,8 +40,10 @@ struct entity_locale {
 //==============================================================================
 class entity_definitions {
 public:
-    static path_string const& tile_filename();
-    static ipoint2            tile_size();
+    static path_string_ref tile_filename();
+    static tex_point_i     tile_size();
+
+    static tex_point_i player_tile();
 
     entity_definitions();
     ~entity_definitions();
@@ -73,9 +76,8 @@ struct entity_data_t {
 //! The data needed to render an entity.
 //==============================================================================
 struct entity_render_info_t {
-    int16_t tile_x;     //!< tile x index
-    int16_t tile_y;     //!< tile y index
-    uint8_t r, g, b, a; //!< color
+    tex_point_i tex_position;
+    rgba8       tex_color;
 };
 
 //==============================================================================
@@ -92,7 +94,7 @@ public:
     entity(entity const&)            = delete;
     entity& operator=(entity const&) = delete;
 
-    entity_render_info_t render_info(defs_t defs) const; 
+    entity_render_info_t render_info(defs_t defs) const;
 
     string_ref name(defs_t defs) const;
 
@@ -143,6 +145,13 @@ public:
 
     using defs_t  = item_definitions const&;
     using items_t = item_store const&;
+
+    entity_render_info_t render_info(entity_definitions const&) const {
+        return entity_render_info_t {
+            entity_definitions::player_tile()
+          , rgba8 {255, 255, 255, 255}
+        };
+    }
 
     item_stack get_equippable(defs_t idefs, items_t istore) const {
         item_stack result;

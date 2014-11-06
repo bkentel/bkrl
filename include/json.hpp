@@ -6,6 +6,7 @@
 #include "types.hpp"
 #include "util.hpp"
 #include "random.hpp"
+#include "render_types.hpp"
 
 #include "identifier.hpp"
 
@@ -273,6 +274,7 @@ extern field_string const field_window_pos;
 extern field_string const field_font;
 extern field_string const field_type;
 extern field_string const field_slot;
+extern field_string const field_player;
 //------------------------------------------------------------------------------
 extern field_string const filetype_config;
 extern field_string const filetype_locale;
@@ -372,6 +374,32 @@ inline optional<lang_id> get_locale(cref value, string_ref const expected_type) 
 //!
 //==============================================================================
 random::random_dist get_random(cref json);
+
+template <typename T = int>
+inline point2d<T> get_positive_int_pair(cref json) {
+    auto const arr = require_array(json, 2, 2);
+    auto const xi  = require_int<T>(arr[0]);
+    auto const yi  = require_int<T>(arr[1]);
+
+    if (xi < T {0} || yi < T {0}) {
+        BK_TODO_FAIL();
+    }
+
+    return {xi, yi};
+}
+
+inline point2d<int16_t> get_tile_index(cref json) {
+    return get_positive_int_pair<int16_t>(json[field_tile]);
+}
+
+inline string_ref get_id_string(cref json) {
+    auto const str = require_string(json[field_id]);
+    if (str.length() < 1) {
+        BK_TODO_FAIL();
+    }
+
+    return str;
+}
 
 } //namespace common
 }} //namespace bkrl::json

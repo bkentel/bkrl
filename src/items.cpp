@@ -125,6 +125,32 @@ bkrl::from_hash(hash_t const hash) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// item_definition
+////////////////////////////////////////////////////////////////////////////////
+struct bkrl::item_definition {
+    using dist_t = random::random_dist;
+
+    static path_string tile_filename;
+    static tex_point_i tile_size;
+
+    item_def_id id;
+    utf8string  id_string;
+    tex_point_i tile_position = tex_point_i {0, 0};
+
+    equip_slot_flags slots;
+
+    int max_stack = 1;
+
+    dist_t damage_min;
+    dist_t damage_max;
+
+    item_type type = item_type::none;
+};
+
+bkrl::path_string bkrl::item_definition::tile_filename {};
+bkrl::tex_point_i bkrl::item_definition::tile_size     {0, 0};
+
+////////////////////////////////////////////////////////////////////////////////
 // item_stack
 ////////////////////////////////////////////////////////////////////////////////
 namespace {
@@ -247,6 +273,15 @@ bool bkrl::item::can_equip(equipment const& eq, defs_t defs) const {
     return false; //TODO
 }
 
+bkrl::item_render_info_t bkrl::item::render_info(defs_t defs) const {
+    auto const& idef = defs.get_definition(id);
+    
+    return item_render_info_t {
+        idef.tile_position
+      , 255, 255, 255, 255
+    };
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // item_store
 ////////////////////////////////////////////////////////////////////////////////
@@ -309,24 +344,6 @@ bkrl::item_store::operator[](item_id id) const {
     return (*impl_)[id];
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// item_definition
-////////////////////////////////////////////////////////////////////////////////
-struct bkrl::item_definition {
-    using dist_t = random::random_dist;
-
-    item_def_id id;
-    utf8string  id_string;
-
-    equip_slot_flags slots;
-
-    int max_stack;
-
-    dist_t damage_min;
-    dist_t damage_max;  
-
-    item_type type;
-};
 
 ////////////////////////////////////////////////////////////////////////////////
 // item_definitions
@@ -399,12 +416,39 @@ public:
         json::require_object(value);
 
         rule_def_filetype(value);
+        rule_def_tiles(value);
         rule_def_definitions(value);
     }
 
     //--------------------------------------------------------------------------
     void rule_def_filetype(cref value) {
         jc::get_filetype(value, jc::filetype_item);
+    }
+
+    //--------------------------------------------------------------------------
+    void rule_def_tiles(cref value) {
+        //TODO
+        item_definition::tile_filename = jc::get_path_string(value[jc::field_filename]);
+        item_definition::tile_size = jc::get_positive_int_pair<tex_coord_i>(
+            value[jc::field_tile_size]
+        );
+    }
+
+    //--------------------------------------------------------------------------
+    void rule_def_stacktiles(cref value) {
+        json::require_array(value);
+    }
+
+    //--------------------------------------------------------------------------
+    void rule_def_stacktile(cref value) {
+        json::require_array(value, 2, 2);
+
+        auto const size = json::require_int(value[0]);
+        if (size < 0) {
+            BK_TODO_FAIL();
+        }
+
+        auto const tile = jc::get_positive_int_pair(value[1]);
     }
 
     //--------------------------------------------------------------------------
@@ -423,18 +467,26 @@ public:
     void rule_def_definition(cref value) {
         rule_def_id(value);
         rule_def_type(value);
+        rule_def_tile(value);
 
         definitions_.emplace(cur_def_.id, std::move(cur_def_));
     }
 
     //--------------------------------------------------------------------------
-    void rule_def_id(cref value) {
-        auto const str = json::require_string(value[jc::field_id]);
-        if (str.length() < 1) {
-            BK_TODO_FAIL();
-        }
+    void rule_def_tile(cref value) {
+        auto const w = item_definition::tile_size.x;
+        auto const h = item_definition::tile_size.y;
 
-        cur_def_.id = item_def_id {bkrl::slash_hash32(str)};
+        auto const p = jc::get_tile_index(value);
+        cur_def_.tile_position.x = w * p.x;
+        cur_def_.tile_position.y = h * p.y;        
+    }
+
+    //--------------------------------------------------------------------------
+    void rule_def_id(cref value) {
+        auto const str = jc::get_id_string(value);
+
+        cur_def_.id        = item_def_id {bkrl::slash_hash32(str)};
         cur_def_.id_string = str.to_string();
     }
 
@@ -613,6 +665,16 @@ bkrl::item_definitions::item_definitions(item_definitions&&) = default;
 bkrl::item_definitions::item_definitions()
   : impl_ {std::make_unique<detail::item_definitions_impl>()}
 {
+}
+
+//------------------------------------------------------------------------------
+bkrl::path_string_ref bkrl::item_definitions::tile_filename() {
+    return item_definition::tile_filename;
+}
+
+//------------------------------------------------------------------------------    
+bkrl::tex_point_i bkrl::item_definitions::tile_size() {
+    return item_definition::tile_size;
 }
 
 //------------------------------------------------------------------------------

@@ -13,6 +13,8 @@
 #include "identifier.hpp"
 #include "types.hpp"
 #include "hash.hpp"
+#include "string.hpp"
+#include "render_types.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
 namespace bkrl {
@@ -215,6 +217,14 @@ private:
 #endif
 
 //==============================================================================
+//! The data needed to render an entity.
+//==============================================================================
+struct item_render_info_t {
+    tex_point_i tex_position;
+    rgba8       tex_color;
+};
+
+//==============================================================================
 //! Instance specific realization of an item definition.
 //==============================================================================
 class item {
@@ -234,13 +244,13 @@ public:
     bool can_equip(defs_t defs) const;
     bool can_equip(equipment const& eq, defs_t defs) const;
 
+    item_render_info_t render_info(defs_t defs) const;
+
     item_def_id     id;
     item_birthplace origin;
     item_data_t     data;
     item_type       type;
 };
-
-
 
 //==============================================================================
 //! A container of all items.
@@ -278,6 +288,9 @@ struct item_locale {
 //==============================================================================
 class item_definitions {
 public:
+    static path_string_ref tile_filename();
+    static tex_point_i tile_size();
+
     item_definitions();
     item_definitions(item_definitions&&);
     ~item_definitions();

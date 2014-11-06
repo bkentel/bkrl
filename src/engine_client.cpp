@@ -278,6 +278,7 @@ public:
       , player&            player
       , tile_sheet&  tiles_sheet
       , tile_sheet&  entities_sheet
+      , tile_sheet&  items_sheet
       , grid_size const width
       , grid_size const height
     )
@@ -285,6 +286,7 @@ public:
       , item_store_ {&items}
       , tiles_sheet_    {&tiles_sheet}
       , entities_sheet_ {&entities_sheet}
+      , items_sheet_ {&items_sheet}
       , player_      {&player}
       , grid_        {width, height}
     {
@@ -316,8 +318,6 @@ public:
             mob.move_to(p);
             mobs_.sort();
         }
-
-        
     }
 
     //--------------------------------------------------------------------------
@@ -339,6 +339,65 @@ public:
     }
 
     //--------------------------------------------------------------------------
+    void draw_player(renderer& r) {
+        auto& sheet = *entities_sheet_;
+        auto& tex   = sheet.get_texture();
+
+        auto const& entities    = definitions_->get_entities();
+        auto const& the_player  = *player_;
+        auto const  player_info = the_player.render_info(entities);
+        auto const  player_pos  = the_player.position();
+
+        r.set_color_mod(tex, player_info.tex_color);
+        sheet.render(r, player_info.tex_position, player_pos);
+    }
+
+    //--------------------------------------------------------------------------
+    void draw_health_bar(
+        renderer& r
+      , entity const& ent
+      , ipoint2 const p
+      , ipoint2 const tile_size
+    ) {
+        constexpr auto bar_border = 1;
+        constexpr auto bar_size   = 2;
+        constexpr auto bar_h      = bar_size + bar_border * 2;
+
+        static auto const backcolor = make_color(100, 100, 100);
+        static auto const forecolor = make_color(255, 50, 50);
+
+        auto const tw = tile_size.x;
+        auto const th = tile_size.x;
+
+        auto const x = p.x * tw;
+        auto const y = p.y * th - bar_h;
+        auto const w = tw;
+        auto const h = bar_size;
+
+        auto const& hp = ent.health();
+
+        auto const percent = static_cast<float>(hp.hi - hp.size()) / hp.hi;
+        auto const width   = static_cast<int>(std::round(percent * w));
+
+        auto const back_rect = make_rect_size(
+            x - bar_border
+          , y - bar_border
+          , w + bar_border * 2
+          , h + bar_border * 2
+        );
+
+        auto const fore_rect = make_rect_size(
+            x, y, width, h
+        );
+
+        r.set_draw_color(backcolor);
+        r.draw_filled_rect(back_rect);
+
+        r.set_draw_color(forecolor);
+        r.draw_filled_rect(fore_rect);
+    }
+
+    //--------------------------------------------------------------------------
     void draw_entities(renderer& r) {
         auto& sheet = *entities_sheet_;
         auto& tex   = sheet.get_texture();
@@ -347,68 +406,45 @@ public:
         auto const tile_h = sheet.tile_h();
 
         auto const& entities = definitions_->get_entities();
-        
-        r.set_color_mod(tex, make_color(255, 255, 255));
-        auto const player_pos = player_->position();
-        sheet.render(r, tile_sheet::tile_pos {13 * tile_w, 13 * tile_h}, player_pos);
 
-        for (auto const& mob : mobs_) {
-            auto const p = mob.position();
-            
-            auto const rinfo = mob.render_info(entities);
+        for (auto const& ent : mobs_) {
+            auto const p     = ent.position();          
+            auto const rinfo = ent.render_info(entities);
 
-            //auto const& e = entities.get_definition(mob.id);
+            r.set_color_mod(tex, rinfo.tex_color);
+            sheet.render(r, rinfo.tex_position, p);
 
-            auto const tx = rinfo.tile_x;
-            auto const ty = rinfo.tile_y;
-            auto const tp = tile_sheet::tile_pos {tx * tile_w, ty * tile_h};
-
-            auto const color = make_color(rinfo.r, rinfo.g, rinfo.b);
-
-            r.set_color_mod(tex, color);
-            sheet.render(r, tp, p);
-
-            auto const health = mob.health();
+            auto const health = ent.health();
             if (health.size() != 0) {
-                constexpr auto bar_border = 1;
-                constexpr auto bar_size   = 2;
-                constexpr auto bar_h      = bar_size + bar_border * 2;
-
-                auto const x = p.x * tile_w;
-                auto const y = p.y * tile_h - bar_h;
-                auto const w = tile_w;
-                auto const h = bar_size;
-
-                auto const percent = static_cast<float>(health.hi - health.size()) / health.hi;
-                auto const w2 = static_cast<int>(std::round(percent*w));
-
-                r.set_draw_color(make_color(100, 100, 100));
-                r.draw_filled_rect(make_rect_size(
-                    x - bar_border
-                  , y - bar_border
-                  , w + bar_border * 2
-                  , h + bar_border * 2
-                ));
-
-                r.set_draw_color(make_color(255, 50, 50));
-                r.draw_filled_rect(make_rect_size(
-                    x, y, w2, h
-                ));
-
+                draw_health_bar(r, ent, p, ipoint2 {tile_w, tile_h});
             }
         }
     }
 
     //--------------------------------------------------------------------------
     void draw_items(renderer& r) {
-        auto const& sheet = *tiles_sheet_;
+        auto const& sheet = *items_sheet_;
 
         auto const tile_w = sheet.tile_w();
         auto const tile_h = sheet.tile_h();
 
+        auto const& istore = *item_store_;
+        auto const& idefs  = definitions_->get_items();
+
         for (auto const& i : items_) {
-            auto const p = i.first;
-            sheet.render(r, tile_sheet::tile_pos {15 * tile_w, 0 * tile_h}, p);
+            ipoint2 const     stack_pos = i.first;
+            item_stack const& stack     = i.second;
+
+            auto const tile_pos = [&] {
+                if (stack.size() == 1) {
+                    auto const rinfo = istore[stack.at(0)].render_info(idefs);
+                    return rinfo.tex_position;
+                }
+
+                return tile_sheet::tile_pos {tile_w * 15, tile_h * 0};
+            }();
+
+            sheet.render(r, tile_pos, stack_pos);
         }
     }
 
@@ -417,6 +453,7 @@ public:
         draw_map(r);
         draw_items(r);
         draw_entities(r);
+        draw_player(r);
     }
 
     //--------------------------------------------------------------------------
@@ -1068,6 +1105,7 @@ private:
 
     tile_sheet* tiles_sheet_    = nullptr;
     tile_sheet* entities_sheet_ = nullptr;
+    tile_sheet* items_sheet_    = nullptr;
 
     player*           player_;
 
@@ -1452,6 +1490,16 @@ public:
         return tile_sheet {r, info};
     }
 
+    static tile_sheet make_items_sheet_(renderer& r) {
+        tile_map_info const info {
+            static_cast<int16_t>(item_definitions::tile_size().x)
+          , static_cast<int16_t>(item_definitions::tile_size().y)
+          , item_definitions::tile_filename()
+        };
+
+        return tile_sheet {r, info};
+    }
+
     explicit impl_t(data_definitions& defs)
       : definitions_        {&defs}
       , config_             {&defs.get_config()}
@@ -1464,6 +1512,7 @@ public:
       , last_message_       {}
       , tile_sheet_         {renderer_, defs.get_tilemap()}
       , entities_sheet_     {make_entities_sheet_(renderer_)}
+      , items_sheet_        {make_items_sheet_(renderer_)}
       , view_               {tile_sheet_, app_.client_width(), app_.client_height()}
       , cur_level_          {nullptr}
       , player_             {}
@@ -1579,6 +1628,7 @@ public:
               , player_
               , tile_sheet_
               , entities_sheet_
+              , items_sheet_
               , level_w
               , level_h
             );
@@ -2219,6 +2269,7 @@ private:
 
     tile_sheet tile_sheet_;
     tile_sheet entities_sheet_;
+    tile_sheet items_sheet_;
 
     view   view_;
 
