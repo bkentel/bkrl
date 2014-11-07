@@ -339,7 +339,7 @@ public:
     
     //--------------------------------------------------------------------------
     void advance(random::generator& trivial) {
-        for (auto& mob : mobs_) {
+        for (auto& ent : entities_) {
             auto const roll = random::percent(trivial);
             if (roll < 25) {
                 continue;
@@ -350,17 +350,17 @@ public:
                 continue;
             }
 
-            if (!can_move_by(mob, v)) {
+            if (!can_move_by(ent, v)) {
                 continue;
             }
 
-            auto const p = mob.position() + v;
+            auto const p = ent.position() + v;
             if (entity_at(p)) {
                 continue;
             }
 
-            mob.move_to(p);
-            mobs_.sort();
+            ent.move_to(p);
+            entities_.sort();
         }
     }
 
@@ -451,7 +451,7 @@ public:
 
         auto const& entities = definitions_->get_entities();
 
-        for (auto const& ent : mobs_) {
+        for (auto const& ent : entities_) {
             auto const p     = ent.position();          
             auto const rinfo = ent.render_info(entities);
 
@@ -611,7 +611,7 @@ public:
             return static_cast<entity const&>(*player_);
         }
 
-        return mobs_.at(p);
+        return entities_.at(p);
     }
 
     optional<entity&> entity_at(ipoint2 const p) {
@@ -619,7 +619,7 @@ public:
             return static_cast<entity&>(*player_);
         }
 
-        return mobs_.at(p);
+        return entities_.at(p);
     }
 
     //--------------------------------------------------------------------------
@@ -644,7 +644,7 @@ public:
             add_to_stack_(make_stack_at_(p), std::move(object.items()));
         }
 
-        mobs_.remove(p);
+        entities_.remove(p);
 
         boost::format fmt {msgs[message_type::kill_regular].data()};
         fmt % name;
@@ -727,12 +727,11 @@ public:
     //--------------------------------------------------------------------------
     utf8string get_inspect_msg(ipoint2 const p)  const {
         if (!grid_.is_valid(p)) {
-            return "";
+            return utf8string {};
         }
 
         auto const type = grid_.get(attribute::tile_type, p);
-        //auto result = enum_map<tile_type>::get(type).string.to_string();
-        auto result = utf8string {"Here:\n"};
+        auto result = utf8string {"Here:"};
 
         auto const stack = items_.at(p);
         if (stack) {
@@ -747,10 +746,9 @@ public:
             }
         }
         
-        auto const mob = mobs_.at(p);
-        if (mob) {
+        if (auto const ent = entity_at(p)) {
             auto const& entities = definitions_->get_entities();
-            auto const& id       = mob->id;
+            auto const& id       = ent->id;
             auto const& name     = entities.get_locale(id).name;
             auto const& text     = entities.get_locale(id).text;
 
@@ -960,9 +958,9 @@ private:
 
             BK_ASSERT_DBG(intersects(bounds, p));
 
-            auto mob = generate_entity(substantive, entities, items, *item_store_, stable);
+            auto ent = generate_entity(substantive, entities, items, *item_store_, stable);
 
-            while (!can_move_to(mob, p)) {
+            while (!can_move_to(ent, p)) {
                 auto const v = random::direction(substantive);
                 auto const q = p + v;
                 
@@ -978,16 +976,15 @@ private:
                 auto const v = random::direction(substantive);
                 auto const q = p + v;
                 
-                if (intersects(bounds, q) && can_move_to(mob, q)) {
+                if (intersects(bounds, q) && can_move_to(ent, q)) {
                     p = q;
                 }
             }
 
-            mob.move_to(p);
-            mobs_.emplace(std::move(mob));
+            ent.move_to(p);
+            entities_.emplace(std::move(ent));
+            entities_.sort();
         }
-
-        mobs_.sort();
     }
 
     //--------------------------------------------------------------------------
@@ -1163,7 +1160,7 @@ private:
     ipoint2 stairs_down_ = ipoint2 {0, 0};
 
     spatial_map<item_stack, int> items_;
-    spatial_map<entity>          mobs_;
+    spatial_map<entity>          entities_;
 };
 
 //==============================================================================
