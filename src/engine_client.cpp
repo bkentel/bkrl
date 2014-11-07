@@ -264,6 +264,54 @@ merge_walls(
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
+struct tile_sheet_set {
+    enum type {
+        world, items, entities
+      , enum_size
+    };
+
+    static tile_sheet make_world_(renderer& r, data_definitions& defs) {
+        return tile_sheet {r, defs.get_tilemap()};
+    }
+
+    static tile_sheet make_items_(renderer& r) {
+        tile_map_info const info {
+            static_cast<int16_t>(item_definitions::tile_size().x)
+          , static_cast<int16_t>(item_definitions::tile_size().y)
+          , item_definitions::tile_filename()
+        };
+
+        return tile_sheet {r, info};
+    }
+
+    static tile_sheet make_entities_(renderer& r) {
+        tile_map_info const info {
+            static_cast<int16_t>(entity_definitions::tile_size().x)
+          , static_cast<int16_t>(entity_definitions::tile_size().y)
+          , entity_definitions::tile_filename()
+        };
+
+        return tile_sheet {r, info};
+    }
+
+    tile_sheet_set(renderer& r, data_definitions& defs) {
+        sheets_.reserve(static_cast<size_t>(enum_size));
+        sheets_.emplace_back(make_world_(r, defs));
+        sheets_.emplace_back(make_items_(r));
+        sheets_.emplace_back(make_entities_(r));
+    }
+
+    tile_sheet& operator[](type const t) {
+        return sheets_[enum_value(t)];
+    }
+
+    tile_sheet const& operator[](type const t) const {
+        return sheets_[enum_value(t)];
+    }
+
+    std::vector<tile_sheet> sheets_;
+};
+
 //==============================================================================
 //! One level within the world.
 //==============================================================================
@@ -276,19 +324,15 @@ public:
       , data_definitions const& definitions
       , item_store&        items
       , player&            player
-      , tile_sheet&  tiles_sheet
-      , tile_sheet&  entities_sheet
-      , tile_sheet&  items_sheet
+      , tile_sheet_set&  tiles_sheets
       , grid_size const width
       , grid_size const height
     )
-      : definitions_ {&definitions}
-      , item_store_ {&items}
-      , tiles_sheet_    {&tiles_sheet}
-      , entities_sheet_ {&entities_sheet}
-      , items_sheet_ {&items_sheet}
-      , player_      {&player}
-      , grid_        {width, height}
+      : definitions_  {&definitions}
+      , item_store_   {&items}
+      , tiles_sheets_ {&tiles_sheets}
+      , player_       {&player}
+      , grid_         {width, height}
     {
         generate_(substantive, trivial);
     }
@@ -325,7 +369,7 @@ public:
         auto const w = grid_.width();
         auto const h = grid_.height();
 
-        auto& sheet = *tiles_sheet_;
+        auto& sheet = (*tiles_sheets_)[tile_sheet_set::world];
         
         //set to default color
         r.set_color_mod(sheet.get_texture());
@@ -340,7 +384,7 @@ public:
 
     //--------------------------------------------------------------------------
     void draw_player(renderer& r) {
-        auto& sheet = *entities_sheet_;
+        auto& sheet = (*tiles_sheets_)[tile_sheet_set::entities];
         auto& tex   = sheet.get_texture();
 
         auto const& entities    = definitions_->get_entities();
@@ -399,7 +443,7 @@ public:
 
     //--------------------------------------------------------------------------
     void draw_entities(renderer& r) {
-        auto& sheet = *entities_sheet_;
+        auto& sheet = (*tiles_sheets_)[tile_sheet_set::entities];
         auto& tex   = sheet.get_texture();
 
         auto const tile_w = sheet.tile_w();
@@ -423,7 +467,8 @@ public:
 
     //--------------------------------------------------------------------------
     void draw_items(renderer& r) {
-        auto const& sheet = *items_sheet_;
+        auto& sheet = (*tiles_sheets_)[tile_sheet_set::items];
+        auto& tex   = sheet.get_texture();
 
         auto const tile_w = sheet.tile_w();
         auto const tile_h = sheet.tile_h();
@@ -1001,8 +1046,15 @@ private:
     //! update the texture id for the tile at @p p using the mappings in @p map.
     //------------------------------------------------------------------------------
     void update_texture_id_(grid_point const p) {
-        auto const& map = get_tile_map_();
+        auto const& map = (*tiles_sheets_)[tile_sheet_set::world].get_map();
 
+        update_texture_id_(p, map);
+    }
+
+    //------------------------------------------------------------------------------
+    //! update the texture id for the tile at @p p using the mappings in @p map.
+    //------------------------------------------------------------------------------
+    void update_texture_id_(grid_point const p, tile_map const& map) {
         auto const type = grid_.get(attribute::texture_type, p);
         auto const id   = map[type];
         grid_.set(attribute::texture_id, p, id);
@@ -1012,8 +1064,10 @@ private:
     //! update the texture id for every tile in @p grid using the mappings in @p map.
     //------------------------------------------------------------------------------
     void update_texture_id_() {
+        auto const& map = (*tiles_sheets_)[tile_sheet_set::world].get_map();
+
         for_each_xy(grid_, [&](grid_index const x, grid_index const y) {
-            update_texture_id_(grid_point {x, y});
+            update_texture_id_(grid_point {x, y}, map);
         });
     }
 
@@ -1091,21 +1145,13 @@ private:
         //more than one
         return message_type::direction_prompt;
     }
-
-    //--------------------------------------------------------------------------
-    tile_map const& get_tile_map_() const {
-        BK_ASSERT_DBG(tiles_sheet_);
-        return tiles_sheet_->get_map();
-    }
 private:
     //--------------------------------------------------------------------------
     data_definitions const* definitions_;
 
     item_store* item_store_     = nullptr;
 
-    tile_sheet* tiles_sheet_    = nullptr;
-    tile_sheet* entities_sheet_ = nullptr;
-    tile_sheet* items_sheet_    = nullptr;
+    tile_sheet_set* tiles_sheets_ = nullptr;
 
     player*           player_;
 
@@ -1480,24 +1526,12 @@ public:
       , font_size = 20
     };
 
-    static tile_sheet make_entities_sheet_(renderer& r) {
-        tile_map_info const info {
-            static_cast<int16_t>(entity_definitions::tile_size().x)
-          , static_cast<int16_t>(entity_definitions::tile_size().y)
-          , entity_definitions::tile_filename()
+    static view construct_view_(tile_sheet_set const& sheets, application const& app) {
+        return view {
+            sheets[tile_sheet_set::world]
+          , app.client_width()
+          , app.client_height()
         };
-
-        return tile_sheet {r, info};
-    }
-
-    static tile_sheet make_items_sheet_(renderer& r) {
-        tile_map_info const info {
-            static_cast<int16_t>(item_definitions::tile_size().x)
-          , static_cast<int16_t>(item_definitions::tile_size().y)
-          , item_definitions::tile_filename()
-        };
-
-        return tile_sheet {r, info};
     }
 
     explicit impl_t(data_definitions& defs)
@@ -1510,10 +1544,8 @@ public:
       , font_lib_           {}
       , font_face_          {renderer_, font_lib_, config_->font_name, font_size}
       , last_message_       {}
-      , tile_sheet_         {renderer_, defs.get_tilemap()}
-      , entities_sheet_     {make_entities_sheet_(renderer_)}
-      , items_sheet_        {make_items_sheet_(renderer_)}
-      , view_               {tile_sheet_, app_.client_width(), app_.client_height()}
+      , tile_sheets_        {renderer_, defs}
+      , view_               {construct_view_(tile_sheets_, app_)}
       , cur_level_          {nullptr}
       , player_             {}
       , input_mode_         {nullptr}
@@ -1626,9 +1658,7 @@ public:
               , *definitions_
               , item_store_
               , player_
-              , tile_sheet_
-              , entities_sheet_
-              , items_sheet_
+              , tile_sheets_
               , level_w
               , level_h
             );
@@ -1800,8 +1830,9 @@ public:
         auto const dist_x = w - q.x;
         auto const dist_y = h - q.y;
 
-        auto const tw = tile_sheet_.tile_w();
-        auto const th = tile_sheet_.tile_h();
+        auto const& sheet = tile_sheets_[tile_sheet_set::world];
+        auto const tw = sheet.tile_w();
+        auto const th = sheet.tile_h();
 
         auto scroll_x = 0;
         auto scroll_y = 0;
@@ -2267,9 +2298,7 @@ private:
 
     transitory_text_layout inspect_message_;
 
-    tile_sheet tile_sheet_;
-    tile_sheet entities_sheet_;
-    tile_sheet items_sheet_;
+    tile_sheet_set tile_sheets_;
 
     view   view_;
 
