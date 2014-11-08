@@ -77,7 +77,7 @@ struct entity_data_t {
 //==============================================================================
 struct entity_render_info_t {
     tex_point_i tex_position;
-    rgba8       tex_color;
+    argb8       tex_color;
 };
 
 //==============================================================================
@@ -149,7 +149,7 @@ public:
     entity_render_info_t render_info(entity_definitions const&) const {
         return entity_render_info_t {
             entity_definitions::player_tile()
-          , rgba8 {255, 255, 255, 255}
+          , argb8 {255, 255, 255, 255}
         };
     }
 

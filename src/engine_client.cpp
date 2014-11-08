@@ -1550,6 +1550,7 @@ public:
       , imode_selection_    {[&] {input_mode_ = nullptr;}}
       , item_list_          {font_face_, defs.get_items(), item_store_}
       , msg_log_            {font_face_, defs.get_messages()}
+      , test_list_          {font_face_}
     {
         definitions_->set_language(config_->language);
         
@@ -1561,6 +1562,36 @@ public:
         print_message(message_type::welcome);
 
         item_list_.set_position(ipoint2 {24, 128});
+        ////////////////////////////////////////////////////
+        test_list_.set_position(ipoint2 {100, 100});
+        test_list_.set_title("Equipment");
+
+        test_list_.add_col("Body");
+        test_list_.add_col("Item");
+
+        test_list_.add_row("a\t:");
+        test_list_.add_row("b\t:");
+        test_list_.add_row("c\t:");
+        test_list_.add_row("d\t:");
+        test_list_.add_row("e\t:");
+        test_list_.add_row("f\t:");
+        test_list_.add_row("g\t:");
+        test_list_.add_row("h\t:");
+        test_list_.add_row("i\t:");
+        test_list_.add_row("j\t:");
+
+        test_list_.set_text(0, 0, "Head");       test_list_.set_text(0, 1, "leather helm");
+        test_list_.set_text(1, 0, "Neck");       test_list_.set_text(1, 1, "opal pendant");
+        test_list_.set_text(2, 0, "Upper Arms"); test_list_.set_text(2, 1, "leather cuirass");
+        test_list_.set_text(3, 0, "Lower Arms"); test_list_.set_text(3, 1, "leather cuirass");
+        test_list_.set_text(4, 0, "Hands");      test_list_.set_text(4, 1, "chain gloves");
+        test_list_.set_text(5, 0, "Chest");      test_list_.set_text(5, 1, "leather cuirass");
+        test_list_.set_text(6, 0, "Waist");      test_list_.set_text(6, 1, "heavy girdle");
+        test_list_.set_text(7, 0, "Upper Legs"); test_list_.set_text(7, 1, "leather leggings");
+        test_list_.set_text(8, 0, "Lower Legs"); test_list_.set_text(8, 1, "leather leggings");
+        test_list_.set_text(9, 0, "Feet");       test_list_.set_text(9, 1, "leather boots");
+
+        test_list_.layout();
         ////////////////////////////////////////////////////
         main();
     }
@@ -1725,6 +1756,8 @@ public:
         }
 
         msg_log_.render(r, 0, 0);
+
+        test_list_.render(r);
     }
 
     void draw_level(renderer& r) {
@@ -2313,6 +2346,8 @@ private:
 
     gui::item_list   item_list_;
     gui::message_log msg_log_;
+
+    gui::list test_list_;
 
     ipoint2 mouse_pos_ = ipoint2 {0, 0};
 

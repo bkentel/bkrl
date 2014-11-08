@@ -18,7 +18,7 @@ struct bkrl::entity_definition {
     utf8string    id_string;
     dist_t        items;   //!< number of carried items
     tex_point_i   tile_position = tex_point_i {0, 0};
-    rgba8         tile_color = rgba8 {255, 255, 255, 255};
+    argb8         tile_color = argb8 {255, 255, 255, 255};
     dist_t        health;  //!< health
 };
 
