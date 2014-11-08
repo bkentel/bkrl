@@ -917,6 +917,14 @@ public:
     int ascender()   const noexcept { return face_.ascender(); }
     int descender()  const noexcept { return face_.descender(); }
     int line_gap()   const noexcept { return face_.line_gap(); }
+
+    void set_color(argb8 const color) {
+        renderer_.set_color_mod(texture_, color);
+    }
+
+    void set_color(rgb8 const color) {
+        renderer_.set_color_mod(texture_, color);
+    }
 private:
     renderer&         renderer_;
     font::face        face_;

@@ -24,12 +24,12 @@ public:
     explicit list_impl(font_face& face)
       : face_ {&face}
     {
-        update_entry_(0, 0, "");
+        update_entry_(0, 0, "\xE2\x8C\x98");
     }
     
-    enum : int {
-        auto_size = -1
-    };
+    ipoint2 get_index_at(ipoint2 p) const;
+
+    int get_selection() const;
 
     void set_title(string_ref text);
 
@@ -44,8 +44,8 @@ public:
     void add_row(string_ref header);
     void add_col(string_ref header);
 
-    void set_col_width(int width = auto_size);
-    void set_row_height(int height = auto_size);
+    void set_col_width(int width);
+    void set_row_height(int height);
 
     void set_text(int row, int col, string_ref text);
     void set_icon(int row, int col, int); //TODO
@@ -73,9 +73,15 @@ private:
     ipoint2    pos_       = ipoint2 {0, 0};
     int        rows_      = 0;
     int        cols_      = 0;
+    int        total_w_   = 0;
+    int        total_h_   = 0;
 
-    int total_w_ = 0;
-    int total_h_ = 0;
+    std::vector<cell_info> row_info_;
+    std::vector<cell_info> col_info_;
+
+    transitory_text_layout title_;
+    
+    boost::container::flat_map<key_t, transitory_text_layout, std::less<>> entries_;
 
     int border_size_        = 4;
     int title_border_size_  = 4;
@@ -86,14 +92,16 @@ private:
     argb8 color_odd_  = argb8 {255, 40, 40, 40};
     argb8 color_sel_  = argb8 {255, 100, 100, 20};
     argb8 color_back_ = argb8 {255, 80, 60, 60};
-
-    std::vector<cell_info> row_info_;
-    std::vector<cell_info> col_info_;
-
-    transitory_text_layout title_;
-    
-    boost::container::flat_map<key_t, transitory_text_layout, std::less<>> entries_;
 };
+
+bkrl::ipoint2 bkrl::gui::detail::list_impl::get_index_at(ipoint2 const p) const {
+    BK_TODO_FAIL();
+    return p;
+}
+
+int bkrl::gui::detail::list_impl::get_selection() const {
+    return selection_;
+}
 
 //--------------------------------------------------------------------------
 void bkrl::gui::detail::list_impl::update_entry_(int const row, int const col, string_ref const text) {
@@ -107,19 +115,27 @@ void bkrl::gui::detail::list_impl::update_entry_(int const row, int const col, s
 
     auto const& entry = [&]() -> transitory_text_layout const& {
         auto const key = key_t {row, col};
-        auto const it  = entries_.find(key);
+        auto const it = entries_.find(key);
+
         if (it == std::end(entries_)) {
-            auto const result = entries_.emplace(key, transitory_text_layout {*face_, text});
+            auto const result = entries_.emplace(
+                key
+              , transitory_text_layout {*face_, text}
+            );
+
             if (!result.second) {
                 BK_TODO_FAIL();
             }
 
-            if (row >= row_info_.size()) {
-                row_info_.resize(row + 1, cell_info {0, 0});
+            auto const ri = static_cast<size_t>(row);
+            auto const ci = static_cast<size_t>(col);
+
+            if (ri >= row_info_.size()) {
+                row_info_.resize(ri + 1, cell_info {0, 0});
             }
 
-            if (col >= col_info_.size()) {
-                col_info_.resize(col + 1, cell_info {0, 0});
+            if (ci >= col_info_.size()) {
+                col_info_.resize(ci + 1, cell_info {0, 0});
             }
 
             return result.first->second;
@@ -238,7 +254,21 @@ void bkrl::gui::detail::list_impl::select_prev() {
 
 //--------------------------------------------------------------------------
 void bkrl::gui::detail::list_impl::clear() {
-    BK_TODO_FAIL();
+    selection_ = 0;
+    rows_      = 0;
+    cols_      = 0;
+
+    total_w_ = 0;
+    total_h_ = 0;
+
+    row_info_.clear();
+    col_info_.clear();
+
+    title_.clear();
+    
+    for (auto& entry : entries_) {
+        entry.second.clear();
+    }
 }
 
 //--------------------------------------------------------------------------
@@ -313,67 +343,91 @@ void bkrl::gui::detail::list_impl::render(renderer& render) {
         auto const x = x0 + col_x;
         auto const y = y0 + row_y;
 
+        auto changed = false;
+
+        if (row == 0) {
+            face_->set_color(make_color(200, 200, 0));
+            changed = true;
+        } else if (col == 0) {
+            face_->set_color(make_color(0, 200, 200));
+            changed = true;
+        }
+
         txt.render(render, *face_, x, y);
+
+        if (changed) {
+            face_->set_color(make_color(200, 200, 200));
+        }
     }
+
+    face_->set_color(make_color(255, 255, 255)); //TODO
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // gui::list
 ////////////////////////////////////////////////////////////////////////////////
+bkrl::gui::list::list(list&&) = default;
+bkrl::gui::list::~list() = default;
+
 bkrl::gui::list::list(font_face& face)
   : impl_ {std::make_unique<detail::list_impl>(face)}
 {
 }
 
-bkrl::gui::list::list(list&&) = default;
-bkrl::gui::list::~list() = default;
-    
-void bkrl::gui::list::set_title(string_ref text) {
+bkrl::ipoint2 bkrl::gui::list::get_index_at(ipoint2 const p) const {
+    return impl_->get_index_at(p);
+}
+
+int bkrl::gui::list::get_selection() const {
+    return impl_->get_selection();
+}
+
+void bkrl::gui::list::set_title(string_ref const text) {
     impl_->set_title(text);
 }
 
-void bkrl::gui::list::set_col_header(int col, string_ref text) {
+void bkrl::gui::list::set_col_header(int const col, string_ref const text) {
     impl_->set_col_header(col, text);
 }
 
-void bkrl::gui::list::set_row_header(int row, string_ref text) {
+void bkrl::gui::list::set_row_header(int const row, string_ref const text) {
     impl_->set_row_header(row, text);
 }
 
-void bkrl::gui::list::set_position(ipoint2 p) {
+void bkrl::gui::list::set_position(ipoint2 const p) {
     impl_->set_position(p);
 }
 
-void bkrl::gui::list::set_row_color(argb8 even, optional<argb8> odd) {
-    impl_->set_row_color(even, odd);
-}
+//void bkrl::gui::list::set_row_color(argb8 even, optional<argb8> odd) {
+//    impl_->set_row_color(even, odd);
+//}
+//
+//void bkrl::gui::list::set_selection_color(argb8 color) {
+//    impl_->set_selection_color(color);
+//}
 
-void bkrl::gui::list::set_selection_color(argb8 color) {
-    impl_->set_selection_color(color);
-}
-
-void bkrl::gui::list::add_row(string_ref header) {
+void bkrl::gui::list::add_row(string_ref const header) {
     impl_->add_row(header);
 }
 
-void bkrl::gui::list::add_col(string_ref header) {
+void bkrl::gui::list::add_col(string_ref const header) {
     impl_->add_col(header);
 }
 
-void bkrl::gui::list::set_col_width(int width) {
-}
+//void bkrl::gui::list::set_col_width(int width) {
+//}
+//
+//void bkrl::gui::list::set_row_height(int height ) {
+//}
 
-void bkrl::gui::list::set_row_height(int height ) {
-}
-
-void bkrl::gui::list::set_text(int row, int col, string_ref text) {
+void bkrl::gui::list::set_text(int const row, int const col, string_ref const text) {
     impl_->set_text(row, col, text);
 }
 
-void bkrl::gui::list::set_icon(int row, int col, int) {
-}
+//void bkrl::gui::list::set_icon(int row, int col, int) {
+//}
     
-void bkrl::gui::list::set_selection(int row) {
+void bkrl::gui::list::set_selection(int const row) {
     impl_->set_selection(row);
 }
 

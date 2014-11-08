@@ -1569,16 +1569,16 @@ public:
         test_list_.add_col("Body");
         test_list_.add_col("Item");
 
-        test_list_.add_row("a\t:");
-        test_list_.add_row("b\t:");
-        test_list_.add_row("c\t:");
-        test_list_.add_row("d\t:");
-        test_list_.add_row("e\t:");
-        test_list_.add_row("f\t:");
-        test_list_.add_row("g\t:");
-        test_list_.add_row("h\t:");
-        test_list_.add_row("i\t:");
-        test_list_.add_row("j\t:");
+        test_list_.add_row("a\t)");
+        test_list_.add_row("b\t)");
+        test_list_.add_row("c\t)");
+        test_list_.add_row("d\t)");
+        test_list_.add_row("e\t)");
+        test_list_.add_row("f\t)");
+        test_list_.add_row("g\t)");
+        test_list_.add_row("h\t)");
+        test_list_.add_row("i\t)");
+        test_list_.add_row("j\t)");
 
         test_list_.set_text(0, 0, "Head");       test_list_.set_text(0, 1, "leather helm");
         test_list_.set_text(1, 0, "Neck");       test_list_.set_text(1, 1, "opal pendant");

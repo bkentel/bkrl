@@ -44,6 +44,14 @@ int font_face::ascender()   const { return impl_->ascender(); }
 int font_face::descender()  const { return impl_->descender(); }
 int font_face::line_gap()   const { return impl_->line_gap(); }
 
+void bkrl::font_face::set_color(rgb8 const color) {
+    impl_->set_color(color);
+}
+
+void bkrl::font_face::set_color(argb8 const color) {
+    impl_->set_color(color);
+}
+
 //------------------------------------------------------------------------------
 glyph_metrics
 font_face::metrics(

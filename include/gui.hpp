@@ -37,11 +37,9 @@ public:
     list(list&&);
     ~list();
     
-    enum : int {
-        row_header = -1
-      , col_header = -1
-      , auto_size = -1
-    };
+    ipoint2 get_index_at(ipoint2 p) const;
+
+    int get_selection() const;
 
     void set_title(string_ref text);
 
@@ -50,20 +48,20 @@ public:
 
     void set_position(ipoint2 p);
 
-    void set_row_color(argb8 even, optional<argb8> odd);
-    void set_selection_color(argb8 color);
+    //void set_row_color(argb8 even, optional<argb8> odd);
+    //void set_selection_color(argb8 color);
 
     void add_row(string_ref header);
     void add_col(string_ref header);
 
-    void set_col_width(int width = auto_size);
-    void set_row_height(int height = auto_size);
+    //void set_col_width(int width = auto_size);
+    //void set_row_height(int height = auto_size);
 
     void set_text(int row, int col, string_ref text);
-    void set_icon(int row, int col, int); //TODO
+    //void set_icon(int row, int col, int); //TODO
     
     void set_selection(int row);
-
+    
     void select_next();
     void select_prev();
 

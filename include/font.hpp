@@ -12,6 +12,7 @@
 #include "assert.hpp"
 #include "math.hpp"
 #include "util.hpp"
+#include "render_types.hpp"
 
 namespace bkrl {
 
@@ -153,8 +154,8 @@ public:
        
     texture const& get_texture() const;
 
-    void set_color(uint8_t r, uint8_t g, uint8_t b);
-    void set_alpha(uint8_t a);
+    void set_color(rgb8 color);
+    void set_color(argb8 color);
 
     int pixel_size() const;
     int ascender()   const;
