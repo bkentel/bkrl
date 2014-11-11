@@ -837,7 +837,10 @@ public:
             return itm;
         }
 
-        auto const id = *itm;
+        return unequip(*itm, defs, items);
+    }
+
+    optional<item_id> unequip(item_id id, defs_t defs, items_t items) {
         auto const& def = get_item_def(id, defs, items);
 
         for (int i = 1; i < equip_size; ++i) {
@@ -852,7 +855,7 @@ public:
 
         flags_ &= ~def.slots;
 
-        return itm;
+        return id;
     }
 
     optional<item_id> match_any(equip_slot_flags const flags) const {
@@ -937,6 +940,11 @@ bkrl::equipment::equip(item_id id, defs_t defs, items_t items) {
 bkrl::optional<bkrl::item_id>
 bkrl::equipment::unequip(equip_slot slot, defs_t defs, items_t items) {
     return impl_->unequip(slot, defs, items);
+}
+
+bkrl::optional<bkrl::item_id>
+bkrl::equipment::unequip(item_id id, defs_t defs, items_t items) {
+    return impl_->unequip(id, defs, items);
 }
 
 bkrl::optional<bkrl::item_id>

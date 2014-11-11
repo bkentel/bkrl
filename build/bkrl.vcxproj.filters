@@ -212,13 +212,7 @@
     <ClInclude Include="..\include\gui.hpp">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\identifier.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\items.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\integers.hpp">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\hash.hpp">
@@ -243,6 +237,12 @@
       <Filter>include\common</Filter>
     </ClInclude>
     <ClInclude Include="..\include\render_types.hpp">
+      <Filter>include\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\integers.hpp">
+      <Filter>include\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\identifier.hpp">
       <Filter>include\common</Filter>
     </ClInclude>
   </ItemGroup>

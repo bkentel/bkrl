@@ -6,29 +6,38 @@
         ["welcome",          "Welcome to the dungeon!"]
       , ["direction_prompt", "Which direction?"]
       , ["canceled",         "Cancelled."]
+
       , ["door_no_door",     "You see no door here."]
       , ["door_is_open",     "You see nothing to open."]
       , ["door_is_closed",   "You see nothing to close."]
       , ["door_blocked",     "You are in the way."]
+
       , ["stairs_no_stairs", "You see no stairs here."]
       , ["stairs_no_down",   "You can't go down here."]
       , ["stairs_no_up",     "You can't go up here."]
+
       , ["get_no_items",     "You see nothing to get."]
       , ["get_which_prompt", "Get which?"]
       , ["get_ok",           "Got %1%."]
+
       , ["drop_nothing",     "You have nothing to drop."]
       , ["drop_ok",          "You drop the %1%."]
+
       , ["attack_regular",   "You hit the %1% for %2% damage."]
       , ["kill_regular",     "You killed the %1%."]
+
       , ["title_inventory",  "Inventory"]
       , ["title_wield_wear", "Weild or wear"]
       , ["title_get",        "Pick up"]
       , ["title_drop",       "Drop"]
+
       , ["wield_wear_conflict", "You can't equip the %1%; remove your %2% first."]
       , ["wield_wear_nothing",  "You have nothing to equip."]
       , ["wield_wear_ok",       "You equip the %1%."]
+
       , ["header_items", "Items"]
       , ["header_slot", "Slot"]
+
       , ["eqslot_head",         "Head"]
       , ["eqslot_arms_upper",   "Upper Arms"]
       , ["eqslot_arms_lower",   "Lower Arms"]

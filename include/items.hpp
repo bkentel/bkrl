@@ -339,6 +339,7 @@ public:
     result_t equip(item_id id, defs_t defs, items_t items);
 
     optional<item_id> unequip(equip_slot slot, defs_t defs, items_t items);
+    optional<item_id> unequip(item_id id, defs_t defs, items_t items);
 
     optional<item_id> in_slot(equip_slot slot) const;
 

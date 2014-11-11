@@ -464,6 +464,7 @@ bkrl::from_hash(hash_t const hash) {
       , {"drop",       ct::drop}
       , {"inventory",  ct::inventory}
       , {"wield_wear", ct::wield_wear}
+      , {"take_off",   ct::take_off}
       , {"equipment",  ct::equipment}
     };
 

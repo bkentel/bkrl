@@ -1500,16 +1500,21 @@ public:
         exit_mode_(optional<item_id>{get_selection_()});
     }
 private:
-    item_id get_selection_() {
+    optional<item_id> get_selection_() {
         auto const i = list_->get_selection();
         if (i < 0) {
             BK_TODO_FAIL();
         }
 
-        return list_->at(i);
+        auto const id = list_->at(i);
+        if (id == item_id {0}) {
+            return optional<item_id> {};
+        }
+
+        return optional<item_id> {id};
     }
 
-    void exit_mode_(optional<item_id>&& iid) {
+    void exit_mode_(optional<item_id>&& iid) {        
         handler_(iid);
 
         list_->clear();
@@ -1573,37 +1578,7 @@ public:
 
         item_list_.set_position(ipoint2 {24, 128});
         equip_list_.set_position(ipoint2 {24, 128});
-        ////////////////////////////////////////////////////
-        //test_list_.set_position(ipoint2 {100, 100});
-        //test_list_.set_title("Equipment");
 
-        //test_list_.add_col("Body");
-        //test_list_.add_col("Item");
-
-        //test_list_.add_row("a\t)");
-        //test_list_.add_row("b\t)");
-        //test_list_.add_row("c\t)");
-        //test_list_.add_row("d\t)");
-        //test_list_.add_row("e\t)");
-        //test_list_.add_row("f\t)");
-        //test_list_.add_row("g\t)");
-        //test_list_.add_row("h\t)");
-        //test_list_.add_row("i\t)");
-        //test_list_.add_row("j\t)");
-
-        //test_list_.set_text(0, 0, "Head");       test_list_.set_text(0, 1, "leather helm");
-        //test_list_.set_text(1, 0, "Neck");       test_list_.set_text(1, 1, "opal pendant");
-        //test_list_.set_text(2, 0, "Upper Arms"); test_list_.set_text(2, 1, "leather cuirass");
-        //test_list_.set_text(3, 0, "Lower Arms"); test_list_.set_text(3, 1, "leather cuirass");
-        //test_list_.set_text(4, 0, "Hands");      test_list_.set_text(4, 1, "chain gloves");
-        //test_list_.set_text(5, 0, "Chest");      test_list_.set_text(5, 1, "leather cuirass");
-        //test_list_.set_text(6, 0, "Waist");      test_list_.set_text(6, 1, "heavy girdle");
-        //test_list_.set_text(7, 0, "Upper Legs"); test_list_.set_text(7, 1, "leather leggings");
-        //test_list_.set_text(8, 0, "Lower Legs"); test_list_.set_text(8, 1, "leather leggings");
-        //test_list_.set_text(9, 0, "Feet");       test_list_.set_text(9, 1, "leather boots");
-
-        //test_list_.layout();
-        ////////////////////////////////////////////////////
         main();
     }
 
@@ -2201,16 +2176,32 @@ public:
         });
     }
 
+    //--------------------------------------------------------------------------
     void do_equipment() {
         auto const& list = player_.equip().list();
-        if (list.empty()) {
-            return; //TODO
-        }
 
         enter_equip_mode_(list, [this](optional<item_id> maybe_sel) {
             if (!maybe_sel) {
                 return;
             }
+        });
+    }
+
+    //--------------------------------------------------------------------------
+    void do_take_off() {
+        auto const& list = player_.equip().list();
+
+        enter_equip_mode_(list, [this](optional<item_id> maybe_sel) {
+            if (!maybe_sel) {
+                return;
+            }
+
+            auto const& idefs  = definitions_->get_items();
+            auto const& istore = item_store_;
+
+            auto const& iid = *maybe_sel;
+            player_.equip().unequip(iid, idefs, istore);
+            player_.items().insert(iid, idefs, istore);
         });
     }
 
@@ -2235,6 +2226,7 @@ public:
 
         switch (cmd) {
         case ct::equipment  : do_equipment();         break;
+        case ct::take_off   : do_take_off();          break;
         case ct::wield_wear : do_wield_wear();        break;
         case ct::inventory  : do_inventory();         break;
         case ct::open       : do_open();              break;
@@ -2299,45 +2291,6 @@ public:
         if (input_mode_) {
             input_mode_->on_mouse_button(info);
         }
-
-        //if (info.state != application::mouse_button_info::state_t::pressed) {
-        //    return;
-        //}
-        //
-        //if (info.button != 1) {
-        //    return;
-        //}
-
-        //auto const q = screen_to_grid(info.x, info.y);
-        //if (q.x < 0 || q.y < 0) {
-        //    return;
-        //}
-
-        //auto const p = grid_point {
-        //    static_cast<grid_index>(q.x)
-        //  , static_cast<grid_index>(q.y)
-        //};
-
-        //if (!map_.is_valid(p)) {
-        //    return;
-        //}
-
-        //auto const tex_type      = map_.get(attribute::texture_type, p);
-        //auto const tex_type_str  = enum_map<texture_type>::get(tex_type);
-        //auto const room_id       = map_.get(attribute::room_id, p);
-        //auto const base_type     = map_.get(attribute::tile_type, p);
-        //auto const base_type_str = enum_map<tile_type>::get(base_type);
-        //auto const tex_id        = map_.get(attribute::texture_id, p);
-
-        //std::cout << "===================="                      << "\n";
-        //std::cout << "| (" << p.x << ", " << p.y << ")"          << "\n";
-        //std::cout << "--------------------"                      << "\n";
-        //std::cout << "| tile_type    = " << base_type_str.string << "\n";
-        //std::cout << "| texture_type = " << tex_type_str.string  << "\n";
-        //std::cout << "| texture_id   = " << tex_id               << "\n";
-        //std::cout << "| room_id      = " << room_id              << "\n";
-        //std::cout << "===================="                      << "\n";
-        //std::cout << std::endl;
     }
 private:
     data_definitions* definitions_;
@@ -2380,8 +2333,6 @@ private:
     gui::item_list   item_list_;
     gui::equip_list  equip_list_;
     gui::message_log msg_log_;
-
-    //gui::list test_list_;
 
     ipoint2 mouse_pos_ = ipoint2 {0, 0};
 
