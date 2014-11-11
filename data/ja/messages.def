@@ -6,29 +6,45 @@
         ["welcome",          "ダンジョンへようこそ！"]
       , ["direction_prompt", "どの方向へ？"]
       , ["canceled",         "止めた。"]
+      
       , ["door_no_door",     "ここにはドアがない。"]
       , ["door_is_open",     "開けるものがない。"]
       , ["door_is_closed",   "閉めるものがない。"]
       , ["door_blocked",     "自分が邪魔になっている。"]
+      
       , ["stairs_no_stairs", "ここには階段がない。"]
       , ["stairs_no_down",   "ここを降りることはできない。"]
       , ["stairs_no_up",     "ここを登ることはできない。"]
+      
       , ["get_no_items",     "ここには拾うものがない。"]
       , ["get_which_prompt", "どれを拾う？"]
       , ["get_ok",           "%1%を拾った。"]
+      
       , ["drop_nothing",     "落とすことのできるものを持っていない。"]
       , ["drop_ok",          "%1%を落とした。"]
+      
       , ["attack_regular",   "%1%に%2%点のダメージを与えた."]
       , ["kill_regular",     "%1%を斃した。"]
+      
       , ["title_inventory",  "所持品"]
       , ["title_wield_wear", "装備"]
       , ["title_get",        "拾得"]
       , ["title_drop",       "放棄"]
+      , ["title_equipment",  "装備中"]
+      , ["title_take_off",   "外す"]
+
+      , ["inventory_nothing", "何も持っていない。"]
+      
+      , ["take_off_nothing", "何も装備していない。"]
+      , ["take_off_ok",      "%1%を外した。"]
+      
       , ["wield_wear_conflict", "%1%を装備することができない。まず装備中の%2%を外して。"]
       , ["wield_wear_nothing",  "装備できるものは持っていない。"]
       , ["wield_wear_ok",       "%1%を装備した。"]
+      
       , ["header_items", "アイテム"]
-      , ["header_slot", "ところ"]
+      , ["header_slot", "部分"]
+      
       , ["eqslot_head",         "頭"]
       , ["eqslot_arms_upper",   "上腕"]
       , ["eqslot_arms_lower",   "前腕"]

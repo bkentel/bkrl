@@ -30,13 +30,20 @@
       , ["title_wield_wear", "Weild or wear"]
       , ["title_get",        "Pick up"]
       , ["title_drop",       "Drop"]
+      , ["title_equipment",  "Equipment"]
+      , ["title_take_off",   "Unequip"]
 
+      , ["inventory_nothing", "You have no items."]
+      
+      , ["take_off_nothing", "You don't have anything equipped."]
+      , ["take_off_ok",      "You unequip your %1%."]
+      
       , ["wield_wear_conflict", "You can't equip the %1%; remove your %2% first."]
       , ["wield_wear_nothing",  "You have nothing to equip."]
       , ["wield_wear_ok",       "You equip the %1%."]
 
       , ["header_items", "Items"]
-      , ["header_slot", "Slot"]
+      , ["header_slot",  "Slot"]
 
       , ["eqslot_head",         "Head"]
       , ["eqslot_arms_upper",   "Upper Arms"]

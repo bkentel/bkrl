@@ -48,6 +48,13 @@ enum class message_type : uint16_t {
   , title_wield_wear
   , title_get
   , title_drop
+  , title_equipment
+  , title_take_off
+
+  , inventory_nothing
+  
+  , take_off_nothing
+  , take_off_ok
 
   , wield_wear_conflict
   , wield_wear_nothing

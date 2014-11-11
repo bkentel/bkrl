@@ -40,6 +40,13 @@ bkrl::from_hash(hash_t const hash) {
       , {"title_wield_wear", mt::title_wield_wear}
       , {"title_get",        mt::title_get}
       , {"title_drop",       mt::title_drop}
+      , {"title_equipment",  mt::title_equipment}
+      , {"title_take_off",   mt::title_take_off}
+
+      , {"inventory_nothing", mt::inventory_nothing}
+
+      , {"take_off_nothing", mt::take_off_nothing}
+      , {"take_off_ok",      mt::take_off_ok}
 
       , {"wield_wear_conflict", mt::wield_wear_conflict}
       , {"wield_wear_nothing",  mt::wield_wear_nothing}

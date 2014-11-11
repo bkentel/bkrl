@@ -1437,7 +1437,16 @@ public:
     using completion_handler = std::function<void (optional<item_id> iid)>;
 
     //--------------------------------------------------------------------------
-    input_mode_base* enter_mode(gui::item_list& list, completion_handler handler) {
+    input_mode_base* enter_mode(
+        gui::item_list&    list
+      , item_list const&   items
+      , string_ref const   title
+      , completion_handler handler
+    ) {
+        list.clear();
+        list.insert(items);
+        list.set_title(title);
+
         list_    = &list;
         handler_ = std::move(handler);
 
@@ -1525,6 +1534,107 @@ private:
     completion_handler handler_;
 };
 
+//==============================================================================
+//==============================================================================
+class gui_root {
+public:
+    gui_root(
+        font_face&              face
+      , item_definitions const& idefs
+      , item_store       const& istore
+      , message_map      const& msgs
+    )
+      : item_list  {face, idefs, istore, msgs}
+      , equip_list {face, idefs, istore, msgs}
+      , msg_log    {face, msgs}
+    {
+        item_list.set_position(ipoint2 {150, 100});
+        equip_list.set_position(ipoint2 {150, 100});
+    }
+
+    void render(renderer& r) {
+        if (!item_list.empty()) {
+            item_list.render(r);
+        }
+
+        if (!equip_list.empty()) {
+            equip_list.render(r);
+        }
+
+        msg_log.render(r, 0, 0);
+    }
+
+    gui::item_list   item_list;
+    gui::equip_list  equip_list;
+    gui::message_log msg_log;
+};
+
+//==============================================================================
+//==============================================================================
+class input_state {
+public:
+    using mouse_move_info   = bkrl::application::mouse_move_info;
+    using mouse_button_info = bkrl::application::mouse_button_info;
+
+    void completion_handler_() noexcept {
+        cur_mode = nullptr;
+    }
+
+    input_state()
+      : mode_direction {[this] { completion_handler_(); }}
+      , mode_selection {[this] { completion_handler_(); }}
+    {
+    }
+
+    explicit operator bool() const noexcept {
+        return cur_mode != nullptr;
+    }
+    
+    template <typename Handler>
+    void enter_selection_mode(
+        gui::item_list&   list
+      , item_list const&  items
+      , string_ref const  title
+      , Handler&&         handler
+    ) {
+        BK_ASSERT(cur_mode == nullptr);
+
+        cur_mode = mode_selection.enter_mode(
+            list
+          , items
+          , title
+          , std::forward<Handler>(handler)
+        );
+    }
+
+    template <typename Handler>
+    void enter_direction_mode(Handler&& handler) {
+        BK_ASSERT(cur_mode == nullptr);
+
+        cur_mode = mode_direction.enter_mode(std::forward<Handler>(handler));
+    }
+
+    void on_char(char const c) {
+        cur_mode->on_char(c);
+    }
+    
+    bool on_command(command_type const cmd) {
+        return cur_mode->on_command(cmd);
+    }
+    
+    void on_mouse_move(mouse_move_info const& info) {
+        cur_mode->on_mouse_move(info);
+    }
+    
+    void on_mouse_button(mouse_button_info const& info) {
+        cur_mode->on_mouse_button(info);
+    }
+
+    input_mode_base*     cur_mode = nullptr;
+    input_mode_direction mode_direction;
+    input_mode_selection mode_selection;
+};
+
 } //namespace bkrl
 
 //==============================================================================
@@ -1554,30 +1664,20 @@ public:
       , renderer_           {app_}
       , font_lib_           {}
       , font_face_          {renderer_, font_lib_, config_->font_name, font_size}
-      , last_message_       {}
       , tile_sheets_        {renderer_, defs}
       , view_               {construct_view_(tile_sheets_, app_)}
       , cur_level_          {nullptr}
       , player_             {}
-      , input_mode_         {nullptr}
-      , imode_direction_    {[&] {input_mode_ = nullptr;}}
-      , imode_selection_    {[&] {input_mode_ = nullptr;}}
-      , item_list_          {font_face_, defs.get_items(), item_store_, defs.get_messages()}
-      , equip_list_         {font_face_, defs.get_items(), item_store_, defs.get_messages()}
-      , msg_log_            {font_face_, defs.get_messages()}
-      //, test_list_          {font_face_}
+      , gui_                {font_face_, defs.get_items(), item_store_, defs.get_messages()}
     {
         definitions_->set_language(config_->language);
         
-        ////////////////////////////////////////////////////
         init_sinks();
         init_timers();
 
         next_level(0);
+        
         print_message(message_type::welcome);
-
-        item_list_.set_position(ipoint2 {24, 128});
-        equip_list_.set_position(ipoint2 {24, 128});
 
         main();
     }
@@ -1598,11 +1698,11 @@ public:
     }
 
     void init_timers() {
-        auto const fade_time = std::chrono::milliseconds {1000};
-        timers_.add_timer(fade_time, [this, fade_time](timer::id_t, timer::duration_t) {
-            fade_message();
-            return fade_time;
-        });
+        //auto const fade_time = std::chrono::milliseconds {1000};
+        //timers_.add_timer(fade_time, [this, fade_time](timer::id_t, timer::duration_t) {
+        //    fade_message();
+        //    return fade_time;
+        //});
 
         auto const frame_time = std::chrono::nanoseconds {1000000000 / 60};
         timers_.add_timer(frame_time, [this, frame_time](timer::id_t, timer::duration_t) {
@@ -1641,23 +1741,13 @@ public:
         });
     }
 
-    void fade_message() {
-        if (last_message_fade_) {
-            --last_message_fade_;
-        }
+    template <typename... Types>
+    void print_message(message_type const msg, Types&&... types) {
+        gui_.msg_log.print_line(msg, std::forward<Types>(types)...);
     }
 
     void print_message(string_ref const msg) {
-        msg_log_.print_line(msg);
-    }
-
-    void print_message(message_type const msg) {
-        if (msg == message_type::none) {
-            last_message_ = transitory_text_layout {};
-        } else {
-            //TODO
-            print_message(definitions_->get_messages()[msg]);
-        }
+        gui_.msg_log.print_line(msg);
     }
 
     void next_level(int level) {
@@ -1737,17 +1827,7 @@ public:
     }
 
     void draw_gui(renderer& r) {
-        if (!item_list_.empty()) {
-            item_list_.render(r);
-        }
-
-        if (!equip_list_.empty()) {
-            equip_list_.render(r);
-        }
-
-        msg_log_.render(r, 0, 0);
-
-        //test_list_.render(r);
+        gui_.render(r);
     }
 
     void draw_level(renderer& r) {
@@ -1801,7 +1881,7 @@ public:
             return;
         }
 
-        input_mode_ = imode_direction_.enter_mode([this, p, opened](bool const cancel, ivec2 const dir) {
+        input_state_.enter_direction_mode([this, p, opened](bool const cancel, ivec2 const dir) {
             if (cancel) {
                 print_message(message_type::canceled);
                 return;
@@ -1872,55 +1952,6 @@ public:
         do_scroll(scroll_x, scroll_y);
     }
 
-    void make_item_list_(string_ref const title, item_list const& items) {
-        item_list_.clear();
-        item_list_.insert(items);
-        item_list_.set_title(title);
-    }
-
-    void make_item_list_(message_type const title, item_stack const& items) {       
-        make_item_list_(definitions_->get_messages()[title], items.list());
-    }
-
-    void make_item_list_(message_type const title, item_list const& items) {       
-        make_item_list_(definitions_->get_messages()[title], items);
-    }
-
-    template <typename List, typename Handler>
-    void enter_item_select_mode_(
-        message_type const  title
-      , List         const& items
-      , Handler&&           handler
-    ) {
-        BK_ASSERT(input_mode_ != &imode_selection_);
-
-        make_item_list_(title, items);
-
-        input_mode_ = imode_selection_.enter_mode(
-            item_list_
-          , std::forward<Handler>(handler)
-        );
-    }
-
-
-    template <typename Handler>
-    void enter_equip_mode_(
-        item_list    const& items
-      , Handler&&           handler
-    ) {
-        BK_ASSERT(input_mode_ != &imode_selection_);
-
-        auto const& title = definitions_->get_messages()[message_type::title_wield_wear];
-
-        equip_list_.clear();
-        equip_list_.set_title(title);
-        equip_list_.insert(items);
-
-        input_mode_ = imode_selection_.enter_mode(
-            equip_list_
-          , std::forward<Handler>(handler)
-        );
-    }
     //--------------------------------------------------------------------------
     //! Get the item with id = iid
     //--------------------------------------------------------------------------
@@ -1932,7 +1963,7 @@ public:
         cur_level_->get_item(p, iid);
         player_.items().insert(iid, idefs, istore);
 
-        msg_log_.print_line(message_type::get_ok, get_item_name_(iid));
+        print_message(message_type::get_ok, get_item_name_(iid));
         
         advance();
     }
@@ -1952,13 +1983,26 @@ public:
     }
 
     //--------------------------------------------------------------------------
+    void unequip_item_(item_id const iid) {
+        auto const& idefs  = definitions_->get_items();
+        auto const& istore = item_store_;
+
+        player_.equip().unequip(iid, idefs, istore);
+        player_.items().insert(iid, idefs, istore);
+
+        auto const& name = istore[iid].get_name(idefs);
+
+        print_message(message_type::take_off_ok, name);
+    }
+
+    //--------------------------------------------------------------------------
     void equip_item_(item_id const iid) {
         auto const& istore = item_store_;
         auto const& idefs  = definitions_->get_items();
 
         auto const& result = player_.equip_item(iid, idefs, istore);
         if (result.second) {
-            msg_log_.print_line(message_type::wield_wear_ok, get_item_name_(iid));
+            print_message(message_type::wield_wear_ok, get_item_name_(iid));
             return;
         }
 
@@ -1967,20 +2011,23 @@ public:
             BK_TODO_FAIL();
         }
 
-        msg_log_.print_line(message_type::wield_wear_conflict, get_item_name_(iid), get_item_name_(*conflicting));
+        print_message(
+            message_type::wield_wear_conflict
+          , get_item_name_(iid)
+          , get_item_name_(*conflicting)
+        );
     }
 
     //--------------------------------------------------------------------------
     void drop_item_(item_id const iid) {
-        auto const p = player_.position();
-
+        auto const  p      = player_.position();
         auto const& istore = item_store_;
         auto const& idefs  = definitions_->get_items();
 
         player_.items().remove(iid);
         cur_level_->drop_item_at(p, iid);
 
-        msg_log_.print_line(message_type::drop_ok, get_item_name_(iid));
+        print_message(message_type::drop_ok, get_item_name_(iid));
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -2102,14 +2149,16 @@ public:
 
     //--------------------------------------------------------------------------
     void do_drop() {
-        auto& stack = player_.items();
-        if (stack.empty()) {
-            msg_log_.print_line(message_type::drop_nothing);
+        auto const title = get_message_string_(message_type::title_drop);
+        auto&      list  = gui_.item_list;
+        auto&      items = player_.items().list();
+        
+        if (items.empty()) {
+            print_message(message_type::drop_nothing);
             return;
         }
 
-        auto const& title = message_type::title_drop;
-        enter_item_select_mode_(title, stack, [this](optional<item_id> maybe_sel) {
+        input_state_.enter_selection_mode(list, items, title, [this](optional<item_id> maybe_sel) {
             if (!maybe_sel) {
                 return;
             }
@@ -2120,20 +2169,25 @@ public:
 
     //--------------------------------------------------------------------------
     void do_get() {
-        auto const& maybe_stack = cur_level_->get_stack_at(player_.position());
+        auto const title = get_message_string_(message_type::title_get);
+        auto&      list  = gui_.item_list;
+        auto const p     = player_.position();
+
+        auto const& maybe_stack = cur_level_->get_stack_at(p);
         if (!maybe_stack) {
-            msg_log_.print_line(message_type::get_no_items);
+            print_message(message_type::get_no_items);
             return;
         }
 
-        auto const& stack = *maybe_stack;
+        auto& stack = *maybe_stack;
         if (stack.size() == 1) {
             get_item_(stack.at(0));
             return;
         }
 
-        auto const& title = message_type::title_get;
-        enter_item_select_mode_(title, stack, [this](optional<item_id> maybe_sel) {
+        auto& items = stack.list();
+
+        input_state_.enter_selection_mode(list, items, title, [this](optional<item_id> maybe_sel) {
             if (!maybe_sel) {
                 return;
             }
@@ -2144,13 +2198,16 @@ public:
 
     //--------------------------------------------------------------------------
     void do_inventory() {
-        auto const& items = player_.items();
+        auto const title = get_message_string_(message_type::title_inventory);
+        auto&      list  = gui_.item_list;
+        auto&      items = player_.items().list();
+       
         if (items.empty()) {
-            return; //TODO message
+            print_message(message_type::inventory_nothing);
+            return;
         }
 
-        auto const& title = message_type::title_inventory;
-        enter_item_select_mode_(title, items, [this](optional<item_id> maybe_sel) {
+        input_state_.enter_selection_mode(list, items, title, [this](optional<item_id> maybe_sel) {
         });
     }
 
@@ -2158,16 +2215,17 @@ public:
     void do_wield_wear() {
         auto const& istore = item_store_;
         auto const& idefs  = definitions_->get_items();
-
-        item_stack items = player_.get_equippable(idefs, istore);
+        auto const  title  = get_message_string_(message_type::title_wield_wear);
+        auto&       list   = gui_.item_list;
+        auto const& equip  = player_.get_equippable(idefs, istore);
+        auto const& items  = equip.list();
 
         if (items.empty()) {
-            msg_log_.print_line(message_type::wield_wear_nothing);
+            print_message(message_type::wield_wear_nothing);
             return;
         }
 
-        auto const& title = message_type::title_wield_wear;
-        enter_item_select_mode_(title, items, [this](optional<item_id> maybe_sel) {
+        input_state_.enter_selection_mode(list, items, title, [this](optional<item_id> maybe_sel) {
             if (!maybe_sel) {
                 return;
             }
@@ -2178,30 +2236,32 @@ public:
 
     //--------------------------------------------------------------------------
     void do_equipment() {
-        auto const& list = player_.equip().list();
+        auto const  title  = get_message_string_(message_type::title_equipment);
+        auto&       list   = gui_.equip_list;
+        auto const& items  = player_.equip().list();
 
-        enter_equip_mode_(list, [this](optional<item_id> maybe_sel) {
-            if (!maybe_sel) {
-                return;
-            }
+        input_state_.enter_selection_mode(list, items, title, [this](optional<item_id> maybe_sel) {
         });
     }
 
     //--------------------------------------------------------------------------
     void do_take_off() {
-        auto const& list = player_.equip().list();
+        auto const& title  = get_message_string_(message_type::title_take_off);
+        auto&       list   = gui_.equip_list;
+        auto const& items  = player_.equip().list();
 
-        enter_equip_mode_(list, [this](optional<item_id> maybe_sel) {
+        if (items.empty()) {
+            print_message(message_type::take_off_nothing);
+            return;
+        }
+
+        input_state_.enter_selection_mode(list, items, title, [this](optional<item_id> maybe_sel) {
+            //TODO print a msg for empty slots?
             if (!maybe_sel) {
                 return;
             }
 
-            auto const& idefs  = definitions_->get_items();
-            auto const& istore = item_store_;
-
-            auto const& iid = *maybe_sel;
-            player_.equip().unequip(iid, idefs, istore);
-            player_.items().insert(iid, idefs, istore);
+            unequip_item_(*maybe_sel);
         });
     }
 
@@ -2210,16 +2270,16 @@ public:
     ////////////////////////////////////////////////////////////////////////////
     //--------------------------------------------------------------------------
     void on_char(char const c) {
-        if (input_mode_) {
-            input_mode_->on_char(c);
+        if (input_state_) {
+            input_state_.on_char(c);
             return;
         }
     }
 
     //--------------------------------------------------------------------------
     bool on_command(command_type const cmd) {
-        if (input_mode_) {
-            return input_mode_->on_command(cmd);
+        if (input_state_) {
+            return input_state_.on_command(cmd);
         }
 
         using ct = command_type;
@@ -2267,8 +2327,8 @@ public:
 
     //--------------------------------------------------------------------------
     void on_mouse_move(application::mouse_move_info const& info) {
-        if (input_mode_) {
-            input_mode_->on_mouse_move(info);
+        if (input_state_) {
+            input_state_.on_mouse_move(info);
         }
         
         mouse_pos_ = ipoint2 {info.x, info.y};
@@ -2288,8 +2348,8 @@ public:
 
     //--------------------------------------------------------------------------
     void on_mouse_button(application::mouse_button_info const& info) {
-        if (input_mode_) {
-            input_mode_->on_mouse_button(info);
+        if (input_state_) {
+            input_state_.on_mouse_button(info);
         }
     }
 private:
@@ -2309,9 +2369,6 @@ private:
 
     item_store  item_store_;
 
-    transitory_text_layout last_message_;
-    int                    last_message_fade_ = 5;
-
     transitory_text_layout inspect_message_;
 
     tile_sheet_set tile_sheets_;
@@ -2326,13 +2383,9 @@ private:
 
     player player_;
 
-    input_mode_base*     input_mode_;
-    input_mode_direction imode_direction_;
-    input_mode_selection imode_selection_;
+    input_state input_state_;
 
-    gui::item_list   item_list_;
-    gui::equip_list  equip_list_;
-    gui::message_log msg_log_;
+    gui_root gui_;
 
     ipoint2 mouse_pos_ = ipoint2 {0, 0};
 

@@ -151,16 +151,24 @@ public:
     
     auto size() const noexcept { return static_cast<int>(items_.size()); }
 
-    auto begin()       { return std::begin(items_); }
-    auto begin() const { return std::begin(items_); }
+    auto begin()        & { return std::begin(items_); }
+    auto begin()  const & { return std::begin(items_); }
 
-    auto end()       { return std::end(items_); }
-    auto end() const { return std::end(items_); }
+    auto end()          & { return std::end(items_); }
+    auto end()    const & { return std::end(items_); }
 
-    auto cbegin() const { return std::cbegin(items_); }
-    auto cend()   const { return std::cend(items_); }
+    auto cbegin() const & { return std::cbegin(items_); }
+    auto cend()   const & { return std::cend(items_); }
 
-    item_list const& list() const { return items_; }
+    item_list const& list() const & { return items_; }
+
+    auto begin()        && = delete;
+    auto begin()  const && = delete;
+    auto end()          && = delete;
+    auto end()    const && = delete;
+    auto cbegin() const && = delete;
+    auto cend()   const && = delete;
+    item_list const& list() const && = delete;
 private:
     std::vector<item_id> items_;
 };
