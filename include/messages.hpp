@@ -53,6 +53,26 @@ enum class message_type : uint16_t {
   , wield_wear_nothing
   , wield_wear_ok
 
+  , header_items
+  , header_slot
+
+  , eqslot_head
+  , eqslot_arms_upper
+  , eqslot_arms_lower
+  , eqslot_hands
+  , eqslot_chest
+  , eqslot_waist
+  , eqslot_legs_upper
+  , eqslot_legs_lower
+  , eqslot_feet
+  , eqslot_finger_left
+  , eqslot_finger_right
+  , eqslot_neck
+  , eqslot_back
+  , eqslot_hand_main
+  , eqslot_hand_off
+  , eqslot_ammo
+
   , enum_size
 };
 

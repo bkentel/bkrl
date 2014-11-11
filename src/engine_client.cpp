@@ -1467,7 +1467,7 @@ public:
     bool on_command(command_type cmd) override {
         switch (cmd) {
         default: break;
-        case command_type::accept : exit_mode_(optional<item_id>{list_->selection()}); break;
+        case command_type::accept : exit_mode_(optional<item_id>{get_selection_()}); break;
         case command_type::cancel : exit_mode_(optional<item_id>{}); break;
         case command_type::north  : list_->select_prev(); break;
         case command_type::south  : list_->select_next(); break;
@@ -1478,7 +1478,7 @@ public:
     
     //--------------------------------------------------------------------------
     void on_mouse_move(mouse_move_info const& info) override {
-        auto const i = list_->index_at(info.x, info.y);
+        auto const i = list_->get_index_at(ipoint2 {info.x, info.y});
         if (i == -1) {
             return;
         }
@@ -1492,14 +1492,23 @@ public:
             return;
         }
 
-        auto const i = list_->index_at(info.x, info.y);
+        auto const i = list_->get_index_at(ipoint2 {info.x, info.y});
         if (i == -1) {
             return;
         }
 
-        exit_mode_(optional<item_id>{list_->selection()});
+        exit_mode_(optional<item_id>{get_selection_()});
     }
 private:
+    item_id get_selection_() {
+        auto const i = list_->get_selection();
+        if (i < 0) {
+            BK_TODO_FAIL();
+        }
+
+        return list_->at(i);
+    }
+
     void exit_mode_(optional<item_id>&& iid) {
         handler_(iid);
 
@@ -1548,9 +1557,10 @@ public:
       , input_mode_         {nullptr}
       , imode_direction_    {[&] {input_mode_ = nullptr;}}
       , imode_selection_    {[&] {input_mode_ = nullptr;}}
-      , item_list_          {font_face_, defs.get_items(), item_store_}
+      , item_list_          {font_face_, defs.get_items(), item_store_, defs.get_messages()}
+      , equip_list_         {font_face_, defs.get_items(), item_store_, defs.get_messages()}
       , msg_log_            {font_face_, defs.get_messages()}
-      , test_list_          {font_face_}
+      //, test_list_          {font_face_}
     {
         definitions_->set_language(config_->language);
         
@@ -1562,36 +1572,37 @@ public:
         print_message(message_type::welcome);
 
         item_list_.set_position(ipoint2 {24, 128});
+        equip_list_.set_position(ipoint2 {24, 128});
         ////////////////////////////////////////////////////
-        test_list_.set_position(ipoint2 {100, 100});
-        test_list_.set_title("Equipment");
+        //test_list_.set_position(ipoint2 {100, 100});
+        //test_list_.set_title("Equipment");
 
-        test_list_.add_col("Body");
-        test_list_.add_col("Item");
+        //test_list_.add_col("Body");
+        //test_list_.add_col("Item");
 
-        test_list_.add_row("a\t)");
-        test_list_.add_row("b\t)");
-        test_list_.add_row("c\t)");
-        test_list_.add_row("d\t)");
-        test_list_.add_row("e\t)");
-        test_list_.add_row("f\t)");
-        test_list_.add_row("g\t)");
-        test_list_.add_row("h\t)");
-        test_list_.add_row("i\t)");
-        test_list_.add_row("j\t)");
+        //test_list_.add_row("a\t)");
+        //test_list_.add_row("b\t)");
+        //test_list_.add_row("c\t)");
+        //test_list_.add_row("d\t)");
+        //test_list_.add_row("e\t)");
+        //test_list_.add_row("f\t)");
+        //test_list_.add_row("g\t)");
+        //test_list_.add_row("h\t)");
+        //test_list_.add_row("i\t)");
+        //test_list_.add_row("j\t)");
 
-        test_list_.set_text(0, 0, "Head");       test_list_.set_text(0, 1, "leather helm");
-        test_list_.set_text(1, 0, "Neck");       test_list_.set_text(1, 1, "opal pendant");
-        test_list_.set_text(2, 0, "Upper Arms"); test_list_.set_text(2, 1, "leather cuirass");
-        test_list_.set_text(3, 0, "Lower Arms"); test_list_.set_text(3, 1, "leather cuirass");
-        test_list_.set_text(4, 0, "Hands");      test_list_.set_text(4, 1, "chain gloves");
-        test_list_.set_text(5, 0, "Chest");      test_list_.set_text(5, 1, "leather cuirass");
-        test_list_.set_text(6, 0, "Waist");      test_list_.set_text(6, 1, "heavy girdle");
-        test_list_.set_text(7, 0, "Upper Legs"); test_list_.set_text(7, 1, "leather leggings");
-        test_list_.set_text(8, 0, "Lower Legs"); test_list_.set_text(8, 1, "leather leggings");
-        test_list_.set_text(9, 0, "Feet");       test_list_.set_text(9, 1, "leather boots");
+        //test_list_.set_text(0, 0, "Head");       test_list_.set_text(0, 1, "leather helm");
+        //test_list_.set_text(1, 0, "Neck");       test_list_.set_text(1, 1, "opal pendant");
+        //test_list_.set_text(2, 0, "Upper Arms"); test_list_.set_text(2, 1, "leather cuirass");
+        //test_list_.set_text(3, 0, "Lower Arms"); test_list_.set_text(3, 1, "leather cuirass");
+        //test_list_.set_text(4, 0, "Hands");      test_list_.set_text(4, 1, "chain gloves");
+        //test_list_.set_text(5, 0, "Chest");      test_list_.set_text(5, 1, "leather cuirass");
+        //test_list_.set_text(6, 0, "Waist");      test_list_.set_text(6, 1, "heavy girdle");
+        //test_list_.set_text(7, 0, "Upper Legs"); test_list_.set_text(7, 1, "leather leggings");
+        //test_list_.set_text(8, 0, "Lower Legs"); test_list_.set_text(8, 1, "leather leggings");
+        //test_list_.set_text(9, 0, "Feet");       test_list_.set_text(9, 1, "leather boots");
 
-        test_list_.layout();
+        //test_list_.layout();
         ////////////////////////////////////////////////////
         main();
     }
@@ -1755,9 +1766,13 @@ public:
             item_list_.render(r);
         }
 
+        if (!equip_list_.empty()) {
+            equip_list_.render(r);
+        }
+
         msg_log_.render(r, 0, 0);
 
-        test_list_.render(r);
+        //test_list_.render(r);
     }
 
     void draw_level(renderer& r) {
@@ -1912,6 +1927,25 @@ public:
         );
     }
 
+
+    template <typename Handler>
+    void enter_equip_mode_(
+        item_list    const& items
+      , Handler&&           handler
+    ) {
+        BK_ASSERT(input_mode_ != &imode_selection_);
+
+        auto const& title = definitions_->get_messages()[message_type::title_wield_wear];
+
+        equip_list_.clear();
+        equip_list_.set_title(title);
+        equip_list_.insert(items);
+
+        input_mode_ = imode_selection_.enter_mode(
+            equip_list_
+          , std::forward<Handler>(handler)
+        );
+    }
     //--------------------------------------------------------------------------
     //! Get the item with id = iid
     //--------------------------------------------------------------------------
@@ -2173,8 +2207,7 @@ public:
             return; //TODO
         }
 
-        auto const& title = message_type::title_wield_wear;
-        enter_item_select_mode_(title, list, [this](optional<item_id> maybe_sel) {
+        enter_equip_mode_(list, [this](optional<item_id> maybe_sel) {
             if (!maybe_sel) {
                 return;
             }
@@ -2345,9 +2378,10 @@ private:
     input_mode_selection imode_selection_;
 
     gui::item_list   item_list_;
+    gui::equip_list  equip_list_;
     gui::message_log msg_log_;
 
-    gui::list test_list_;
+    //gui::list test_list_;
 
     ipoint2 mouse_pos_ = ipoint2 {0, 0};
 

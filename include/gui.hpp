@@ -30,6 +30,7 @@ namespace detail { class list_impl; }
 namespace detail { class item_list_impl; }
 
 //==============================================================================
+//!
 //==============================================================================
 class list {
 public:
@@ -51,8 +52,8 @@ public:
     //void set_row_color(argb8 even, optional<argb8> odd);
     //void set_selection_color(argb8 color);
 
-    void add_row(string_ref header);
-    void add_col(string_ref header);
+    int add_row(string_ref header);
+    int add_col(string_ref header);
 
     //void set_col_width(int width = auto_size);
     //void set_row_height(int height = auto_size);
@@ -74,6 +75,9 @@ private:
     std::unique_ptr<detail::list_impl> impl_;
 };
 
+//==============================================================================
+//!
+//==============================================================================
 class item_list {
 public:
     item_list(item_list&&);
@@ -83,30 +87,54 @@ public:
         font_face&              face
       , item_definitions const& item_defs
       , item_store       const& items
+      , message_map      const& messages
     );
 
+    ///////
+
+    int get_index_at(ipoint2 p) const;
+
+    int get_selection() const;
+
+    void set_title(string_ref text);
+
     void set_position(ipoint2 p);
-    void set_title(string_ref title);
-    void render(renderer& r);
-    int  index_at(int x, int y) const;
+   
+    void set_selection(int row);
+    
+    void select_next();
+    void select_prev();
+
+    void clear();
+
+    void layout();
+
+    void render(renderer& render);
+
+    ///////
 
     item_id at(int index);
     
     void insert(item_id id);
-    void insert(bkrl::item_list const& items);
-
-    void clear();
-
-    void set_selection(int i);
-    void select_next();
-    void select_prev();
-
-    item_id selection() const noexcept;
+    virtual void insert(bkrl::item_list const& items);
 
     int  size()  const noexcept;
     bool empty() const noexcept;
-private:
+protected:
     std::unique_ptr<detail::item_list_impl> impl_;
+};
+
+//==============================================================================
+//!
+//==============================================================================
+class equip_list : public item_list {
+public:
+    equip_list(equip_list&&) = default;
+    ~equip_list() = default;
+
+    using item_list::item_list;
+   
+    void insert(bkrl::item_list const& items) override;
 };
 
 //==============================================================================

@@ -44,6 +44,26 @@ bkrl::from_hash(hash_t const hash) {
       , {"wield_wear_conflict", mt::wield_wear_conflict}
       , {"wield_wear_nothing",  mt::wield_wear_nothing}
       , {"wield_wear_ok",       mt::wield_wear_ok}
+
+      , {"header_items", mt::header_items}
+      , {"header_slot",  mt::header_slot}
+
+      , {"eqslot_head",         mt::eqslot_head}
+      , {"eqslot_arms_upper",   mt::eqslot_arms_upper}
+      , {"eqslot_arms_lower",   mt::eqslot_arms_lower}
+      , {"eqslot_hands",        mt::eqslot_hands}
+      , {"eqslot_chest",        mt::eqslot_chest}
+      , {"eqslot_waist",        mt::eqslot_waist}
+      , {"eqslot_legs_upper",   mt::eqslot_legs_upper}
+      , {"eqslot_legs_lower",   mt::eqslot_legs_lower}
+      , {"eqslot_feet",         mt::eqslot_feet}
+      , {"eqslot_finger_left",  mt::eqslot_finger_left}
+      , {"eqslot_finger_right", mt::eqslot_finger_right}
+      , {"eqslot_neck",         mt::eqslot_neck}
+      , {"eqslot_back",         mt::eqslot_back}
+      , {"eqslot_hand_main",    mt::eqslot_hand_main}
+      , {"eqslot_hand_off",     mt::eqslot_hand_off}
+      , {"eqslot_ammo",         mt::eqslot_ammo}
     };
 
     return find_mapping(mappings, hash, mt::invalid);

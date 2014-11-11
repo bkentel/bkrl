@@ -243,6 +243,7 @@ public:
 
     bool can_equip(defs_t defs) const;
     bool can_equip(equipment const& eq, defs_t defs) const;
+    equip_slot_flags equip_slots(defs_t defs) const;
 
     item_render_info_t render_info(defs_t defs) const;
 

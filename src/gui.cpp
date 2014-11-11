@@ -41,8 +41,8 @@ public:
     void set_row_color(argb8 even, optional<argb8> odd);
     void set_selection_color(argb8 color);
 
-    void add_row(string_ref header);
-    void add_col(string_ref header);
+    int add_row(string_ref header);
+    int add_col(string_ref header);
 
     void set_col_width(int width);
     void set_row_height(int height);
@@ -67,6 +67,34 @@ private:
     };
 
     void update_entry_(int row, int col, string_ref text);
+    void change_selection_(int delta);
+
+    inline irect get_border_rect_() const noexcept {
+        return make_rect_size(
+            pos_.x
+          , pos_.y
+          , total_w_ + border_size_ * 2
+          , total_h_ + border_size_ * 2 + title_.actual_height() + title_border_size_
+        );
+    }
+
+    inline irect get_title_rect_() const noexcept {
+        return make_rect_size(
+            pos_.x
+          , pos_.y
+          , total_w_ + border_size_ * 2
+          , title_.actual_height() + title_border_size_
+        );
+    }
+
+    inline irect get_list_rect_() const noexcept {
+        return make_rect_size(
+            pos_.x + border_size_
+          , pos_.y + border_size_ + title_.actual_height() + title_border_size_
+          , total_w_
+          , total_h_
+        );
+    }
 
     font_face* face_      = nullptr;
     int        selection_ = 0;
@@ -95,8 +123,27 @@ private:
 };
 
 bkrl::ipoint2 bkrl::gui::detail::list_impl::get_index_at(ipoint2 const p) const {
-    BK_TODO_FAIL();
-    return p;
+    auto const rect = get_list_rect_();
+    if (!bkrl::intersects(rect, p)) {
+        return {-1, -1};
+    }
+    
+    auto const y = (p.y - rect.top);
+    auto const x = (p.x - rect.left);
+
+    auto row = 0;
+    for (auto const& info : row_info_) {
+        if (y < info.offset + info.size) { break; }
+        row++;
+    }
+
+    auto col = 0;
+    for (auto const& info : col_info_) {
+        if (x < info.offset + info.size) { break; }
+        col++;
+    }
+
+    return {col - 1, row - 1};
 }
 
 int bkrl::gui::detail::list_impl::get_selection() const {
@@ -127,23 +174,23 @@ void bkrl::gui::detail::list_impl::update_entry_(int const row, int const col, s
                 BK_TODO_FAIL();
             }
 
-            auto const ri = static_cast<size_t>(row);
-            auto const ci = static_cast<size_t>(col);
-
-            if (ri >= row_info_.size()) {
-                row_info_.resize(ri + 1, cell_info {0, 0});
-            }
-
-            if (ci >= col_info_.size()) {
-                col_info_.resize(ci + 1, cell_info {0, 0});
-            }
-
             return result.first->second;
         } else {
             it->second.reset(*face_, text);
             return it->second;
         }
     }();
+
+    auto const ri = static_cast<size_t>(row);
+    auto const ci = static_cast<size_t>(col);
+
+    if (ri >= row_info_.size()) {
+        row_info_.resize(ri + 1, cell_info {0, 0});
+    }
+
+    if (ci >= col_info_.size()) {
+        col_info_.resize(ci + 1, cell_info {0, 0});
+    }
 
     auto& row_size = row_info_[row].size;
     auto& col_size = col_info_[col].size;
@@ -185,13 +232,15 @@ void bkrl::gui::detail::list_impl::set_selection_color(argb8 const color) {
 }
 
 //--------------------------------------------------------------------------
-void bkrl::gui::detail::list_impl::add_row(string_ref const header) {
+int bkrl::gui::detail::list_impl::add_row(string_ref const header) {
     set_row_header(rows_++, header);
+    return rows_ - 1;
 }
 
 //--------------------------------------------------------------------------
-void bkrl::gui::detail::list_impl::add_col(string_ref const header) {
+int bkrl::gui::detail::list_impl::add_col(string_ref const header) {
     set_col_header(cols_++, header);
+    return cols_ - 1;
 }
 
 //--------------------------------------------------------------------------
@@ -226,30 +275,27 @@ void bkrl::gui::detail::list_impl::layout() {
 }
 
 //--------------------------------------------------------------------------
+void bkrl::gui::detail::list_impl::change_selection_(int const delta) {
+    BK_ASSERT(rows_ > 0);
+
+    selection_ = (selection_ + delta) % rows_;
+}
+
+//--------------------------------------------------------------------------
 void bkrl::gui::detail::list_impl::set_selection(int const row) {
-    if (row >= rows_) {
-        BK_TODO_FAIL();
-    }
+    BK_ASSERT(row >= 0 && row < rows_);
 
     selection_ = row;
 }
 
 //--------------------------------------------------------------------------
 void bkrl::gui::detail::list_impl::select_next() {
-    if (rows_ <= 0) {
-        BK_TODO_FAIL();
-    }
-
-    selection_ = (selection_ + 1) % rows_;
+    change_selection_(1);
 }
 
 //--------------------------------------------------------------------------
 void bkrl::gui::detail::list_impl::select_prev() {
-    if (rows_ <= 0) {
-        BK_TODO_FAIL();
-    }
-
-    selection_ = (selection_ - 1) % rows_;
+    change_selection_(rows_ - 1);
 }
 
 //--------------------------------------------------------------------------
@@ -330,12 +376,30 @@ void bkrl::gui::detail::list_impl::render(renderer& render) {
     }
 
     //
+    // draw the selection
+    //
+    render.set_draw_color(color_sel_);
+    {
+        auto const info = row_info_[selection_ + 1];
+        auto const y = y0 + info.offset;
+        auto const h = info.size;
+
+        auto const rect = make_rect_size(x0, y, total_w_, h);
+    
+        render.draw_filled_rect(rect);
+    }
+
+    //
     // draw the actual text in the cells
     //
     for (auto const& entry : entries_) {
         auto const  row = entry.first.row;
         auto const  col = entry.first.col;
         auto const& txt = entry.second;
+
+        if (txt.empty()) {
+            continue;
+        }
 
         auto const row_y = row_info_[row].offset;
         auto const col_x = col_info_[col].offset;
@@ -358,6 +422,22 @@ void bkrl::gui::detail::list_impl::render(renderer& render) {
         if (changed) {
             face_->set_color(make_color(200, 200, 200));
         }
+    }
+
+    render.set_draw_color(color_back_);
+    for (int i = 1; i < col_info_.size(); ++i) {
+        auto const& col = col_info_[i];
+        
+        if (col.size <= 0) { continue; }
+
+        auto const rect = make_rect_size(
+            x0 + col.offset - padding_col_ / 2
+            , y0
+            , 1
+            , total_h_
+        );
+
+        render.draw_filled_rect(rect);
     }
 
     face_->set_color(make_color(255, 255, 255)); //TODO
@@ -406,12 +486,12 @@ void bkrl::gui::list::set_position(ipoint2 const p) {
 //    impl_->set_selection_color(color);
 //}
 
-void bkrl::gui::list::add_row(string_ref const header) {
-    impl_->add_row(header);
+int bkrl::gui::list::add_row(string_ref const header) {
+    return impl_->add_row(header);
 }
 
-void bkrl::gui::list::add_col(string_ref const header) {
-    impl_->add_col(header);
+int bkrl::gui::list::add_col(string_ref const header) {
+    return impl_->add_col(header);
 }
 
 //void bkrl::gui::list::set_col_width(int width) {
@@ -456,179 +536,178 @@ void bkrl::gui::list::render(renderer& render) {
 ////////////////////////////////////////////////////////////////////////////////
 class bkrl::gui::detail::item_list_impl {
 public:
-    static constexpr int border  = 8;
-    static constexpr int padding = 4;
+    enum {
+        col_item    = 0
+      , col_eq_slot = 0
+      , col_eq_item = 1
+    };
 
     item_list_impl(
         font_face&              face
       , item_definitions const& item_defs
       , item_store       const& items
+      , message_map      const& messages
     )
-      : face_       {&face}
+      : list_       {face}
       , item_defs_  {&item_defs}
       , item_store_ {&items}
+      , messages_   {&messages}
     {
+        clear();
     }
 
     void set_position(ipoint2 const p) {
-        pos_ = p;
+        list_.set_position(p);
     }
 
     void set_title(string_ref const title) {
-        title_.reset(*face_, title);
-        row_w_ = std::max(row_w_, title_.actual_width()  + padding);
-        row_h_ = std::max(row_h_, title_.actual_height() + padding);
+        list_.set_title(title);
     }
 
     void render(renderer& r) {
-        auto const size = static_cast<int>(items_.size());
-
-        if (size == 0) {
+        if (items_.empty()) {
             return;
         }
 
-        static auto color_background = make_color(50,  50,  50);
-        static auto color_even       = make_color(13,  13,  13);
-        static auto color_odd        = make_color(25,  25,  25);
-        static auto color_highlight  = make_color(20, 20, 50);
-
-        auto const x = pos_.x;
-        auto const y = pos_.y;
-
-        auto cur_x = x + border;
-        auto cur_y = y + border;
-
-        auto const w = row_w_ + border * 2;
-        auto const h = row_h_ * (size + 1) + border * 2;
-
-        auto const restore = r.restore_view();
-
-        //draw the background
-        r.set_draw_color(color_background);
-        r.draw_filled_rect(make_rect_size(x, y, w, h));
-
-        title_.render(r, *face_, cur_x, cur_y);
-        cur_y += row_h_;
-
-        int i = 0;
-        for (auto const& itm : item_text_) {
-            if (i == selection_) {
-                r.set_draw_color(color_highlight);
-            } else if (i % 2 == 0) {
-                r.set_draw_color(color_even);
-            } else {
-                r.set_draw_color(color_odd);
-            }
-
-            r.draw_filled_rect(make_rect_size(cur_x, cur_y, row_w_, row_h_));
-
-            itm.render(r, *face_, cur_x, cur_y);
-            cur_y += row_h_;
-            ++i;
-        }
+        list_.render(r);
     }
     
-    int index_at(int const x, int const y) const {
-        auto const n = static_cast<int>(items_.size());
-
-        if (n == 0) {
-            return -1;
-        }
-
-        auto const left = pos_.x;
-        auto const top  = pos_.y;
-
-        if (x < left || y < top) {
-            return -1;
-        }
-
-        auto const w = row_w_ + border * 2;
-        auto const h = row_h_ * (n + 1) + border * 2;
-
-        auto const right  = left + w;
-        auto const bottom = top  + h;
-        
-        if (x >= right || y >= bottom) {
-            return -1;
-        }
-
-        auto const i = (y - top) / row_h_;
-        if (i < 1 || i > n) {
-            return -1;
-        }
-
-        return i - 1;
+    int index_at(ipoint2 const p) const {
+        auto const where = list_.get_index_at(p);
+        return where.y;
     }
 
-    item_id at(int const index) {
-        BK_ASSERT(index >= 0 && index < size());
+    item_id at(int const index) const {        
         return items_[index];
     }
 
-    void insert(item_id const id) {
-        auto const& itm  = (*item_store_)[id];
-        auto const& loc  = item_defs_->get_locale(itm.id);
-        auto const& name = loc.name;
+    void insert_item(item_id const id) {
+        auto const& istore = *item_store_;
+        auto const& idefs  = *item_defs_;
 
-        name_buffer_.clear();
-        name_buffer_.reserve(2 + name.size());
-
-        name_buffer_.push_back(prefix_);
-        name_buffer_.append({"\t-\t"});
-
-        name_buffer_.push_back('\t');
-        name_buffer_.append(name.data(), name.size());
-
-        items_.emplace_back(id);
-        item_text_.emplace_back(*face_, name_buffer_, 500, 32);
-        auto const& back = item_text_.back();
-
-        row_w_ = std::max(row_w_, back.actual_width()  + padding);
-        row_h_ = std::max(row_h_, back.actual_height() + padding);
-
-        prefix_++;
+        insert_item_(id, istore, idefs);
     }
 
-    void insert(bkrl::item_list const& items) {
+    void insert_item(bkrl::item_list const& items) {
         clear();
 
-        for (auto&& iid : items) {
-            insert(iid);
+        list_.add_col((*messages_)[message_type::header_items]);
+
+        auto const& istore = *item_store_;
+        auto const& idefs  = *item_defs_;
+
+        for (auto const& iid : items) {
+            insert_item_(iid, istore, idefs);
         }
+
+        list_.layout();
 
         BK_ASSERT(!empty());
     }
 
-    void clear() {
-        items_.clear();
-        item_text_.clear();
-        title_.clear();
+    void insert_item_(item_id const id, item_store const& istore, item_definitions const& idefs) {
+        auto const& itm  = istore[id];
+        auto const& name = itm.get_name(idefs);
 
-        selection_ = 0;
-        row_w_     = 0;
-        row_h_     = 0;
-        prefix_   = 'a';
+        name_buffer_.clear();
+        name_buffer_.push_back(prefix_++);
+
+        auto const row = list_.add_row(name_buffer_);
+        auto const col = 0;
+
+        list_.set_text(row, col, name);
+        items_.push_back(id);
     }
 
-    void set_selection(int i) {
-        BK_ASSERT(i < size());
-        selection_ = i;
+    void insert_equip(bkrl::item_list const& items) {
+        using msg = message_type;
+        using eqs = equip_slot;
+
+        auto const& istore = *item_store_;
+        auto const& idefs  = *item_defs_;
+        auto const& msgs   = *messages_;
+
+        auto const slot_count = enum_value(equip_slot::enum_size);
+        
+        list_.add_col(msgs[msg::header_slot]);
+        list_.add_col(msgs[msg::header_items]);
+
+        name_buffer_.clear();
+        name_buffer_.push_back(prefix_);
+
+        for (int i = 0; i < slot_count - 1; ++i) {
+            list_.add_row(name_buffer_);
+
+            name_buffer_[0]++;
+            prefix_++;
+        }
+        
+        auto const set_slot_name = [&](equip_slot const slot, message_type const hdr) {
+            list_.set_text(
+                enum_value(slot) - 1
+              , col_eq_slot
+              , msgs[hdr]
+            );
+        };
+
+        set_slot_name(eqs::head, msg::eqslot_head);
+        set_slot_name(eqs::arms_upper, msg::eqslot_arms_upper);
+        set_slot_name(eqs::arms_lower, msg::eqslot_arms_lower);
+        set_slot_name(eqs::hands, msg::eqslot_hands);
+        set_slot_name(eqs::chest, msg::eqslot_chest);
+        set_slot_name(eqs::waist, msg::eqslot_waist);
+        set_slot_name(eqs::legs_upper, msg::eqslot_legs_upper);
+        set_slot_name(eqs::legs_lower, msg::eqslot_legs_lower);
+        set_slot_name(eqs::feet, msg::eqslot_feet);
+        set_slot_name(eqs::finger_left, msg::eqslot_finger_left);
+        set_slot_name(eqs::finger_right, msg::eqslot_finger_right);
+        set_slot_name(eqs::neck, msg::eqslot_neck);
+        set_slot_name(eqs::back, msg::eqslot_back);
+        set_slot_name(eqs::hand_main, msg::eqslot_hand_main);
+        set_slot_name(eqs::hand_off, msg::eqslot_hand_off);
+        set_slot_name(eqs::ammo, msg::eqslot_ammo);
+
+        items_.resize(slot_count, item_id {0});
+
+        for (auto const& iid : items) {
+            auto const& itm  = istore[iid];
+            auto const& name = itm.get_name(idefs);
+
+            BK_ASSERT_DBG(itm.can_equip(idefs));
+
+            auto const slots = itm.equip_slots(idefs);
+
+            for (int i = 1; i < slot_count - 1; ++i) {
+                if (!slots.test(i)) { continue; }
+
+                list_.set_text(i - 1, col_eq_item, name);
+                items_[i - 1] = iid;
+            }
+        }
+
+        list_.layout();
+    }
+
+    void clear() {
+        list_.clear();
+        items_.clear();
+        prefix_ = 'a';
+    }
+
+    void set_selection(int const i) {
+        list_.set_selection(i);
     }
 
     void select_next() {
-        auto const size = items_.size();
-        selection_ = (selection_ + 1) % size;
+        list_.select_next();
     }
 
     void select_prev() {
-        auto const size = items_.size();
-        selection_ = (selection_ == 0)
-          ? (size - 1)
-          : (selection_ - 1);
+        list_.select_prev();
     }
 
-    item_id selection() const noexcept {
-        return items_[selection_];
+    int get_selection() const noexcept {
+        return list_.get_selection();
     }
 
     int size() const noexcept {
@@ -639,23 +718,16 @@ public:
         return items_.empty();
     }
 private:
-    font_face*              face_       = nullptr;
+    list list_;
+
     item_definitions const* item_defs_  = nullptr;
-    item_store const*       item_store_ = nullptr;
+    item_store       const* item_store_ = nullptr;
+    message_map      const* messages_   = nullptr;
 
-    int  selection_ = 0;
-    int  row_w_     = 0;
-    int  row_h_     = 0;
-    char prefix_    = 'a';
+    char prefix_ = 'a';
 
-    ipoint2 pos_ = ipoint2 {0, 0};
-
-    utf8string name_buffer_;
-
-    transitory_text_layout              title_;
-    
-    std::vector<item_id>                items_;
-    std::vector<transitory_text_layout> item_text_;
+    utf8string           name_buffer_;
+    std::vector<item_id> items_;
 };
 
 bkrl::gui::item_list::item_list(item_list&&) = default;
@@ -665,8 +737,9 @@ bkrl::gui::item_list::item_list(
     font_face&              face
   , item_definitions const& item_defs
   , item_store       const& items
+  , message_map      const& messages
 )
-  : impl_ {std::make_unique<detail::item_list_impl>(face, item_defs, items)}
+  : impl_ {std::make_unique<detail::item_list_impl>(face, item_defs, items, messages)}
 {
 }
 
@@ -682,8 +755,8 @@ void bkrl::gui::item_list::render(renderer& r) {
     impl_->render(r);
 }
 
-int bkrl::gui::item_list::index_at(int const x, int const y) const {
-    return impl_->index_at(x, y);
+int bkrl::gui::item_list::get_index_at(ipoint2 const p) const {
+    return impl_->index_at(p);
 }
 
 bkrl::item_id bkrl::gui::item_list::at(int const index) {
@@ -691,11 +764,11 @@ bkrl::item_id bkrl::gui::item_list::at(int const index) {
 }
 
 void bkrl::gui::item_list::insert(bkrl::item_list const& items) {
-    impl_->insert(items);
+    impl_->insert_item(items);
 }
 
 void bkrl::gui::item_list::insert(item_id const id) {
-    impl_->insert(id);
+    impl_->insert_item(id);
 }
 
 void bkrl::gui::item_list::clear() {
@@ -714,8 +787,8 @@ void bkrl::gui::item_list::select_prev() {
     impl_->select_prev();
 }
 
-bkrl::item_id bkrl::gui::item_list::selection() const noexcept {
-    return impl_->selection();
+int bkrl::gui::item_list::get_selection() const {
+    return impl_->get_selection();
 }
 
 int bkrl::gui::item_list::size() const noexcept {
@@ -724,6 +797,13 @@ int bkrl::gui::item_list::size() const noexcept {
 
 bool bkrl::gui::item_list::empty() const noexcept {
     return impl_->empty();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// gui::equip_list
+////////////////////////////////////////////////////////////////////////////////
+void bkrl::gui::equip_list::insert(bkrl::item_list const& items) {
+    impl_->insert_equip(items);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

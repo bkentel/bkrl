@@ -270,8 +270,23 @@ bool bkrl::item::can_equip(defs_t defs) const {
 }
 
 bool bkrl::item::can_equip(equipment const& eq, defs_t defs) const {
+    BK_TODO_FAIL();
     return false; //TODO
 }
+
+bkrl::equip_slot_flags bkrl::item::equip_slots(defs_t defs) const {
+    switch (type) {
+    default :
+        return equip_slot_flags {};
+    case item_type::armor :
+    case item_type::weapon :
+        break;
+    }
+    
+    auto const& idef = defs.get_definition(id);
+    return idef.slots;
+}
+
 
 bkrl::item_render_info_t bkrl::item::render_info(defs_t defs) const {
     auto const& idef = defs.get_definition(id);
