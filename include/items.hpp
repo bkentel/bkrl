@@ -25,6 +25,8 @@ class item_store;
 class item_definitions;
 class equipment;
 
+class message_map;
+
 struct item_definition;
 struct item_locale;
 
@@ -52,6 +54,7 @@ enum class item_type : uint8_t {
 };
 
 extern template item_type from_hash(hash_t hash);
+string_ref to_string(message_map const& msgs, item_type type); //TODO
 
 //==============================================================================
 //! Item equipment slots.
@@ -106,6 +109,9 @@ enum class damage_type : uint8_t {
 
   , enum_size
 };
+
+extern template damage_type from_hash(hash_t hash);
+string_ref to_string(message_map const& msgs, damage_type type); //TODO
 
 //==============================================================================
 //! A description of where and how an item was generated.
@@ -237,6 +243,9 @@ struct item_render_info_t {
 //==============================================================================
 class item {
 public:
+    using defs_t = item_definitions const&;
+    using msg_t  = message_map const&;
+
     item()                       = default;
     item(item const&)            = delete;
     item& operator=(item const&) = delete;
@@ -245,13 +254,15 @@ public:
     item(item&&);
     ~item();
 
-    using defs_t = item_definitions const&;
-
     string_ref get_name(defs_t defs) const;
 
     bool can_equip(defs_t defs) const;
     bool can_equip(equipment const& eq, defs_t defs) const;
     equip_slot_flags equip_slots(defs_t defs) const;
+
+    utf8string get_info_string(msg_t messages) const;
+
+    int16_t get_weight(defs_t defs) const;
 
     item_render_info_t render_info(defs_t defs) const;
 

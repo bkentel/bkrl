@@ -23,8 +23,8 @@
       , ["drop_nothing",     "You have nothing to drop."]
       , ["drop_ok",          "You drop the %1%."]
 
-      , ["attack_regular",   "You hit the %1% for %2% damage."]
-      , ["kill_regular",     "You killed the %1%."]
+      , ["attack_regular",   "You hit the %1% for %2% points of %3% damage."]
+      , ["kill_regular",     "You kill the %1%."]
 
       , ["title_inventory",  "Inventory"]
       , ["title_wield_wear", "Weild or wear"]
@@ -61,5 +61,17 @@
       , ["eqslot_hand_main",    "Main-hand"]
       , ["eqslot_hand_off",     "Off-hand"]
       , ["eqslot_ammo",         "Ammo"]
+      
+      , ["dtype_slash",    "slashing"]
+      , ["dtype_pierce",   "piercing"]
+      , ["dtype_blunt",    "bludgeoning"]
+      , ["dtype_fire",     "fire"]
+      , ["dtype_cold",     "cold"]
+      , ["dtype_electric", "electric"]
+      , ["dtype_acid",     "acid"]
+      
+      , ["itype_armor",  "armor"]
+      , ["itype_weapon", "weapon"]
+      , ["itype_potion", "potion"]
     ]
 }

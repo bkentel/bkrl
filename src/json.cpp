@@ -26,6 +26,7 @@ field_string const jc::field_tile_size   {"tile_size"};
 field_string const jc::field_stack       {"stack"};
 field_string const jc::field_damage_min  {"damage_min"};
 field_string const jc::field_damage_max  {"damage_max"};
+field_string const jc::field_damage_type {"damage_type"};
 field_string const jc::field_tile        {"tile"};
 field_string const jc::field_color       {"color"};
 field_string const jc::field_items       {"items"};
@@ -38,6 +39,8 @@ field_string const jc::field_font             {"font"};
 field_string const jc::field_type             {"type"};
 field_string const jc::field_slot             {"slot"};
 field_string const jc::field_player           {"player"};
+field_string const jc::field_armor_level      {"armor_level"};
+field_string const jc::field_weight           {"weight"};
 //------------------------------------------------------------------------------
 field_string const jc::filetype_config   {"CONFIG"};
 field_string const jc::filetype_locale   {"LOCALE"};

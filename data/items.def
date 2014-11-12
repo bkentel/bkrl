@@ -10,24 +10,28 @@
     , "tile": [14, 9]
     , "type": "armor"
     , "slot": ["arms_upper", "arms_lower", "chest"]
+    , "armor_level": ["uniform", 1, 3]
     , "weight": 200
     }
   , { "id": "ARMOR_LEATHER_LEGGINGS"
     , "tile": [14, 3]
     , "type": "armor"
     , "slot": ["legs_upper", "legs_lower", "waist"]
+    , "armor_level": ["uniform", 1, 3]
     , "weight": 200
     }
   , { "id": "ARMOR_LEATHER_BOOTS"
     , "tile": [6, 1]
     , "type": "armor"
     , "slot": ["feet"]
+    , "armor_level": ["uniform", 1, 3]
     , "weight": 200
     }
   , { "id": "ARMOR_LEATHER_CAP"
     , "tile": [15, 8]
     , "type": "armor"
     , "slot": ["head"]
+    , "armor_level": ["uniform", 1, 3]
     , "weight": 200
     }
   , { "id": "WEAPON_SWORD_SHORT"
@@ -36,6 +40,7 @@
     , "slot": ["hand_main"]
     , "damage_min": ["uniform", 1, 3]
     , "damage_max": ["constant", 6]
+    , "damage_type": "slash"
     , "weight": 200
     }
   , { "id": "WEAPON_LONG_SWORD"
@@ -44,6 +49,7 @@
     , "slot": ["hand_main"]
     , "damage_min": ["uniform", 1, 3]
     , "damage_max": ["constant", 10]
+    , "damage_type": "slash"
     , "weight": 200
     }
   , { "id": "WEAPON_HAMMER"
@@ -52,6 +58,7 @@
     , "slot": ["hand_main"]
     , "damage_min": ["uniform", 3, 4]
     , "damage_max": ["constant", 6]
+    , "damage_type": "blunt"
     , "weight": 200
     }
   , { "id": "WEAPON_STAFF"
@@ -60,6 +67,7 @@
     , "slot": ["hand_main", "hand_off"]
     , "damage_min": ["uniform", 1, 2]
     , "damage_max": ["constant", 5]
+    , "damage_type": "blunt"
     , "weight": 200
     }
   , { "id": "WEAPON_SHORT_BOW"
@@ -76,6 +84,7 @@
     , "slot": ["hand_main"]
     , "damage_min": ["uniform", 2, 3]
     , "damage_max": ["constant", 4]
+    , "damage_type": "pierce"
     , "weight": 200
     }
   , { "id": "WEAPON_AXE"
@@ -84,6 +93,7 @@
     , "slot": ["hand_main"]
     , "damage_min": ["uniform", 1, 4]
     , "damage_max": ["constant", 10]
+    , "damage_type": "slash"
     , "weight": 200
     }
   , { "id": "POTION_HEALTH_MINOR"

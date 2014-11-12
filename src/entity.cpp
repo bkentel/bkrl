@@ -268,9 +268,18 @@ bkrl::string_ref bkrl::entity::name(defs_t defs) const {
     return defs.get_locale(id).name;
 }
 
-bool bkrl::entity::apply_damage(damage_t const delta) {
+bool bkrl::entity::apply_damage(health_t const delta) {
     return (data.cur_health -= delta) <= 0;
 }
+
+bkrl::damage_t bkrl::entity::get_attack_value(random_t& gen, defs_t defs) {
+    return {1, damage_type::pierce}; //TODO
+}
+
+bkrl::defence_t bkrl::entity::get_defence_value(random_t& gen, defs_t defs, damage_type const type) {
+    return {0, type}; //TODO
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // entity_definitions
 ////////////////////////////////////////////////////////////////////////////////
@@ -346,6 +355,9 @@ bkrl::generate_entity(
   , item_store&               items
   , spawn_table        const& table
 ) {
+    //TODO not thread safe; can't be initialized (save / load)
+    static auto next_instance_id = uint32_t {0x80000000};
+
     auto const size  = entity_defs.get_definitions_size();
     auto const index = random::uniform_range(gen, 0, size - 1);
 
@@ -355,6 +367,7 @@ bkrl::generate_entity(
     entity result;
 
     result.id = id;
+    result.instance_id = entity_id {next_instance_id++};
     result.data.max_health = static_cast<health_t>(def.health(gen));
     result.data.cur_health = result.data.max_health;
     result.data.position = {0, 0};

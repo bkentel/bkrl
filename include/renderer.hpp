@@ -84,6 +84,8 @@ public:
     void do_one_event();
     void do_all_events();
 
+    void sleep(int ms) const;
+
     void on_char(char_sink sink);
     void on_command(command_sink sink);
     void on_close(close_sink sink);

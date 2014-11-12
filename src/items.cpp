@@ -6,6 +6,8 @@
 #include "algorithm.hpp"
 #include "json.hpp"
 
+#include "messages.hpp" //TODO
+
 namespace jc = bkrl::json::common;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -80,7 +82,6 @@ bkrl::get_item_loc(
     return defs.get_locale(store[id].id);
 }
 
-
 template <> bkrl::item_type
 bkrl::from_hash(hash_t const hash) {
     using mapping_t = string_ref_mapping<item_type> const;
@@ -95,6 +96,22 @@ bkrl::from_hash(hash_t const hash) {
     };
 
     return find_mapping(mappings, hash, item_type::none);
+}
+
+bkrl::string_ref bkrl::to_string(message_map const& msgs, item_type const type) {
+    using it = bkrl::item_type;
+    using mt = bkrl::message_type;
+
+    switch (type) {
+    default : break;
+    case it::weapon    : return msgs[mt::itype_weapon];
+    case it::armor     : return msgs[mt::itype_armor];
+    case it::scroll    : BK_TODO_FAIL(); break;
+    case it::potion    : return msgs[mt::itype_potion];
+    case it::container : BK_TODO_FAIL(); break;
+    }
+
+    return "{invalid item type}";
 }
 
 template <> bkrl::equip_slot
@@ -124,6 +141,42 @@ bkrl::from_hash(hash_t const hash) {
     return find_mapping(mappings, hash, equip_slot::none);
 }
 
+template <> bkrl::damage_type
+bkrl::from_hash(hash_t const hash) {
+    using mapping_t = string_ref_mapping<damage_type> const;
+
+    static mapping_t mappings[] = {
+        {"none",     damage_type::none}
+      , {"slash",    damage_type::slash}
+      , {"pierce",   damage_type::pierce}
+      , {"blunt",    damage_type::blunt}
+      , {"fire",     damage_type::fire}
+      , {"cold",     damage_type::cold}
+      , {"electric", damage_type::electric}
+      , {"acid",     damage_type::acid}
+    };
+
+    return find_mapping(mappings, hash, damage_type::invalid);
+}
+
+bkrl::string_ref bkrl::to_string(message_map const& msgs, damage_type const type) {
+    using dt = bkrl::damage_type;
+    using mt = bkrl::message_type;
+
+    switch (type) {
+    default : break;
+    case dt::slash    : return msgs[mt::dtype_slash];
+    case dt::pierce   : return msgs[mt::dtype_pierce];
+    case dt::blunt    : return msgs[mt::dtype_blunt];
+    case dt::fire     : return msgs[mt::dtype_fire];
+    case dt::cold     : return msgs[mt::dtype_cold];
+    case dt::electric : return msgs[mt::dtype_electric];
+    case dt::acid     : return msgs[mt::dtype_acid];
+    }
+
+    return "{invalid damage type}";
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // item_definition
 ////////////////////////////////////////////////////////////////////////////////
@@ -143,6 +196,11 @@ struct bkrl::item_definition {
 
     dist_t damage_min;
     dist_t damage_max;
+    damage_type damage_type = damage_type::none;
+
+    dist_t armor_level;
+
+    int16_t weight = 0;
 
     item_type type = item_type::none;
 };
@@ -254,11 +312,13 @@ bkrl::item::~item() {
     }
 }
 
+//------------------------------------------------------------------------------
 bkrl::string_ref
 bkrl::item::get_name(defs_t defs) const {
     return defs.get_locale(id).name;
 }
 
+//------------------------------------------------------------------------------
 bool bkrl::item::can_equip(defs_t defs) const {
     switch (type) {
     case item_type::armor :
@@ -269,11 +329,13 @@ bool bkrl::item::can_equip(defs_t defs) const {
     return false;
 }
 
+//------------------------------------------------------------------------------
 bool bkrl::item::can_equip(equipment const& eq, defs_t defs) const {
     BK_TODO_FAIL();
     return false; //TODO
 }
 
+//------------------------------------------------------------------------------
 bkrl::equip_slot_flags bkrl::item::equip_slots(defs_t defs) const {
     switch (type) {
     default :
@@ -287,8 +349,53 @@ bkrl::equip_slot_flags bkrl::item::equip_slots(defs_t defs) const {
     return idef.slots;
 }
 
+//------------------------------------------------------------------------------
+bkrl::utf8string
+bkrl::item::get_info_string(msg_t messages) const {
+    //TODO split this into multiple functions
+    
+    using it = item_type;
 
-bkrl::item_render_info_t bkrl::item::render_info(defs_t defs) const {
+    utf8string result;
+
+    switch (type) {
+    default            : BK_TODO_FAIL();
+    case it::none      : break;
+    case it::container : break;
+    case it::weapon : {
+        auto const& w = data.weapon;
+
+        result.append(std::to_string(w.dmg_min));
+        result.append(" - ");
+        result.append(std::to_string(w.dmg_max));
+        result.append(" ");
+        result.append(to_string(messages, w.dmg_type).data());
+        
+        break;
+    }
+    case it::armor : {
+        auto const& a = data.armor;
+
+        result.append(std::to_string(a.base));
+        result.append(" armor");
+        
+        break;
+    }
+    case it::potion    : break;
+    }
+
+    return result;
+}
+
+//------------------------------------------------------------------------------
+bkrl::int16_t
+bkrl::item::get_weight(defs_t defs) const {
+    return defs.get_definition(id).weight;
+}
+
+//------------------------------------------------------------------------------
+bkrl::item_render_info_t
+bkrl::item::render_info(defs_t defs) const {
     auto const& idef = defs.get_definition(id);
     
     return item_render_info_t {
@@ -483,6 +590,7 @@ public:
         rule_def_id(value);
         rule_def_type(value);
         rule_def_tile(value);
+        rule_def_weight(value);
 
         definitions_.emplace(cur_def_.id, std::move(cur_def_));
     }
@@ -524,14 +632,45 @@ public:
     }
 
     //--------------------------------------------------------------------------
+    void rule_def_weight(cref value) {
+        auto const weight = json::require_int<int16_t>(value[jc::field_weight]);
+        
+        if (weight <= 0) {
+            BK_TODO_FAIL();
+        }
+
+        cur_def_.weight = weight;
+    }
+
+    //--------------------------------------------------------------------------
     void rule_def_weapon(cref value) {
         rule_def_slots(value);
         rule_def_damage(value);
+        rule_def_damage_type(value);
+    }
+
+    //--------------------------------------------------------------------------
+    void rule_def_damage_type(cref value) {
+        auto const& type_str = json::optional_string(value[jc::field_damage_type]);
+        if (!type_str) {
+            cur_def_.damage_type = damage_type::none;
+            return;
+        }
+
+        auto const hash = slash_hash32(*type_str);
+        auto const type = from_hash<damage_type>(hash);
+        if (type == damage_type::invalid) {
+            BK_TODO_FAIL();
+        }
+
+        cur_def_.damage_type = type;
     }
 
     //--------------------------------------------------------------------------
     void rule_def_armor(cref value) {
         rule_def_slots(value);
+
+        cur_def_.armor_level = jc::get_random(value[jc::field_armor_level]);
     }
 
     //--------------------------------------------------------------------------
@@ -745,13 +884,48 @@ bkrl::generate_item(
 ) {
     auto const size = item_defs.get_definitions_size();
     auto const i    = random::uniform_range(gen, 0, size - 1);
-
     auto const& def = item_defs.get_definition_at(i);
     
     item itm;
     itm.id     = def.id;;
     itm.type   = def.type;
     itm.origin = origin;
+
+    auto const make_weapon = [&] {
+        BK_ASSERT(itm.type == item_type::weapon);
+        auto& weap = itm.data.weapon;
+
+        auto const dmg_min = def.damage_min(gen);
+        auto const dmg_max = def.damage_max(gen);
+
+        if (dmg_min < 0 || dmg_max < 0 || dmg_max < dmg_min) {
+            BK_TODO_FAIL();
+        }
+
+        weap.dmg_min  = static_cast<int16_t>(dmg_min);
+        weap.dmg_max  = static_cast<int16_t>(dmg_max);
+        weap.dmg_type = def.damage_type;
+    };
+
+    auto const make_armor = [&] {
+        BK_ASSERT(itm.type == item_type::armor);
+        auto& armor = itm.data.armor;
+
+        std::fill(std::begin(armor.resists), std::end(armor.resists), 1);
+        
+        auto const al = def.armor_level(gen);
+        
+        if (al <= 0) {
+            BK_TODO_FAIL();
+        }
+
+        armor.base = static_cast<int16_t>(al);
+    };
+
+    switch (itm.type) {
+    case item_type::weapon : make_weapon(); break;
+    case item_type::armor  : make_armor();  break;
+    }
 
     return store.insert(std::move(itm));
 }

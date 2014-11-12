@@ -51,6 +51,11 @@ application::do_all_events() {
 }
 
 void
+application::sleep(int const ms) const {
+    impl_->sleep(ms);
+}
+
+void
 application::on_char(char_sink sink) {
     impl_->on_command(sink);
 }

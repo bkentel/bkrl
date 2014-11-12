@@ -80,6 +80,18 @@ enum class message_type : uint16_t {
   , eqslot_hand_off
   , eqslot_ammo
 
+  , dtype_slash
+  , dtype_pierce
+  , dtype_blunt
+  , dtype_fire
+  , dtype_cold
+  , dtype_electric
+  , dtype_acid
+
+  , itype_weapon
+  , itype_armor
+  , itype_potion
+
   , enum_size
 };
 

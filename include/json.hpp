@@ -263,6 +263,7 @@ extern field_string const field_tile_size;
 extern field_string const field_stack;
 extern field_string const field_damage_min;
 extern field_string const field_damage_max;
+extern field_string const field_damage_type;
 extern field_string const field_tile;
 extern field_string const field_color;
 extern field_string const field_items;
@@ -275,6 +276,8 @@ extern field_string const field_font;
 extern field_string const field_type;
 extern field_string const field_slot;
 extern field_string const field_player;
+extern field_string const field_armor_level;
+extern field_string const field_weight;
 //------------------------------------------------------------------------------
 extern field_string const filetype_config;
 extern field_string const filetype_locale;

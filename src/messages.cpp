@@ -71,6 +71,19 @@ bkrl::from_hash(hash_t const hash) {
       , {"eqslot_hand_main",    mt::eqslot_hand_main}
       , {"eqslot_hand_off",     mt::eqslot_hand_off}
       , {"eqslot_ammo",         mt::eqslot_ammo}
+
+      , {"dtype_slash",    mt::dtype_slash}
+      , {"dtype_pierce",   mt::dtype_pierce}
+      , {"dtype_blunt",    mt::dtype_blunt}
+      , {"dtype_fire",     mt::dtype_fire}
+      , {"dtype_cold",     mt::dtype_cold}
+      , {"dtype_electric", mt::dtype_electric}
+      , {"dtype_acid",     mt::dtype_acid}
+
+      , {"itype_weapon", mt::itype_weapon}
+      , {"itype_armor",  mt::itype_armor}
+      , {"itype_potion", mt::itype_potion}
+
     };
 
     return find_mapping(mappings, hash, mt::invalid);

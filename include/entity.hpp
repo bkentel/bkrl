@@ -24,8 +24,13 @@ struct entity_locale;
 namespace detail { class entity_store_impl; }
 namespace detail { class entity_definitions_impl; }
 
-using damage_t = int16_t;
-using health_t = int16_t;
+struct damage_t {
+    int16_t     value;
+    damage_type type;
+};
+
+using defence_t = damage_t;
+using health_t  = int16_t;
 
 //==============================================================================
 //! Localized entity strings.
@@ -108,8 +113,20 @@ public:
 
     auto health() const { return range<int> {data.cur_health, data.max_health}; }
 
-    bool apply_damage(damage_t delta);
+    bool apply_damage(health_t delta);
+
+    friend bool operator==(entity const& rhs, entity const& lhs) noexcept {
+        return lhs.instance_id == rhs.instance_id;
+    }
+
+    friend bool operator!=(entity const& rhs, entity const& lhs) noexcept {
+        return !(lhs == rhs);
+    }
+
+    damage_t  get_attack_value(random_t& gen, defs_t defs);
+    defence_t get_defence_value(random_t& gen, defs_t defs, damage_type type);
 public:
+    entity_id     instance_id;
     entity_def_id id;
     entity_data_t data;
 };
@@ -176,25 +193,41 @@ public:
         return try_equip;
     }
 
-    damage_t get_attack_value(random_t& gen, defs_t defs, items_t istore) {
-        auto const& main = equip_.in_slot(equip_slot::hand_main);
-        if (!main) {
-            return 1;
-        }
-
-        auto const  iid = *main;
-        auto const& itm = istore[iid];
-        
-        BK_ASSERT(itm.type == item_type::weapon);
-
-        auto const& w = itm.data.weapon;
-        
-        return random::uniform_range(gen, w.dmg_min, w.dmg_max);
-    }
 
     equipment&       equip()       { return equip_; }
     equipment const& equip() const { return equip_; }
 
+    damage_t get_attack_value(random_t& gen, items_t items) {
+        auto const opt_weapon = [&]() -> optional<bkrl::item_id> {
+            if (auto const main = equip_.in_slot(equip_slot::hand_main)) {
+                return main;
+            } else if (auto const off = equip_.in_slot(equip_slot::hand_off)) {
+                return off;
+            }
+
+            return {};
+        }();
+
+        //TODO unarmed
+        if (!opt_weapon) {
+            return damage_t {1, damage_type::blunt};
+        }
+
+        auto const weapon_id = *opt_weapon;
+
+        auto const& itm      = items[weapon_id];
+        auto const  dmg_min  = itm.data.weapon.dmg_min; //TODO
+        auto const  dmg_max  = itm.data.weapon.dmg_max; //TODO
+        auto const  dmg_type = itm.data.weapon.dmg_type; //TODO
+
+        auto const dmg = random::uniform_range(gen, dmg_min, dmg_max);
+
+        return damage_t {dmg, dmg_type};
+    }
+    
+    defence_t get_defence_value(random_t& gen, defs_t defs, damage_type type) {
+        return defence_t {1, type}; // TODO
+    }
 private:
     equipment equip_;
 };

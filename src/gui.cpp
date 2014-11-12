@@ -537,9 +537,15 @@ void bkrl::gui::list::render(renderer& render) {
 class bkrl::gui::detail::item_list_impl {
 public:
     enum {
-        col_item    = 0
-      , col_eq_slot = 0
-      , col_eq_item = 1
+        col_itm_name    = 0
+      , col_itm_weight  = 1
+      , col_itm_type    = 2
+      , col_itm_details = 3
+
+      , col_eq_slot    = 0
+      , col_eq_name    = 1
+      , col_eq_weight  = 2
+      , col_eq_details = 3
     };
 
     item_list_impl(
@@ -584,20 +590,25 @@ public:
     void insert_item(item_id const id) {
         auto const& istore = *item_store_;
         auto const& idefs  = *item_defs_;
+        auto const& msgs   = *messages_;
 
-        insert_item_(id, istore, idefs);
+        insert_item_(id, istore, idefs, msgs);
     }
 
     void insert_item(bkrl::item_list const& items) {
         clear();
 
-        list_.add_col((*messages_)[message_type::header_items]);
-
         auto const& istore = *item_store_;
         auto const& idefs  = *item_defs_;
+        auto const& msgs   = *messages_;
+
+        list_.add_col(msgs[message_type::header_items]);
+        list_.add_col("Weight");
+        list_.add_col("Type");
+        list_.add_col("Details");
 
         for (auto const& iid : items) {
-            insert_item_(iid, istore, idefs);
+            insert_item_(iid, istore, idefs, msgs);
         }
 
         list_.layout();
@@ -605,17 +616,23 @@ public:
         BK_ASSERT(!empty());
     }
 
-    void insert_item_(item_id const id, item_store const& istore, item_definitions const& idefs) {
-        auto const& itm  = istore[id];
-        auto const& name = itm.get_name(idefs);
+    void insert_item_(item_id const id, item_store const& istore, item_definitions const& idefs, message_map const& msgs) {
+        auto const& itm    = istore[id];
+        auto const& name   = itm.get_name(idefs);
+        auto const& type   = to_string(msgs, itm.type);
+        auto const& weight = std::to_string(itm.get_weight(idefs));
+        auto const& info   = itm.get_info_string(msgs);
 
         name_buffer_.clear();
         name_buffer_.push_back(prefix_++);
 
         auto const row = list_.add_row(name_buffer_);
-        auto const col = 0;
 
-        list_.set_text(row, col, name);
+        list_.set_text(row, col_itm_name,    name);
+        list_.set_text(row, col_itm_weight,  weight);
+        list_.set_text(row, col_itm_type,    type);
+        list_.set_text(row, col_itm_details, info);
+        
         items_.push_back(id);
     }
 
@@ -631,6 +648,8 @@ public:
         
         list_.add_col(msgs[msg::header_slot]);
         list_.add_col(msgs[msg::header_items]);
+        list_.add_col("Weight");
+        list_.add_col("Details");
 
         name_buffer_.clear();
         name_buffer_.push_back(prefix_);
@@ -670,8 +689,10 @@ public:
         items_.resize(slot_count, item_id {0});
 
         for (auto const& iid : items) {
-            auto const& itm  = istore[iid];
-            auto const& name = itm.get_name(idefs);
+            auto const& itm    = istore[iid];
+            auto const& name   = itm.get_name(idefs);
+            auto const& info   = itm.get_info_string(msgs);
+            auto const& weight = std::to_string(itm.get_weight(idefs));
 
             BK_ASSERT_DBG(itm.can_equip(idefs));
 
@@ -680,8 +701,12 @@ public:
             for (int i = 1; i < slot_count - 1; ++i) {
                 if (!slots.test(i)) { continue; }
 
-                list_.set_text(i - 1, col_eq_item, name);
-                items_[i - 1] = iid;
+                auto const row = i - 1;
+
+                list_.set_text(row, col_eq_name,    name);
+                list_.set_text(row, col_eq_weight,  weight);
+                list_.set_text(row, col_eq_details, info);
+                items_[row] = iid;
             }
         }
 

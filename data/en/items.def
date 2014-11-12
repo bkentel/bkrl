@@ -6,6 +6,18 @@
     , "name": "leather coat"
     , "text": "A coat made from tough and durable leather."
     }
+  , { "id": "ARMOR_LEATHER_LEGGINGS"
+    , "name": "leather leggings"
+    , "text": "todo"
+    }
+  , { "id": "ARMOR_LEATHER_BOOTS"
+    , "name": "leather boots"
+    , "text": "todo"
+    }
+  , { "id": "ARMOR_LEATHER_CAP"
+    , "name": "leather cap"
+    , "text": "todo"
+    }
   , { "id":   "WEAPON_SWORD_SHORT"
     , "name": "short sword"
     , "text": "A short sword suitable for, well, slashing."

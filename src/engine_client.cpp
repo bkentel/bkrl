@@ -442,12 +442,26 @@ public:
     }
 
     //--------------------------------------------------------------------------
+    void draw_health_bars(renderer& r) {
+        auto const& sheet  = (*tiles_sheets_)[tile_sheet_set::entities];
+        auto const  tile_w = sheet.tile_w();
+        auto const  tile_h = sheet.tile_h();
+        auto const  size   = ipoint2 {tile_w, tile_h};
+
+        for (auto const& ent : entities_) {
+            auto const p = ent.position();          
+
+            auto const health = ent.health();
+            if (health.size() != 0) {
+                draw_health_bar(r, ent, p, size);
+            }
+        }
+    }
+
+    //--------------------------------------------------------------------------
     void draw_entities(renderer& r) {
         auto& sheet = (*tiles_sheets_)[tile_sheet_set::entities];
         auto& tex   = sheet.get_texture();
-
-        auto const tile_w = sheet.tile_w();
-        auto const tile_h = sheet.tile_h();
 
         auto const& entities = definitions_->get_entities();
 
@@ -457,11 +471,6 @@ public:
 
             r.set_color_mod(tex, rinfo.tex_color);
             sheet.render(r, rinfo.tex_position, p);
-
-            auto const health = ent.health();
-            if (health.size() != 0) {
-                draw_health_bar(r, ent, p, ipoint2 {tile_w, tile_h});
-            }
         }
     }
 
@@ -499,6 +508,7 @@ public:
         draw_items(r);
         draw_entities(r);
         draw_player(r);
+        draw_health_bars(r);
     }
 
     //--------------------------------------------------------------------------
@@ -623,33 +633,46 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    utf8string attack(random::generator& trivial, entity& subject, entity& object) {
-        auto const p = object.position();
-        BK_ASSERT_DBG(!!entity_at(p));
+    void kill_entity(entity& ent) {
+        auto const p     = ent.position();
+        auto&      items = ent.items();
 
-        auto const& entities = definitions_->get_entities();
-        auto const& msgs = definitions_->get_messages();
-        
-        auto const& name   = object.name(entities);
-        auto const  damage = 1;
-
-        auto const killed = object.apply_damage(damage);
-        if (!killed) {
-            boost::format fmt {msgs[message_type::attack_regular].data()};
-            fmt % name % damage;
-            return boost::str(fmt);
-        }
-        
-        if (!object.items().empty()) {
-            add_to_stack_(make_stack_at_(p), std::move(object.items()));
+        if (!items.empty()) {
+            add_to_stack_(make_stack_at_(p), std::move(items));
         }
 
         entities_.remove(p);
-
-        boost::format fmt {msgs[message_type::kill_regular].data()};
-        fmt % name;
-        return boost::str(fmt);
     }
+
+    //--------------------------------------------------------------------------
+    //utf8string attack(random::generator& trivial, entity& subject, entity& object) {
+    //    auto const p = object.position();
+    //    BK_ASSERT_DBG(!!entity_at(p));
+
+    //    auto const& entities = definitions_->get_entities();
+    //    auto const& msgs = definitions_->get_messages();
+    //    
+    //    auto const& name   = object.name(entities);
+    //    auto const  damage = 1;
+
+    //    auto const killed = object.apply_damage(damage);
+    //    if (!killed) {
+    //        boost::format fmt {msgs[message_type::attack_regular].data()};
+    //        fmt % name % damage;
+    //        return boost::str(fmt);
+    //    }
+    //    
+    //    if (!object.items().empty()) {
+    //        add_to_stack_(make_stack_at_(p), std::move(object.items()));
+    //    }
+
+    //    entities_.remove(p);
+
+    //    boost::format fmt {msgs[message_type::kill_regular].data()};
+    //    fmt % name;
+    //    return boost::str(fmt);
+    //}
+
     //--------------------------------------------------------------------------
     bool can_move_to(entity const& e, ipoint2 const p) const {
         if (!grid_.is_valid(p)) {
@@ -1674,7 +1697,7 @@ public:
         
         init_sinks();
         init_timers();
-
+        
         next_level(0);
         
         print_message(message_type::welcome);
@@ -1693,7 +1716,7 @@ public:
 
     void yield() {
         if (frames_ % 5 == 0) {
-            //SDL_Delay(15);
+            app_.sleep(15);
         }
     }
 
@@ -2030,6 +2053,65 @@ public:
         print_message(message_type::drop_ok, get_item_name_(iid));
     }
 
+    //--------------------------------------------------------------------------
+    void attack_(player& attacker, entity& defender) {
+        check_attack_(attacker, defender);
+
+        auto&       lvl    = *cur_level_;
+        auto&       gen    = random_trivial_;
+        auto const& istore = item_store_;
+        auto const& edefs  = definitions_->get_entities();
+        auto const& msgs   = definitions_->get_messages();
+
+        auto const att = attacker.get_attack_value(gen, istore);
+        auto const def = defender.get_defence_value(gen, edefs, att.type);
+        auto const dmg = static_cast<health_t>(std::max(0, att.value - def.value));
+
+        auto const& att_name = attacker.name(edefs);
+        auto const& def_name = defender.name(edefs);
+
+        auto const killed = defender.apply_damage(dmg);
+        if (!killed) {
+            auto const& dmg_type = to_string(msgs, att.type);
+            print_message(message_type::attack_regular, def_name, dmg, dmg_type);
+            return;
+        } else {
+            print_message(message_type::kill_regular, def_name);
+            lvl.kill_entity(defender);
+        }
+    }
+
+    //--------------------------------------------------------------------------
+    void attack_(entity& attacker, player& defender) {
+    }
+
+    //--------------------------------------------------------------------------
+    void check_attack_(entity& attacker, entity& defender) {
+        if (attacker == defender) {
+            BK_TODO_FAIL();
+        }
+
+        auto& lvl = *cur_level_;
+
+        auto const p_att = attacker.position();
+        auto const p_def = defender.position();
+        auto const v     = p_att - p_def;
+
+        if (std::abs(v.x) > 1 || std::abs(v.y) > 1) {
+            BK_TODO_FAIL();
+        }
+
+        auto const opt_att = lvl.entity_at(p_att);
+        if (!opt_att || *opt_att != attacker) {
+            BK_TODO_FAIL();
+        }
+
+        auto const opt_def = lvl.entity_at(p_def);
+        if (!opt_def || *opt_def != defender) {
+            BK_TODO_FAIL();
+        }
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     // Commands
     ////////////////////////////////////////////////////////////////////////////
@@ -2044,15 +2126,8 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    void do_attack(entity& object) {
-        auto& subject = player_;
-
-        auto const v = subject.position() - object.position();
-        BK_ASSERT_DBG(std::abs(v.x) <= 1);
-        BK_ASSERT_DBG(std::abs(v.y) <= 1);
-
-        auto const msg = cur_level_->attack(random_trivial_, subject, object);
-        print_message(msg);
+    void do_attack(entity& target) {
+        attack_(player_, target);
 
         advance();
     }

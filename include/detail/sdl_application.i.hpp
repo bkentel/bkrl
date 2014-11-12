@@ -108,6 +108,8 @@ public:
     void do_one_event();
     void do_all_events();
 
+    void sleep(int ms) const;
+
     void on_command(char_sink sink)              { on_char_         = sink; }
     void on_command(command_sink sink)           { on_command_      = sink; }
     void on_close(close_sink sink)               { on_close_        = sink; }
@@ -449,6 +451,12 @@ application_impl::do_all_events() {
     while (SDL_PollEvent(&event)) {
         handle_event(event);
     }
+}
+
+//------------------------------------------------------------------------------
+void
+application_impl::sleep(int ms) const {
+    SDL_Delay(ms);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

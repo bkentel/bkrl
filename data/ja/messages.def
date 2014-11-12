@@ -23,7 +23,7 @@
       , ["drop_nothing",     "落とすことのできるものを持っていない。"]
       , ["drop_ok",          "%1%を落とした。"]
       
-      , ["attack_regular",   "%1%に%2%点のダメージを与えた."]
+      , ["attack_regular",   "%1%に%2%点の%3%ダメージを与えた."]
       , ["kill_regular",     "%1%を斃した。"]
       
       , ["title_inventory",  "所持品"]
@@ -61,5 +61,17 @@
       , ["eqslot_hand_main",    "利き手"]
       , ["eqslot_hand_off",     "手"]
       , ["eqslot_ammo",         "矢玉"]
+      
+      , ["dtype_slash",    "斬"]
+      , ["dtype_pierce",   "刺"]
+      , ["dtype_blunt",    "打"]
+      , ["dtype_fire",     "火"]
+      , ["dtype_cold",     "冷"]
+      , ["dtype_electric", "電"]
+      , ["dtype_acid",     "酸"]
+      
+      , ["itype_armor",  "防具"]
+      , ["itype_weapon", "武器"]
+      , ["itype_potion", "ポ－ション"]
     ]
 }
