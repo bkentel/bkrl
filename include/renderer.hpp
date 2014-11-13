@@ -9,10 +9,11 @@
 #include <memory>
 #include <functional>
 
-#include "types.hpp"
+//#include "types.hpp"
 #include "math.hpp"
 #include "util.hpp"
 #include "render_types.hpp"
+#include "enum_forward.hpp"
 
 namespace bkrl {
 

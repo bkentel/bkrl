@@ -182,13 +182,7 @@
     <ClInclude Include="..\include\config.hpp">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\macros.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\messages.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\scope_exit.hpp">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\include\iterable.hpp">
@@ -244,6 +238,21 @@
     </ClInclude>
     <ClInclude Include="..\include\identifier.hpp">
       <Filter>include\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\random_forward.hpp">
+      <Filter>include\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\optional.hpp">
+      <Filter>include\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\macros.hpp">
+      <Filter>include\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\scope_exit.hpp">
+      <Filter>include\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\combat_types.hpp">
+      <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

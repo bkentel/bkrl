@@ -861,6 +861,7 @@ bkrl::gui::message_log::render(
   , int y
 ) {
     constexpr auto max_line = 3;
+    auto const line_h = font_face_->line_gap();
 
     auto const restore = r.restore_view();
 
@@ -876,7 +877,7 @@ bkrl::gui::message_log::render(
         }
 
         line.render(r, *font_face_, x, y);
-        y += line.actual_height();
+        y += line_h;
     }
 }
 

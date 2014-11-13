@@ -57,9 +57,8 @@ struct string_ref_mapping {
     {
     }
 
-    inline operator hash_t()     const noexcept { return hash;   }
-    inline operator value_t()    const noexcept { return value;  }
-    //inline operator string_ref() const noexcept { return string; }
+    inline operator hash_t()  const noexcept { return hash;   }
+    inline operator value_t() const noexcept { return value;  }
 
     string_ref string;
     hash_t     hash;

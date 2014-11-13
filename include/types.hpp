@@ -6,9 +6,7 @@
 //##############################################################################
 #pragma once
 
-
 #include <boost/predef.h>
-#include <boost/optional.hpp>
 
 #include "integers.hpp"
 #include "string.hpp"
@@ -71,53 +69,9 @@ template<class _Container>
 }
 #endif
 
-namespace json11 { class Json; }
-
 ////////////////////////////////////////////////////////////////////////////////
 namespace bkrl {
 ////////////////////////////////////////////////////////////////////////////////
-namespace json   { using cref = json11::Json const&; }
-namespace random { class generator; }
-
-using random_t = random::generator;
-
-template <typename T>
-using optional = boost::optional<T>;
-
-//using hash_t = uint32_t;
-//
-//using utf8string = std::string;
-//
-////------------------------------------------------------------------------------
-//// A string observer (UTF-8)
-////------------------------------------------------------------------------------
-//using string_ref = boost::string_ref;
-//
-////------------------------------------------------------------------------------
-//// Platform specific path string types.
-////------------------------------------------------------------------------------
-//#if BOOST_OS_WINDOWS
-//using path_char = wchar_t;
-//#define BK_PATH_LITERAL(str) L ## str
-//#else
-//using path_char = char;
-//#define BK_PATH_LITERAL(str) str
-//#endif
-//
-//using path_string_ref = boost::basic_string_ref<path_char>;
-//using path_string     = std::basic_string<path_char>;
-////------------------------------------------------------------------------------
-//
-//using codepoint_t = uint32_t;
-
-//forward declarations
-enum class command_type      : uint16_t;
-enum class tile_type         : uint16_t;
-enum class texture_type      : uint16_t;
-enum class key               : uint16_t;
-enum class scancode          : uint16_t;
-enum class key_modifier_type : uint16_t;
-enum class message_type      : uint16_t;
 
 using texture_id = uint32_t;
 using room_id    = uint32_t;

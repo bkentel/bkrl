@@ -1,7 +1,10 @@
 #pragma once
 
-#include "types.hpp"
-#include "util.hpp"
+#include <vector>
+
+#include "macros.hpp"
+#include "json_forward.hpp"
+#include "identifier.hpp"
 
 #include "config.hpp"
 #include "items.hpp"
@@ -11,6 +14,13 @@
 #include "keyboard.hpp"
 
 namespace bkrl {
+
+class config;
+class keymap;
+class tile_map;
+class message_map;
+class item_definitions;
+class entity_definitions;
 
 //==============================================================================
 //!

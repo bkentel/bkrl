@@ -100,11 +100,15 @@
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</BrowseInformation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <Bscmake>
+      <PreserveSbr Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</PreserveSbr>
+    </Bscmake>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Test_Debug'">
     <ClCompile>
@@ -187,6 +191,7 @@
     <ClInclude Include="..\include\algorithm.hpp" />
     <ClInclude Include="..\include\assert.hpp" />
     <ClInclude Include="..\include\bsp_layout.hpp" />
+    <ClInclude Include="..\include\combat_types.hpp" />
     <ClInclude Include="..\include\command_type.hpp" />
     <ClInclude Include="..\include\config.hpp" />
     <ClInclude Include="..\include\definitions.hpp" />
@@ -212,9 +217,11 @@
     <ClInclude Include="..\include\macros.hpp" />
     <ClInclude Include="..\include\math.hpp" />
     <ClInclude Include="..\include\messages.hpp" />
+    <ClInclude Include="..\include\optional.hpp" />
     <ClInclude Include="..\include\pch.hpp" />
     <ClInclude Include="..\include\entity.hpp" />
     <ClInclude Include="..\include\random.hpp" />
+    <ClInclude Include="..\include\random_forward.hpp" />
     <ClInclude Include="..\include\renderer.hpp" />
     <ClInclude Include="..\include\render_types.hpp" />
     <ClInclude Include="..\include\scancode.hpp" />

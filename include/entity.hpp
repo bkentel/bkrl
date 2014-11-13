@@ -5,12 +5,14 @@
 //##############################################################################
 #pragma once
 
-#include "types.hpp"
+#include "math.hpp"
+#include "string.hpp"
+#include "integers.hpp"
 #include "items.hpp"
 #include "identifier.hpp"
 #include "render_types.hpp"
-
 #include "random.hpp"
+#include "combat_types.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
 namespace bkrl {
@@ -23,14 +25,6 @@ struct entity_locale;
 
 namespace detail { class entity_store_impl; }
 namespace detail { class entity_definitions_impl; }
-
-struct damage_t {
-    int16_t     value;
-    damage_type type;
-};
-
-using defence_t = damage_t;
-using health_t  = int16_t;
 
 //==============================================================================
 //! Localized entity strings.
@@ -47,8 +41,7 @@ class entity_definitions {
 public:
     static path_string_ref tile_filename();
     static tex_point_i     tile_size();
-
-    static tex_point_i player_tile();
+    static tex_point_i     player_tile();
 
     entity_definitions();
     ~entity_definitions();
@@ -158,76 +151,23 @@ entity generate_entity(
 //==============================================================================
 class player : public entity {
 public:
-    using entity::entity;
-
     using defs_t  = item_definitions const&;
     using items_t = item_store const&;
 
-    entity_render_info_t render_info(entity_definitions const&) const {
-        return entity_render_info_t {
-            entity_definitions::player_tile()
-          , argb8 {255, 255, 255, 255}
-        };
-    }
+    using entity::entity;
 
-    item_stack get_equippable(defs_t idefs, items_t istore) const {
-        item_stack result;
+    entity_render_info_t render_info(entity_definitions const&) const;
 
-        for (auto const iid : items()) {
-            if (istore[iid].can_equip(idefs)) {
-                result.insert(iid, idefs, istore);
-            }
-        }
+    item_stack get_equippable(defs_t idefs, items_t istore) const;
 
-        return result;
-    }
+    equipment::result_t equip_item(item_id iid, defs_t defs, items_t istore);
 
-    equipment::result_t equip_item(item_id iid, defs_t defs, items_t istore) {
-        auto const try_equip = equip_.equip(iid, defs, istore);
-        if (!try_equip.second) {
-            return try_equip;
-        }
+    equipment&       equip();
+    equipment const& equip() const;
 
-        this->items().remove(iid);
-
-        return try_equip;
-    }
-
-
-    equipment&       equip()       { return equip_; }
-    equipment const& equip() const { return equip_; }
-
-    damage_t get_attack_value(random_t& gen, items_t items) {
-        auto const opt_weapon = [&]() -> optional<bkrl::item_id> {
-            if (auto const main = equip_.in_slot(equip_slot::hand_main)) {
-                return main;
-            } else if (auto const off = equip_.in_slot(equip_slot::hand_off)) {
-                return off;
-            }
-
-            return {};
-        }();
-
-        //TODO unarmed
-        if (!opt_weapon) {
-            return damage_t {1, damage_type::blunt};
-        }
-
-        auto const weapon_id = *opt_weapon;
-
-        auto const& itm      = items[weapon_id];
-        auto const  dmg_min  = itm.data.weapon.dmg_min; //TODO
-        auto const  dmg_max  = itm.data.weapon.dmg_max; //TODO
-        auto const  dmg_type = itm.data.weapon.dmg_type; //TODO
-
-        auto const dmg = random::uniform_range(gen, dmg_min, dmg_max);
-
-        return damage_t {dmg, dmg_type};
-    }
+    damage_t get_attack_value(random_t& gen, items_t items);
     
-    defence_t get_defence_value(random_t& gen, defs_t defs, damage_type type) {
-        return defence_t {1, type}; // TODO
-    }
+    defence_t get_defence_value(random_t& gen, defs_t defs, damage_type type);
 private:
     equipment equip_;
 };

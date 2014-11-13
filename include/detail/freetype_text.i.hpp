@@ -13,6 +13,7 @@
 #include "assert.hpp"
 #include "math.hpp"
 #include "util.hpp"
+#include "optional.hpp"
 
 #include "renderer.hpp"
 

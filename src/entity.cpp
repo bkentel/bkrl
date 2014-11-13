@@ -394,3 +394,83 @@ bkrl::generate_entity(
 
     return result;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// player
+////////////////////////////////////////////////////////////////////////////////
+bkrl::entity_render_info_t
+bkrl::player::render_info(entity_definitions const&) const {
+    return entity_render_info_t {
+        entity_definitions::player_tile()
+        , argb8 {255, 255, 255, 255}
+    };
+}
+
+bkrl::item_stack
+bkrl::player::get_equippable(defs_t idefs, items_t istore) const {
+    item_stack result;
+
+    for (auto const iid : items()) {
+        if (istore[iid].can_equip(idefs)) {
+            result.insert(iid, idefs, istore);
+        }
+    }
+
+    return result;
+}
+
+bkrl::equipment::result_t
+bkrl::player::equip_item(item_id iid, defs_t defs, items_t istore) {
+    auto const try_equip = equip_.equip(iid, defs, istore);
+    if (!try_equip.second) {
+        return try_equip;
+    }
+
+    this->items().remove(iid);
+
+    return try_equip;
+}
+
+
+bkrl::equipment&
+bkrl::player::equip() {
+    return equip_;
+}
+bkrl::equipment const&
+bkrl::player::equip() const {
+    return equip_;
+}
+
+bkrl::damage_t
+bkrl::player::get_attack_value(random_t& gen, items_t items) {
+    auto const opt_weapon = [&]() -> optional<bkrl::item_id> {
+        if (auto const main = equip_.in_slot(equip_slot::hand_main)) {
+            return main;
+        } else if (auto const off = equip_.in_slot(equip_slot::hand_off)) {
+            return off;
+        }
+
+        return { };
+    }();
+
+    //TODO unarmed
+    if (!opt_weapon) {
+        return damage_t {1, damage_type::blunt};
+    }
+
+    auto const weapon_id = *opt_weapon;
+
+    auto const& itm = items[weapon_id];
+    auto const  dmg_min = itm.data.weapon.dmg_min; //TODO
+    auto const  dmg_max = itm.data.weapon.dmg_max; //TODO
+    auto const  dmg_type = itm.data.weapon.dmg_type; //TODO
+
+    auto const dmg = random::uniform_range(gen, dmg_min, dmg_max);
+
+    return damage_t {dmg, dmg_type};
+}
+
+bkrl::defence_t
+bkrl::player::get_defence_value(random_t& gen, defs_t defs, damage_type type) {
+    return defence_t {1, type}; // TODO
+}

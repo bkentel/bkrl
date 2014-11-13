@@ -209,18 +209,18 @@ bkrl::tile_map_info const& bkrl::tile_map::info() const noexcept {
 ////////////////////////////////////////////////////////////////////////////////
 // tile_sheet
 ////////////////////////////////////////////////////////////////////////////////
-bkrl::tile_sheet::tile_sheet(renderer& r, tile_map const& map)
-  : impl_ {std::make_unique<detail::tile_sheet_impl>(r, map)}
-{
-}
+bkrl::tile_sheet::tile_sheet(tile_sheet&&) = default;
+bkrl::tile_sheet::~tile_sheet() = default;
 
 bkrl::tile_sheet::tile_sheet(renderer& r, tile_map_info const& info)
   : impl_ {std::make_unique<detail::tile_sheet_impl>(r, info)}
 {
 }
 
-bkrl::tile_sheet::tile_sheet(tile_sheet&&) = default;
-bkrl::tile_sheet::~tile_sheet() = default;
+bkrl::tile_sheet::tile_sheet(renderer& r, tile_map const& map)
+  : impl_ {std::make_unique<detail::tile_sheet_impl>(r, map)}
+{
+}
 
 bkrl::tex_coord_i bkrl::tile_sheet::sheet_w() const noexcept {
     return impl_->sheet_w();

@@ -3,11 +3,10 @@
 #include <json11/json11.hpp>
 
 #include "assert.hpp"
-#include "types.hpp"
+#include "optional.hpp"
 #include "util.hpp"
 #include "random.hpp"
 #include "render_types.hpp"
-
 #include "identifier.hpp"
 
 namespace bkrl {

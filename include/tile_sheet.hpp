@@ -25,15 +25,15 @@ namespace detail { class tile_map_impl; }
 namespace detail { class tile_sheet_impl; }
 
 struct tile_map_info {
-    tile_map_info() {}
-    tile_map_info(tex_coord_i w, tex_coord_i h, path_string const& path)
-      : tile_w (w), tile_h (h), filename (path)
+    tile_map_info() = default;
+    tile_map_info(tex_coord_i const w, tex_coord_i const h, path_string const& path)
+        : tile_w {w}, tile_h {h}, filename(path)
     {
     }
 
     tex_coord_i tile_w  = 0;
     tex_coord_i tile_h  = 0;
-    path_string filename;
+    path_string filename = path_string {};
 };
 
 //==============================================================================

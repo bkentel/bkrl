@@ -9,9 +9,11 @@
 #include <bitset>
 #include <memory>
 
-#include "types.hpp"
+//#include "types.hpp"
 #include "scancode.hpp"
 #include "enum_map.hpp"
+#include "enum_forward.hpp"
+#include "json_forward.hpp"
 
 namespace bkrl {
 

@@ -114,25 +114,35 @@ void transitory_text_layout::reset(
     auto       x        = 0;
     auto       y        = face.ascender();
 
+    //--------------------------------------------------------------------------
     auto const next_line = [&] {
         x  = 0;
         y += line_gap;
     };
 
+    //--------------------------------------------------------------------------
     auto const next_tab = [&] {
         auto const rem = x % tab_size;
         auto const tab = tab_size - rem;
         x += tab;
     };
 
+    //--------------------------------------------------------------------------
+    auto escape = false;
+    
     auto left = unicode::codepoint {};
     for (auto const codepoint : codepoints_) {
         auto const cp = unicode::codepoint {codepoint};
 
-        //TODO
-        switch (cp.value) {
-        case '\n' : next_line(); break;
-        case '\t' : next_tab();  break;
+        if (!escape) {
+            switch (cp.value) {
+            case '\\' : escape = true; break;
+            case '\n' : next_line();   break;
+            case '\t' : next_tab();    break;
+            default : break;
+            }
+        } else {
+            escape = false;
         }
 
         auto const metrics = face.metrics(left, cp);

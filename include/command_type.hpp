@@ -5,6 +5,7 @@
 //! Game commands.
 //##############################################################################
 #pragma once
+
 #include "hash.hpp"
 #include "integers.hpp"
 

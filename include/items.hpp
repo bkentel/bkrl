@@ -11,10 +11,13 @@
 #include <bitset>
 
 #include "identifier.hpp"
-#include "types.hpp"
+#include "optional.hpp"
 #include "hash.hpp"
 #include "string.hpp"
 #include "render_types.hpp"
+#include "json_forward.hpp"
+#include "random_forward.hpp"
+#include "combat_types.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
 namespace bkrl {
@@ -91,27 +94,6 @@ extern template equip_slot from_hash(hash_t hash);
 using equip_slot_flags = std::bitset<
     static_cast<size_t>(equip_slot::enum_size) - 1
 >;
-
-//==============================================================================
-//! Damage type.
-//==============================================================================
-enum class damage_type : uint8_t {
-    invalid
-
-  , none = 0
-  , slash
-  , pierce
-  , blunt
-  , fire
-  , cold
-  , electric
-  , acid
-
-  , enum_size
-};
-
-extern template damage_type from_hash(hash_t hash);
-string_ref to_string(message_map const& msgs, damage_type type); //TODO
 
 //==============================================================================
 //! A description of where and how an item was generated.
