@@ -7,6 +7,7 @@
 namespace bkrl {
 ////////////////////////////////////////////////////////////////////////////////
 class renderer;
+class texture;
 
 using rgb8  = color3<uint8_t>;
 using argb8 = color4<uint8_t>;

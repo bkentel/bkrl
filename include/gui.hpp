@@ -1,14 +1,12 @@
 #pragma once
 
-#include "types.hpp"
-#include "font.hpp"
-
 #include <array>
 #include <vector>
 
-#include <boost/format.hpp> //TODO ?
-#include "messages.hpp"
+#include <boost/format.hpp>
 
+#include "font.hpp"
+#include "messages.hpp"
 #include "identifier.hpp"
 #include "render_types.hpp"
 

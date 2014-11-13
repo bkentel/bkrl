@@ -6,14 +6,15 @@
 //##############################################################################
 #pragma once
 
-#include <string>
 #include <memory>
-#include <boost/utility/string_ref.hpp>
+#include <type_traits>
 
-#include "types.hpp"
+#include "string.hpp"
 
+////////////////////////////////////////////////////////////////////////////////
 namespace bkrl {
 ////////////////////////////////////////////////////////////////////////////////
+
 template <typename T>
 inline std::remove_reference_t<T> const& as_const(T&& value) noexcept {
     return value;
@@ -155,4 +156,6 @@ inline static void assign(utf8string& out, string_ref const in) {
     out.assign(in.data(), in.size());
 }
 
+////////////////////////////////////////////////////////////////////////////////
 } //namespace bkrl
+////////////////////////////////////////////////////////////////////////////////

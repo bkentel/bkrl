@@ -1,5 +1,6 @@
 #include "time.hpp"
 #include "algorithm.hpp"
+#include "macros.hpp"
 
 using namespace bkrl;
 

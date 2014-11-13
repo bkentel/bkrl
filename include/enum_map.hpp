@@ -9,7 +9,6 @@
 #include <iterator>
 #include <vector>
 
-#include "types.hpp"
 #include "util.hpp"
 #include "assert.hpp"
 #include "algorithm.hpp"

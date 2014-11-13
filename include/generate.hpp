@@ -5,12 +5,12 @@
 //! Procedural generation.
 //##############################################################################
 #pragma once
+
 #include "types.hpp"
 #include "grid.hpp"
+#include "random_forward.hpp"
 
 namespace bkrl {
-
-namespace random { class generator; }
 
 namespace generate {
 

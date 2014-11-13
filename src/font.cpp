@@ -39,10 +39,10 @@ font_face::font_face(
 font_face::~font_face() = default;
 
 //------------------------------------------------------------------------------
-int font_face::pixel_size() const { return impl_->pixel_size(); }
-int font_face::ascender()   const { return impl_->ascender(); }
-int font_face::descender()  const { return impl_->descender(); }
-int font_face::line_gap()   const { return impl_->line_gap(); }
+int font_face::pixel_size() const noexcept { return impl_->pixel_size(); }
+int font_face::ascender()   const noexcept { return impl_->ascender(); }
+int font_face::descender()  const noexcept { return impl_->descender(); }
+int font_face::line_gap()   const noexcept { return impl_->line_gap(); }
 
 void bkrl::font_face::set_color(rgb8 const color) {
     impl_->set_color(color);
@@ -81,8 +81,8 @@ font_face::get_texture() const {
 transitory_text_layout::transitory_text_layout(
     font_face&       face
   , string_ref const string
-  , int        const max_w
-  , int        const max_h
+  , int16_t    const max_w
+  , int16_t    const max_h
 ) {
     reset(face, string, max_w, max_h);
 }
@@ -91,8 +91,8 @@ transitory_text_layout::transitory_text_layout(
 void transitory_text_layout::reset(
     font_face&       face
   , string_ref const string
-  , int        const max_w
-  , int        const max_h
+  , int16_t    const max_w
+  , int16_t    const max_h
 ) {
     constexpr auto tab_size = 20;
     
@@ -156,10 +156,13 @@ void transitory_text_layout::reset(
             break;
         }
 
-        ipoint2 const p {(x + metrics.left), (y - metrics.top)};
+        pos_t const p {
+            static_cast<int16_t>(x + metrics.left)
+          , static_cast<int16_t>(y - metrics.top)
+        };
 
-        actual_w_ = std::max(actual_w_, p.x + metrics.width);
-        actual_h_ = std::max(actual_h_, p.y + metrics.height);
+        actual_w_ = std::max(actual_w_, static_cast<int16_t>(p.x + metrics.width));
+        actual_h_ = std::max(actual_h_, static_cast<int16_t>(p.y + metrics.height));
 
         x += metrics.advance_x;
         y -= metrics.advance_y;

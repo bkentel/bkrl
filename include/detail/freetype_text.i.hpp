@@ -914,10 +914,10 @@ public:
 
     texture const& get_texture() const;
 
-    int pixel_size() const noexcept { return face_.pixel_size(); }
-    int ascender()   const noexcept { return face_.ascender(); }
-    int descender()  const noexcept { return face_.descender(); }
-    int line_gap()   const noexcept { return face_.line_gap(); }
+    auto pixel_size() const noexcept { return face_.pixel_size(); }
+    auto ascender()   const noexcept { return face_.ascender(); }
+    auto descender()  const noexcept { return face_.descender(); }
+    auto line_gap()   const noexcept { return face_.line_gap(); }
 
     void set_color(argb8 const color) {
         renderer_.set_color_mod(texture_, color);

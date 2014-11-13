@@ -7,8 +7,8 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
-#include "types.hpp"
 #include "assert.hpp"
 #include "math.hpp"
 #include "util.hpp"
@@ -157,10 +157,10 @@ public:
     void set_color(rgb8 color);
     void set_color(argb8 color);
 
-    int pixel_size() const;
-    int ascender()   const;
-    int descender()  const;
-    int line_gap()   const;
+    int pixel_size() const noexcept;
+    int ascender()   const noexcept;
+    int descender()  const noexcept;
+    int line_gap()   const noexcept;
 private:
     std::unique_ptr<detail::font_face_impl> impl_;
 };
@@ -170,7 +170,7 @@ private:
 //==============================================================================
 class transitory_text_layout {
 public:
-    enum : int {
+    enum : int16_t {
         unlimited = -1
     };
 
@@ -179,15 +179,15 @@ public:
     transitory_text_layout(
         font_face& face
       , string_ref string
-      , int        max_w = unlimited
-      , int        max_h = unlimited
+      , int16_t     max_w = unlimited
+      , int16_t     max_h = unlimited
     );
 
     void reset(
         font_face& face
       , string_ref string
-      , int        max_w = unlimited
-      , int        max_h = unlimited
+      , int16_t    max_w = unlimited
+      , int16_t    max_h = unlimited
     );
 
     void clear();
@@ -195,14 +195,16 @@ public:
 
     void render(renderer& r, font_face& face, int x, int y) const;
 
-    int actual_width()  const noexcept { return actual_w_; }
-    int actual_height() const noexcept { return actual_h_; };
+    int16_t actual_width()  const noexcept { return actual_w_; }
+    int16_t actual_height() const noexcept { return actual_h_; };
 private:
-    int actual_w_ = 0;
-    int actual_h_ = 0;
+    using pos_t = point2d<int16_t>;
+
+    int16_t actual_w_ = 0;
+    int16_t actual_h_ = 0;
 
     std::vector<codepoint_t> codepoints_;
-    std::vector<ipoint2>     positions_;
+    std::vector<pos_t>       positions_;
 };
 
 //==============================================================================

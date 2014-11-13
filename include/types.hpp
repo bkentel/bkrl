@@ -6,68 +6,10 @@
 //##############################################################################
 #pragma once
 
-#include <boost/predef.h>
-
 #include "integers.hpp"
-#include "string.hpp"
 #include "math.hpp"
 
-//TODO move this out of here to another file
-#if !BOOST_COMP_MSVC
-namespace std {
-template<class _Container>
-	auto inline cbegin(const _Container& _Cont)
-		-> decltype(std::begin(_Cont))
-	{	// get beginning of sequence
-	return (std::begin(_Cont));
-	}
-
-template<class _Container>
-	auto inline cend(const _Container& _Cont)
-		-> decltype(std::end(_Cont))
-	{	// get end of sequence
-	return (std::end(_Cont));
-	}
-
-template<class _Container>
-	auto inline rbegin(_Container& _Cont) -> decltype(_Cont.rbegin())
-	{	// get beginning of reversed sequence
-	return (_Cont.rbegin());
-	}
-
-template<class _Container>
-	auto inline rbegin(const _Container& _Cont) -> decltype(_Cont.rbegin())
-	{	// get beginning of reversed sequence
-	return (_Cont.rbegin());
-	}
-
-template<class _Container>
-	auto inline rend(_Container& _Cont) -> decltype(_Cont.rend())
-	{	// get end of reversed sequence
-	return (_Cont.rend());
-	}
-
-template<class _Container>
-	auto inline rend(const _Container& _Cont) -> decltype(_Cont.rend())
-	{	// get end of reversed sequence
-	return (_Cont.rend());
-	}
-
-template<class _Container>
-	auto inline crbegin(const _Container& _Cont)
-		-> decltype(std::rbegin(_Cont))
-	{	// get beginning of reversed sequence
-	return (std::rbegin(_Cont));
-	}
-
-template<class _Container>
-	auto inline crend(const _Container& _Cont)
-		-> decltype(std::rend(_Cont))
-	{	// get end of reversed sequence
-	return (std::rend(_Cont));
-	}
-}
-#endif
+#pragma message( "!!types is deprecated" )
 
 ////////////////////////////////////////////////////////////////////////////////
 namespace bkrl {

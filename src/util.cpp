@@ -1,15 +1,15 @@
 #include "util.hpp"
-#include "types.hpp"
 #include "hash.hpp"
+#include "macros.hpp"
 
 #include <cstring>
 #include <cstdio>
 
 #include <utf8.h>
 
-using namespace bkrl;
-
-bkrl::uint64_t bkrl::slash_hash64(char const* s, size_t const len) {
+//------------------------------------------------------------------------------
+bkrl::uint64_t
+bkrl::slash_hash64(char const* s, size_t const len) {
     union {
         uint64_t h;
         uint8_t  u[8];
@@ -27,12 +27,16 @@ bkrl::uint64_t bkrl::slash_hash64(char const* s, size_t const len) {
     return h; //64-bit
 }
 
-bkrl::uint32_t bkrl::slash_hash32(char const* s, size_t const len) {
+//------------------------------------------------------------------------------
+bkrl::uint32_t
+bkrl::slash_hash32(char const* s, size_t const len) {
     auto const h = slash_hash64(s, len);
     return static_cast<uint32_t>(h + (h >> 32)); //32-bit
 }
 
+//------------------------------------------------------------------------------
 namespace {
+//------------------------------------------------------------------------------
 
 struct file_deleter {
     void operator()(FILE* const ptr) const noexcept {
@@ -46,7 +50,7 @@ struct file_deleter {
 using unique_file = std::unique_ptr<FILE, file_deleter>;
 
 #if BOOST_COMP_MSVC
-unique_file open_file(path_string_ref const filename) {
+unique_file open_file(bkrl::path_string_ref const filename) {
     FILE* ptr = nullptr;
 
     auto const result = _wfopen_s(&ptr, filename.data(), L"rb");
@@ -57,8 +61,8 @@ unique_file open_file(path_string_ref const filename) {
     return unique_file {ptr};
 }
 #elif !BOOST_COMP_MSVC && BOOST_OS_WINDOWS
-unique_file open_file(path_string_ref const filename) {
-    utf8string narrow;
+unique_file open_file(bkrl::path_string_ref const filename) {
+    bkrl::utf8string narrow;
     narrow.reserve(filename.size());
 
     utf8::utf16to8(std::cbegin(filename), std::cend(filename), std::back_inserter(narrow));
@@ -72,9 +76,13 @@ unique_file open_file(path_string_ref const filename) {
 }
 #endif
 
+//------------------------------------------------------------------------------
 } //namespace
+//------------------------------------------------------------------------------
 
-utf8string bkrl::read_file(path_string_ref const filename) {
+//------------------------------------------------------------------------------
+bkrl::utf8string
+bkrl::read_file(path_string_ref const filename) {
     constexpr auto max_size = (1 << 20); //1 MiB
 
     auto const file   = open_file(filename);

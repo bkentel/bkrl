@@ -8,8 +8,6 @@
 
 #include <memory>
 
-#include "types.hpp"
-
 namespace bkrl {
 
 class data_definitions;

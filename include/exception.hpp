@@ -9,7 +9,7 @@
 #include <exception>
 #include <boost/exception/all.hpp>
 
-#include "types.hpp"
+#include "string.hpp"
 
 namespace bkrl {
 

@@ -62,15 +62,15 @@ public:
     void render(renderer& render);
 private:
     struct cell_info {
-        int size;
-        int offset;
+        int16_t size;
+        int16_t offset;
     };
 
     void update_entry_(int row, int col, string_ref text);
     void change_selection_(int delta);
 
     inline irect get_border_rect_() const noexcept {
-        return make_rect_size(
+        return make_rect_size<int>(
             pos_.x
           , pos_.y
           , total_w_ + border_size_ * 2
@@ -79,7 +79,7 @@ private:
     }
 
     inline irect get_title_rect_() const noexcept {
-        return make_rect_size(
+        return make_rect_size<int>(
             pos_.x
           , pos_.y
           , total_w_ + border_size_ * 2
@@ -88,7 +88,7 @@ private:
     }
 
     inline irect get_list_rect_() const noexcept {
-        return make_rect_size(
+        return make_rect_size<int>(
             pos_.x + border_size_
           , pos_.y + border_size_ + title_.actual_height() + title_border_size_
           , total_w_
@@ -101,8 +101,8 @@ private:
     ipoint2    pos_       = ipoint2 {0, 0};
     int        rows_      = 0;
     int        cols_      = 0;
-    int        total_w_   = 0;
-    int        total_h_   = 0;
+    int16_t    total_w_   = 0;
+    int16_t    total_h_   = 0;
 
     std::vector<cell_info> row_info_;
     std::vector<cell_info> col_info_;
@@ -111,10 +111,10 @@ private:
     
     boost::container::flat_map<key_t, transitory_text_layout, std::less<>> entries_;
 
-    int border_size_        = 4;
-    int title_border_size_  = 4;
-    int padding_col_        = 8;
-    int padding_row_        = 0;
+    int16_t border_size_        = 4;
+    int16_t title_border_size_  = 4;
+    int16_t padding_col_        = 8;
+    int16_t padding_row_        = 0;
 
     argb8 color_even_ = argb8 {255, 30, 30, 30};
     argb8 color_odd_  = argb8 {255, 40, 40, 40};
@@ -195,7 +195,7 @@ void bkrl::gui::detail::list_impl::update_entry_(int const row, int const col, s
     auto& row_size = row_info_[row].size;
     auto& col_size = col_info_[col].size;
 
-    row_size = face_->line_gap();
+    row_size = static_cast<int16_t>(face_->line_gap());
     //row_size = std::max(row_size, entry.actual_height());
     col_size = std::max(col_size, entry.actual_width());
 }
@@ -254,7 +254,7 @@ void bkrl::gui::detail::list_impl::set_text(
 
 //--------------------------------------------------------------------------
 void bkrl::gui::detail::list_impl::layout() {
-    static auto const update = [](std::vector<cell_info>& values, int& sum, int const padding) {
+    static auto const update = [](std::vector<cell_info>& values, int16_t& sum, int16_t const padding) {
         sum = padding;
 
         auto const n = values.size();
@@ -350,7 +350,7 @@ void bkrl::gui::detail::list_impl::render(renderer& render) {
     auto const x0 = pos_.x + border_size_;
     auto const y0 = pos_.y + border_size_ + title_rect.height();
 
-    auto const back_rect = make_rect_size(
+    auto const back_rect = make_rect_size<int>(
         x0, y0, total_w_, total_h_
     );
 
@@ -370,7 +370,7 @@ void bkrl::gui::detail::list_impl::render(renderer& render) {
         auto const y = y0 + info.offset;
         auto const h = info.size;
 
-        auto const rect = make_rect_size(x0, y, total_w_, h);
+        auto const rect = make_rect_size<int>(x0, y, total_w_, h);
     
         render.draw_filled_rect(rect);
     }
@@ -384,7 +384,7 @@ void bkrl::gui::detail::list_impl::render(renderer& render) {
         auto const y = y0 + info.offset;
         auto const h = info.size;
 
-        auto const rect = make_rect_size(x0, y, total_w_, h);
+        auto const rect = make_rect_size<int>(x0, y, total_w_, h);
     
         render.draw_filled_rect(rect);
     }
@@ -425,12 +425,12 @@ void bkrl::gui::detail::list_impl::render(renderer& render) {
     }
 
     render.set_draw_color(color_back_);
-    for (int i = 1; i < col_info_.size(); ++i) {
+    for (size_t i = 1; i < col_info_.size(); ++i) {
         auto const& col = col_info_[i];
         
         if (col.size <= 0) { continue; }
 
-        auto const rect = make_rect_size(
+        auto const rect = make_rect_size<int>(
             x0 + col.offset - padding_col_ / 2
             , y0
             , 1
@@ -890,8 +890,8 @@ bkrl::gui::message_log::print_line_(format_t& format) {
 //--------------------------------------------------------------------------
 void
 bkrl::gui::message_log::make_line_(string_ref const str) {
-    constexpr auto max_w = 1000;
-    auto const max_h = font_face_->line_gap();
+    constexpr auto max_w = int16_t {1000};
+    auto const     max_h = static_cast<int16_t>(font_face_->line_gap());
 
     auto& line = lines_[front_++];
     if (front_ >= line_count) {

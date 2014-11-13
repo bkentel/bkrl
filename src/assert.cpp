@@ -1,8 +1,6 @@
 #include <atomic>
 #include <cstdlib>
 
-//#include <boost/assert.hpp>
-
 #include "assert.hpp"
 
 using namespace bkrl;
