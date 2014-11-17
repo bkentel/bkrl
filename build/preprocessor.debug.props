@@ -7,7 +7,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;NOMINMAX;STRICT;BK_ASSERT_LEVEL_DBG;BOOST_ENABLE_ASSERT_HANDLER;BOOST_NO_STD_LOCALE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;NOMINMAX;STRICT;BK_ASSERT_LEVEL_DBG;BOOST_ENABLE_ASSERT_HANDLER;BOOST_NO_STD_LOCALE;BOOST_MSVC_ENABLE_2014_JUN_CTP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup />

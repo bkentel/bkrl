@@ -420,8 +420,9 @@ public:
 
         auto const& hp = ent.health();
 
-        auto const percent = static_cast<float>(hp.hi - hp.size()) / hp.hi;
-        auto const width   = static_cast<int>(std::round(percent * w));
+        //auto const percent = static_cast<float>(hp.hi - hp.size()) / hp.hi;
+        //auto const width   = static_cast<int>(std::round(percent * w));
+        auto const width = hp.scale_to(w);
 
         auto const back_rect = make_rect_size(
             x - bar_border
@@ -452,7 +453,7 @@ public:
             auto const p = ent.position();          
 
             auto const health = ent.health();
-            if (health.size() != 0) {
+            if (!health.is_max()) {
                 draw_health_bar(r, ent, p, size);
             }
         }
@@ -645,35 +646,6 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //utf8string attack(random::generator& trivial, entity& subject, entity& object) {
-    //    auto const p = object.position();
-    //    BK_ASSERT_DBG(!!entity_at(p));
-
-    //    auto const& entities = definitions_->get_entities();
-    //    auto const& msgs = definitions_->get_messages();
-    //    
-    //    auto const& name   = object.name(entities);
-    //    auto const  damage = 1;
-
-    //    auto const killed = object.apply_damage(damage);
-    //    if (!killed) {
-    //        boost::format fmt {msgs[message_type::attack_regular].data()};
-    //        fmt % name % damage;
-    //        return boost::str(fmt);
-    //    }
-    //    
-    //    if (!object.items().empty()) {
-    //        add_to_stack_(make_stack_at_(p), std::move(object.items()));
-    //    }
-
-    //    entities_.remove(p);
-
-    //    boost::format fmt {msgs[message_type::kill_regular].data()};
-    //    fmt % name;
-    //    return boost::str(fmt);
-    //}
-
-    //--------------------------------------------------------------------------
     bool can_move_to(entity const& e, ipoint2 const p) const {
         if (!grid_.is_valid(p)) {
             return false;
@@ -794,7 +766,8 @@ private:
             items_.sort(); //TODO
         }
 
-        return *items_.at(p);
+        auto result = items_.at(p);
+        return *result;
     }
 
     //--------------------------------------------------------------------------

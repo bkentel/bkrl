@@ -23,6 +23,21 @@ using std::int64_t;
 using std::size_t;
 
 using hash_t = uint32_t;
+
+template <typename T> struct min_max_value;
+
+#define BK_DEF_MINMAX(ty, lo, hi)       \
+template <> struct min_max_value<ty> { \
+    enum : ty { min = lo, max = hi };   \
+}
+
+BK_DEF_MINMAX(int8_t,  INT8_MIN,  INT8_MAX );
+BK_DEF_MINMAX(int16_t, INT16_MIN, INT16_MAX);
+BK_DEF_MINMAX(int32_t, INT32_MIN, INT32_MAX);
+BK_DEF_MINMAX(int64_t, INT64_MIN, INT64_MAX);
+
+#undef BK_DEF_MINMAX
+
 ////////////////////////////////////////////////////////////////////////////////
 } //namespace bkrl
 ////////////////////////////////////////////////////////////////////////////////

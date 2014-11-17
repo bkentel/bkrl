@@ -30,8 +30,8 @@ namespace detail { class entity_definitions_impl; }
 //! Localized entity strings.
 //==============================================================================
 struct entity_locale {
-    utf8string name;
-    utf8string text;
+    utf8string name; //!< entity name
+    utf8string text; //!< entity description
 };
 
 //==============================================================================
@@ -39,9 +39,9 @@ struct entity_locale {
 //==============================================================================
 class entity_definitions {
 public:
-    static path_string_ref tile_filename();
-    static tex_point_i     tile_size();
-    static tex_point_i     player_tile();
+    static path_string_ref tile_filename(); //!< TODO filename for the entity tiles
+    static tex_point_i     tile_size();     //!< TODO dimensions for the entity tiles
+    static tex_point_i     player_tile();   //!< TODO index of the player tile
 
     entity_definitions();
     ~entity_definitions();
@@ -60,12 +60,58 @@ private:
     std::unique_ptr<detail::entity_definitions_impl> impl_;
 };
 
+template <typename T>
+class ranged_value {
+public:
+    static_assert(std::is_integral<T>::value, "");
+
+    using value_type = T;
+
+    enum : T { minimum = 0 };
+    
+    ranged_value(T const max, T const cur) noexcept
+      : current {cur}
+      , maximum {max}
+    {
+        BK_ASSERT_DBG(current <= maximum);
+        BK_ASSERT_DBG(current >= minimum);
+    }
+    
+    ranged_value(T const max) noexcept
+      : ranged_value {max, max}
+    {
+    }
+
+    ranged_value() = default;
+
+    void modify(T const delta) noexcept {
+        set_to(safe_add(current, delta));
+    }
+
+    bool is_min() const noexcept { return current <= minimum; }
+    bool is_max() const noexcept { return current >= maximum; }
+
+    void set_to_min() noexcept { current = minimum; }
+    void set_to_max() noexcept { current = maximum; }
+    
+    void set_to(T const value) noexcept {
+        current = clamp(value, T {minimum}, T {maximum});
+    }
+
+    template <typename U>
+    U scale_to(U const value) const noexcept {       
+        return (current * value) / maximum;
+    }
+
+    T current;
+    T maximum;
+};
+
 //==============================================================================
 //! The data common to all entities.
 //==============================================================================
 struct entity_data_t {
-    health_t   max_health;
-    health_t   cur_health;
+    ranged_value<health_t> health;
     ipoint2    position;
     item_stack items;
 };
@@ -104,7 +150,7 @@ public:
     void move_to(point_t const& p) { data.position =  p; }
     void move_by(ivec2 const& v)   { data.position += v; }
 
-    auto health() const { return range<int> {data.cur_health, data.max_health}; }
+    auto health() const { return data.health; }
 
     bool apply_damage(health_t delta);
 

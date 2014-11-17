@@ -9,6 +9,8 @@
 #include <cmath>
 #include <utility>
 #include <functional>
+#include <type_traits>
+#include <limits>
 
 #include "assert.hpp"
 
@@ -29,6 +31,30 @@ inline color4<uint8_t> make_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) no
 
 inline color3<uint8_t> make_color(uint8_t r, uint8_t g, uint8_t b) noexcept {
     return color3<uint8_t> {r, g, b};
+}
+
+template <typename T>
+inline T safe_add(T const a, T const b) noexcept {
+    static_assert(std::is_integral<T>::value, "");
+
+    auto constexpr max = min_max_value<T>::max;
+    auto constexpr min = min_max_value<T>::min;
+
+    auto const mixed_signs = (a ^ b) < 0;
+
+    if (!mixed_signs) {
+        if (b < 0) {
+            if (a < (min - b)) {
+                return min;
+            }
+        } else {
+            if (max - a < b) {
+                return max;
+            }
+        }
+    }
+
+    return a + b;
 }
 
 //==============================================================================

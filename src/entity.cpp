@@ -269,7 +269,8 @@ bkrl::string_ref bkrl::entity::name(defs_t defs) const {
 }
 
 bool bkrl::entity::apply_damage(health_t const delta) {
-    return (data.cur_health -= delta) <= 0;
+    auto& hp = data.health;
+    return hp.modify(-delta), hp.is_min();
 }
 
 bkrl::damage_t bkrl::entity::get_attack_value(random_t& gen, defs_t defs) {
@@ -366,10 +367,11 @@ bkrl::generate_entity(
 
     entity result;
 
+    auto const max_health = static_cast<health_t>(def.health(gen));
+
     result.id = id;
     result.instance_id = entity_id {next_instance_id++};
-    result.data.max_health = static_cast<health_t>(def.health(gen));
-    result.data.cur_health = result.data.max_health;
+    result.data.health = ranged_value<health_t> {max_health};
     result.data.position = {0, 0};
 
     auto const item_count = def.items(gen);
