@@ -20,7 +20,8 @@
   3. this notice may not be removed or altered from any source distribution.
 */
 
-#include "enum_map.hpp"
+#include "integers.hpp"
+#include "hash.hpp"
 
 namespace bkrl {
 
@@ -379,6 +380,6 @@ enum class scancode : uint16_t {
                                  for array bounds */
 };
 
-extern template class enum_map<scancode>;
+extern template scancode from_hash(hash_t hash);
 
 } //namespace bkrl

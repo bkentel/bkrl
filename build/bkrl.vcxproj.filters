@@ -119,9 +119,6 @@
     <ClInclude Include="..\include\engine_client.hpp">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\enum_map.hpp">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\algorithm.hpp">
       <Filter>include</Filter>
     </ClInclude>

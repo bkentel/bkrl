@@ -201,7 +201,6 @@
     <ClInclude Include="..\include\detail\sdl_application.i.hpp" />
     <ClInclude Include="..\include\engine_client.hpp" />
     <ClInclude Include="..\include\enum_forward.hpp" />
-    <ClInclude Include="..\include\enum_map.hpp" />
     <ClInclude Include="..\include\exception.hpp" />
     <ClInclude Include="..\include\font.hpp" />
     <ClInclude Include="..\include\generate.hpp" />

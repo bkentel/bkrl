@@ -10,7 +10,6 @@
 #include <memory>
 
 #include "scancode.hpp"
-#include "enum_map.hpp"
 #include "enum_forward.hpp"
 #include "json_forward.hpp"
 
@@ -71,7 +70,7 @@ struct key_modifier {
     > value;
 };
 
-extern template class enum_map<key_modifier_type>;
+extern template key_modifier_type from_hash(hash_t hash);
 
 //==============================================================================
 //! key_combo
@@ -94,8 +93,6 @@ struct key_mapping {
 //==============================================================================
 class keymap {
 public:
-    BK_NOCOPY(keymap);
-
     keymap();
     keymap(keymap&&);
     keymap& operator=(keymap&&);

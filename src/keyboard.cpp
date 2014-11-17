@@ -89,8 +89,8 @@ void keymap::impl_t::rule_mapping_value(cref value) {
         BK_TODO_FAIL();
     }
 
-    auto const key = enum_map<scancode>::get(key_hash);
-    if (key.value == scancode::invalid) {
+    auto const key = from_hash<scancode>(key_hash);
+    if (key == scancode::invalid) {
         BK_TODO_FAIL();
     }
     
@@ -98,8 +98,9 @@ void keymap::impl_t::rule_mapping_value(cref value) {
 
     for (auto i = 2u; i < value.array_items().size(); ++i) {
         auto const mod = json::require_string(value[i]);
+        auto const mod_hash = slash_hash32(mod);
 
-        auto const kmod = enum_map<key_modifier_type>::get(mod).value;
+        auto const kmod = from_hash<key_modifier_type>(mod_hash);
         if (kmod == key_modifier_type::invalid) {
             BK_TODO_FAIL();
         }
@@ -108,7 +109,7 @@ void keymap::impl_t::rule_mapping_value(cref value) {
     }
 
     mappings_.emplace_back(
-        key_mapping {key_combo {key.value, mods}, command}
+        key_mapping {key_combo {key, mods}, command}
     );
 }
 
