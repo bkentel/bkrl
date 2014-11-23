@@ -490,6 +490,21 @@ public:
 
     void update_texture(texture& tex, void const* data, int pitch, int x, int y, int w, int h);
 
+    argb8 get_color_mod(texture const& tex) const {
+        argb8 color;
+
+        auto const t = get_texture(tex);
+
+        auto const result = SDL_GetTextureColorMod(t, &color.r, &color.g, &color.b);
+        if (result) {
+            BK_TODO_FAIL();
+        }
+
+        color.a = 255;
+
+        return color;
+    }
+
     void set_color_mod(texture& tex, uint8_t r, uint8_t g, uint8_t b) {
         auto const t = get_texture(tex);
         

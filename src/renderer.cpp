@@ -185,6 +185,11 @@ renderer::update_texture(texture& tex, void const* data, int const pitch, int co
     impl_->update_texture(tex, data, pitch, x, y, w, h);
 }
 
+bkrl::argb8
+bkrl::renderer::get_color_mod(texture const& tex) const {
+    return impl_->get_color_mod(tex);
+}
+
 void
 renderer::set_color_mod(texture& tex) {
     static auto const clear_color = make_color(255, 255, 255);

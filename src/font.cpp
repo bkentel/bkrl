@@ -1,9 +1,10 @@
 #include "font.hpp"
 #include "detail/freetype_text.i.hpp"
+#include "scope_exit.hpp"
 
 #include "renderer.hpp"
 
-using namespace bkrl;
+using namespace bkrl; //TODO
 
 ////////////////////////////////////////////////////////////////////////////////
 // font_libary
@@ -43,6 +44,10 @@ int font_face::pixel_size() const noexcept { return impl_->pixel_size(); }
 int font_face::ascender()   const noexcept { return impl_->ascender(); }
 int font_face::descender()  const noexcept { return impl_->descender(); }
 int font_face::line_gap()   const noexcept { return impl_->line_gap(); }
+
+bkrl::argb8 bkrl::font_face::get_color() const {
+    return impl_->get_color();
+}
 
 void bkrl::font_face::set_color(rgb8 const color) {
     impl_->set_color(color);
@@ -87,6 +92,148 @@ transitory_text_layout::transitory_text_layout(
     reset(face, string, max_w, max_h);
 }
 
+namespace {
+
+namespace token {
+    auto constexpr escape       = codepoint_t {'\\'};
+    auto constexpr tag_open     = codepoint_t {'<' };
+    auto constexpr tag_close    = codepoint_t {'>' };
+    auto constexpr id_color     = codepoint_t {'c' };
+    auto constexpr delim        = codepoint_t {':' };
+    auto constexpr id_close_tag = codepoint_t {'/' };
+} //namespace token
+
+//--------------------------------------------------------------------------
+template <typename Iterator>
+codepoint_t peek_char(Iterator const& it, Iterator const& end) {
+    return (it != end) ? *it : 0;
+}
+
+//--------------------------------------------------------------------------
+template <typename Iterator>
+codepoint_t consume_char(Iterator& it, Iterator const& end) {
+    return (it != end) ? *it++ : 0;
+}
+
+//--------------------------------------------------------------------------
+bool is_digit(codepoint_t const cp) noexcept {
+    return cp >= '0' && cp <= '9';
+};
+
+//--------------------------------------------------------------------------
+bool is_alpha_lower(codepoint_t const cp) noexcept {
+    return cp >= 'a' && cp <= 'z';
+};
+
+//--------------------------------------------------------------------------
+bool is_alpha_upper(codepoint_t const cp) noexcept {
+    return cp >= 'A' && cp <= 'Z';
+};
+
+//--------------------------------------------------------------------------
+template <typename Iterator>
+codepoint_t expect_char(codepoint_t const expected, Iterator& it, Iterator const& end) {
+    if (it == end) {
+        return 0;
+    }
+
+    auto const value = *it;
+    if (value != expected) {
+        return 0;
+    }
+
+    ++it;
+
+    return value;
+}
+
+//--------------------------------------------------------------------------
+template <typename Iterator>
+bkrl::optional<bkrl::codepoint_t>
+parse_escape(Iterator& it, Iterator const& end) {
+    auto result = bkrl::optional<bkrl::codepoint_t> {};
+
+    if (!expect_char(token::escape, it, end)) {
+        return result;
+    }
+
+    switch (consume_char(it, end)) {
+    default               : break;
+    case token::tag_open  : result = token::tag_open;  break;
+    case token::tag_close : result = token::tag_close; break;
+    }
+
+    return result;
+}
+
+//--------------------------------------------------------------------------
+struct format_tag {
+    enum class tag_type : uint16_t {
+        tag_error, tag_color
+    };
+
+    enum class tag_state : uint16_t {
+        type_begin, type_end
+    };
+
+    uint32_t  data;
+    tag_type  type;
+    tag_state state;
+};
+
+template <typename Iterator>
+format_tag parse_tag(Iterator& it, Iterator const& end) {
+    auto result = format_tag {};
+
+    if (!expect_char(token::tag_open, it, end)) {
+        return result;
+    }
+
+    auto const parse_color = [&] {
+        if (!expect_char(token::delim, it, end)) {
+            return;
+        }
+
+        auto const id = consume_char(it, end);
+        if (!id || !is_digit(id) && !is_alpha_lower(id)) {
+            return;
+        }
+
+        if (!expect_char(token::tag_close, it, end)) {
+            return;
+        }
+
+        result.data  = id;
+        result.type  = format_tag::tag_type::tag_color;
+        result.state = format_tag::tag_state::type_begin;
+    };
+
+    auto const parse_close_tag = [&] {
+        if (!expect_char(token::id_color, it, end)) {
+            return;
+        }
+
+        if (!expect_char(token::tag_close, it, end)) {
+            return;
+        }
+
+        result.data  = 0;
+        result.type  = format_tag::tag_type::tag_color;
+        result.state = format_tag::tag_state::type_end;
+    };
+
+
+    switch (consume_char(it, end)) {
+    default                  : break;
+    case token::id_color     : parse_color();     break;
+    case token::id_close_tag : parse_close_tag(); break;
+    }
+
+    return result;
+}
+
+}
+
 //------------------------------------------------------------------------------
 void transitory_text_layout::reset(
     font_face&       face
@@ -96,19 +243,62 @@ void transitory_text_layout::reset(
 ) {
     constexpr auto tab_size = 20;
     
-    clear();    
+    clear();
 
     //assume 2 bytes on average per codepoint.
     //overly pessimistic for mostly latin text
-    codepoints_.reserve(string.size() / 2);
+    data_.reserve(string.size() / 2);
 
-    utf8::utf8to32(
-        std::cbegin(string)
-      , std::cend(string)
-      , std::back_inserter(codepoints_)
-    );
+    auto       it   = utf8::iterator<char const*> {cbegin(string), cbegin(string), cend(string)};
+    auto const end  = utf8::iterator<char const*> {cend(string),   cbegin(string), cend(string)};
 
-    positions_.reserve(codepoints_.size());
+    record_t   cur_record {};
+    format_tag cur_format {};
+
+    format_t const default_format {
+        make_color(255, 255, 255, 255)
+      , 0
+      , 0
+    };
+
+    int pos = 0;
+
+    while (it != end) {
+        auto cp = *it;
+
+        switch (cp) {
+        case token::escape :
+            if (auto const result = parse_escape(it, end)) {
+                cp = *result;
+            } else {
+                BK_TODO_FAIL();
+                continue;
+            }
+
+            break;
+        case token::tag_open :
+            cur_format = parse_tag(it, end);
+            if (cur_format.type == format_tag::tag_type::tag_color) {
+                if (cur_format.state == format_tag::tag_state::type_begin) {
+                    format_.emplace_back(format_t {make_color(255, 0, 0, 255), pos, pos});
+                } else if (cur_format.state == format_tag::tag_state::type_end) {
+                    format_.back().end = pos;
+                }
+            } else {
+                BK_TODO_FAIL();
+            }
+
+            continue;
+        default :
+            ++it;
+            ++pos;
+
+            break;
+        }
+
+        cur_record.codepoint = cp;
+        data_.push_back(cur_record);
+    }
 
     auto const line_gap = face.line_gap();
     auto       x        = 0;
@@ -127,23 +317,10 @@ void transitory_text_layout::reset(
         x += tab;
     };
 
-    //--------------------------------------------------------------------------
-    auto escape = false;
-    
+    //--------------------------------------------------------------------------    
     auto left = unicode::codepoint {};
-    for (auto const codepoint : codepoints_) {
-        auto const cp = unicode::codepoint {codepoint};
-
-        if (!escape) {
-            switch (cp.value) {
-            case '\\' : escape = true; break;
-            case '\n' : next_line();   break;
-            case '\t' : next_tab();    break;
-            default : break;
-            }
-        } else {
-            escape = false;
-        }
+    for (auto& rec : data_) {
+        auto const cp = unicode::codepoint {rec.codepoint};
 
         auto const metrics = face.metrics(left, cp);
         left = cp;
@@ -156,25 +333,23 @@ void transitory_text_layout::reset(
             break;
         }
 
-        pos_t const p {
-            static_cast<int16_t>(x + metrics.left)
-          , static_cast<int16_t>(y - metrics.top)
-        };
+        auto& p = rec.position;
+
+        p.x = static_cast<int16_t>(x + metrics.left);
+        p.y = static_cast<int16_t>(y - metrics.top);
 
         actual_w_ = std::max(actual_w_, static_cast<int16_t>(p.x + metrics.width));
         actual_h_ = std::max(actual_h_, static_cast<int16_t>(p.y + metrics.height));
 
         x += metrics.advance_x;
         y -= metrics.advance_y;
-
-        positions_.push_back(p);
     }
 }
 
 //------------------------------------------------------------------------------
 void transitory_text_layout::clear() {
-    codepoints_.clear();
-    positions_.clear();
+    data_.clear();
+    format_.clear();
 
     actual_w_ = 0;
     actual_h_ = 0;
@@ -182,12 +357,7 @@ void transitory_text_layout::clear() {
 
 //------------------------------------------------------------------------------
 bool transitory_text_layout::empty() const {
-    BK_ASSERT_DBG(
-        ( codepoints_.empty() &&  positions_.empty())
-     || (!codepoints_.empty() && !positions_.empty())
-    );
-
-    return codepoints_.empty();
+    return data_.empty();
 }
 
 //------------------------------------------------------------------------------
@@ -198,12 +368,32 @@ transitory_text_layout::render(
   , int const  x
   , int const  y
 ) const {
-    for (auto i = 0u; i < codepoints_.size(); ++i) {
-        auto const cp = unicode::codepoint {codepoints_[i]};
-        auto const p  = positions_[i];
-        
-        auto const& tex  = face.get_texture();
-        auto const& info = face.metrics(cp);
+    auto& tex = face.get_texture();
+
+    argb8 old_color = face.get_color();
+
+    on_scope_exit(
+        face.set_color(old_color);
+    );
+
+    auto it  = cbegin(format_);
+    auto end = cend(format_);
+
+    int pos = 0;
+
+    for (auto const& rec : data_) {
+        if (it != end) {
+            if (pos == it->beg) {
+                old_color = face.get_color();
+                face.set_color(it->color);
+            } else if (pos == it->end) {
+                face.set_color(old_color);
+                ++it;
+            }
+        }
+
+        auto const& p    = rec.position;        
+        auto const& info = face.metrics(unicode::codepoint {rec.codepoint});
         
         auto const w = info.width;
         auto const h = info.height;
@@ -212,5 +402,7 @@ transitory_text_layout::render(
         auto const src_rect = make_rect_size(info.tex_x, info.tex_y, w, h);
 
         r.draw_texture(tex, src_rect, dst_rect);
+
+        ++pos;
     }
 }

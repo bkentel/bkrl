@@ -919,6 +919,10 @@ public:
     auto descender()  const noexcept { return face_.descender(); }
     auto line_gap()   const noexcept { return face_.line_gap(); }
 
+    argb8 get_color() const {
+        return renderer_.get_color_mod(texture_);
+    }
+
     void set_color(argb8 const color) {
         renderer_.set_color_mod(texture_, color);
     }

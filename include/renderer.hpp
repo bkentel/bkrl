@@ -274,9 +274,11 @@ public:
         update_texture(tex, data, pitch, rect.left, rect.top, rect.width(), rect.height());
     }
 
+    argb8 get_color_mod(texture const& tex) const;
+
     void set_color_mod(texture& tex);
-    void set_color_mod(texture& tex, color4b color);
-    void set_color_mod(texture& tex, color3b color);
+    void set_color_mod(texture& tex, argb8 color);
+    void set_color_mod(texture& tex, rgb8  color);
     
     void set_alpha_mod(texture& tex, uint8_t a = 255);
 
@@ -284,8 +286,8 @@ public:
     void draw_texture(texture const& tex, rect_t src, rect_t dst);
     ////////////////////////////////////////////////////////////////////////////
     void set_draw_color();
-    void set_draw_color(color4b color);
-    void set_draw_color(color3b color);
+    void set_draw_color(argb8 color);
+    void set_draw_color(rgb8 color);
     
     void set_draw_alpha(uint8_t a = 255);
 

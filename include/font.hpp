@@ -157,6 +157,8 @@ public:
     void set_color(rgb8 color);
     void set_color(argb8 color);
 
+    argb8 get_color() const;
+
     int pixel_size() const noexcept;
     int ascender()   const noexcept;
     int descender()  const noexcept;
@@ -198,13 +200,22 @@ public:
     int16_t actual_width()  const noexcept { return actual_w_; }
     int16_t actual_height() const noexcept { return actual_h_; };
 private:
-    using pos_t = point2d<int16_t>;
+    struct record_t {
+        codepoint_t      codepoint;
+        point2d<int16_t> position;
+    };
+    
+    struct format_t {
+        argb8 color;
+        int   beg;
+        int   end;
+    };
 
     int16_t actual_w_ = 0;
     int16_t actual_h_ = 0;
 
-    std::vector<codepoint_t> codepoints_;
-    std::vector<pos_t>       positions_;
+    std::vector<record_t> data_;
+    std::vector<format_t> format_;
 };
 
 //==============================================================================
