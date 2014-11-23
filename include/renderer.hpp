@@ -13,6 +13,7 @@
 #include "util.hpp"
 #include "render_types.hpp"
 #include "enum_forward.hpp"
+#include "keyboard.hpp"
 
 namespace bkrl {
 
@@ -37,6 +38,18 @@ struct application_base {
         int x, y;
         int dx, dy;
         uint32_t state;
+
+        bool is_down(unsigned const button) const noexcept {
+            return (state & (1 << button)) != 0;
+        }
+
+        bool is_down_ex(unsigned const button) const noexcept {
+            return ((state & (1 << button)) == state) && (state != 0);
+        }
+
+        bool is_down_any() const noexcept {
+            return state != 0;
+        }
     };
 
     struct mouse_button_info {
@@ -85,6 +98,8 @@ public:
     void do_all_events();
 
     void sleep(int ms) const;
+
+    key_modifier get_kb_mods() const;
 
     void on_char(char_sink sink);
     void on_command(command_sink sink);

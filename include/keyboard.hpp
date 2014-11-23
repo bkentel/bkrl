@@ -32,11 +32,13 @@ enum class key_modifier_type : uint16_t {
   , enum_size
 };
 
+extern template key_modifier_type from_hash(hash_t hash);
+
 //==============================================================================
 //! key_modifier
 //==============================================================================
 struct key_modifier {
-    void set(key_modifier_type const mod) {
+    void set(key_modifier_type const mod) noexcept {
         auto const m = static_cast<unsigned>(mod);
 
         switch (mod) {
@@ -57,7 +59,7 @@ struct key_modifier {
         }
     }
 
-    bool test(key_modifier const& other) const {
+    bool test(key_modifier const& other) const noexcept {
         auto const a = value.to_ulong();
         auto const b = other.value.to_ulong();
 
@@ -65,12 +67,51 @@ struct key_modifier {
             || ((a & b) && ((a & b) == b));
     }
 
+    bool test(key_modifier_type const mod) const noexcept {
+        auto const m = static_cast<unsigned>(mod);
+
+        switch (mod) {
+        case key_modifier_type::ctrl :
+            return test(key_modifier_type::ctrl_left)
+                || test(key_modifier_type::ctrl_right);
+        case key_modifier_type::alt :
+            return test(key_modifier_type::alt_left)
+                || test(key_modifier_type::alt_right);
+        case key_modifier_type::shift :
+            return test(key_modifier_type::shift_left)
+                || test(key_modifier_type::shift_right);
+        default :
+            break;
+        }
+
+        return value.test(m);
+    }
+
+    void clear(key_modifier_type const mod) noexcept {
+        auto const m = static_cast<unsigned>(mod);
+
+        switch (mod) {
+        case key_modifier_type::ctrl :
+            clear(key_modifier_type::ctrl_left);
+            clear(key_modifier_type::ctrl_right);
+            break;
+        case key_modifier_type::alt :
+            clear(key_modifier_type::alt_left);
+            clear(key_modifier_type::alt_right);
+            break;
+        case key_modifier_type::shift :
+            clear(key_modifier_type::shift_left);
+            clear(key_modifier_type::shift_right);
+            break;
+        default :
+            value.reset(m);
+        }
+    }
+
     std::bitset<
         static_cast<unsigned>(key_modifier_type::enum_size) - 1
     > value;
 };
-
-extern template key_modifier_type from_hash(hash_t hash);
 
 //==============================================================================
 //! key_combo

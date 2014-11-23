@@ -55,6 +55,11 @@ application::sleep(int const ms) const {
     impl_->sleep(ms);
 }
 
+bkrl::key_modifier
+application::get_kb_mods() const {
+    return impl_->get_kb_mods();
+}
+
 void
 application::on_char(char_sink sink) {
     impl_->on_command(sink);

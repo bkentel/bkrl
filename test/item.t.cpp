@@ -84,15 +84,15 @@ TEST_CASE("equipment sanity check", "[item]") {
     auto const id1 = generate_item(item_id1, istore, item_defs);
     auto const id2 = generate_item(item_id2, istore, item_defs);
 
-    REQUIRE(equip.can_equip(id0, item_defs, istore) == true);
-    REQUIRE(equip.can_equip(id1, item_defs, istore) == true);
-    REQUIRE(equip.can_equip(id2, item_defs, istore) == false);
+    REQUIRE(equip.can_equip(id0, item_defs, istore).second == true);
+    REQUIRE(equip.can_equip(id1, item_defs, istore).second == true);
+    REQUIRE(equip.can_equip(id2, item_defs, istore).second == false);
 
     equip.equip(id0, item_defs, istore);
     REQUIRE(equip.in_slot(equip_slot::hand_main) == id0);
     REQUIRE(equip.in_slot(equip_slot::hand_off) == id0);
 
-    REQUIRE(equip.can_equip(id0, item_defs, istore) == false);
+    REQUIRE(equip.can_equip(id0, item_defs, istore).second == false);
 
     REQUIRE(equip.unequip(equip_slot::hand_main, item_defs, istore) == id0);
     REQUIRE(!equip.in_slot(equip_slot::hand_main));
@@ -100,7 +100,7 @@ TEST_CASE("equipment sanity check", "[item]") {
     REQUIRE(!equip.unequip(equip_slot::hand_main, item_defs, istore));
     REQUIRE(!equip.unequip(equip_slot::hand_off, item_defs, istore));
 
-    REQUIRE(equip.can_equip(id0, item_defs, istore) == true);
+    REQUIRE(equip.can_equip(id0, item_defs, istore).second == true);
     equip.equip(id0, item_defs, istore);
     REQUIRE(equip.unequip(equip_slot::hand_off, item_defs, istore) == id0);
     REQUIRE(!equip.in_slot(equip_slot::hand_main));

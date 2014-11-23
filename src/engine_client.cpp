@@ -1689,7 +1689,7 @@ public:
 
     void yield() {
         if (frames_ % 5 == 0) {
-            app_.sleep(15);
+            //app_.sleep(15);
         }
     }
 
@@ -1902,12 +1902,17 @@ public:
     }
 
     void clear_inspect_message() {
-        inspect_message_ = transitory_text_layout {};
+        inspect_message_.clear();
     }
 
     void set_inspect_message(ipoint2 const p) {
         constexpr auto w = 256;
         constexpr auto h = transitory_text_layout::unlimited;
+
+        auto const q = view_.screen_to_grid(mouse_pos_.x, mouse_pos_.y);
+        if (p == q) {
+            return;
+        }
 
         inspect_message_.reset(
             font_face_, cur_level_->get_inspect_msg(p), w, h
@@ -2377,21 +2382,21 @@ public:
     void on_mouse_move(application::mouse_move_info const& info) {
         if (input_state_) {
             input_state_.on_mouse_move(info);
+        } else if (info.is_down_ex(0)) {
+        } else if (info.is_down_ex(1)) {
+        } else if (info.is_down_ex(2)) {
+            view_.scroll(info.dx, info.dy);
+        } else if (info.is_down_ex(3)) {
+        } else if (!info.is_down_any()) {
+            if (app_.get_kb_mods().test(key_modifier_type::shift)) {
+                auto const p = view_.screen_to_grid(info.x, info.y);
+                set_inspect_message(p);
+            } else {
+                clear_inspect_message();
+            }
         }
-        
+
         mouse_pos_ = ipoint2 {info.x, info.y};
-
-        auto const right = (info.state & (1<<2)) != 0;
-        
-        if (!right) {
-            auto const p = view_.screen_to_grid(info.x, info.y);
-
-            set_inspect_message(p);
-
-            return;
-        }
-
-        view_.scroll(info.dx, info.dy);
     }
 
     //--------------------------------------------------------------------------

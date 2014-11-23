@@ -110,6 +110,8 @@ public:
 
     void sleep(int ms) const;
 
+    key_modifier get_kb_mods() const;
+
     void on_command(char_sink sink)              { on_char_         = sink; }
     void on_command(command_sink sink)           { on_command_      = sink; }
     void on_close(close_sink sink)               { on_close_        = sink; }
@@ -132,6 +134,8 @@ private:
     void handle_event_mouse_move(SDL_MouseMotionEvent const& event);
     void handle_event_mouse_button(SDL_MouseButtonEvent const& event);
     void handle_event_mouse_wheel(SDL_MouseWheelEvent const& event);
+
+    static key_modifier make_flags_(SDL_Keymod flags) noexcept;
 private:
     sdl_state state_; //must be first
     sdl_unique<SDL_Window> window_;
@@ -145,6 +149,8 @@ private:
     mouse_wheel_sink  on_mouse_wheel_;
 
     keymap const* key_map_;
+
+    key_modifier key_mods_;
 
     bool running_;
 };
@@ -343,6 +349,7 @@ application_impl::handle_event_window(SDL_WindowEvent const& event) {
     case SDL_WINDOWEVENT_LEAVE :
         break;
     case SDL_WINDOWEVENT_FOCUS_GAINED :
+    //TODO reset keymods and mouse state
         break;
     case SDL_WINDOWEVENT_FOCUS_LOST :
         break;
@@ -354,39 +361,32 @@ application_impl::handle_event_window(SDL_WindowEvent const& event) {
 }
 
 //------------------------------------------------------------------------------
+bkrl::key_modifier
+application_impl::make_flags_(SDL_Keymod const flags) noexcept {
+    key_modifier result;
+
+    using km = key_modifier_type;
+
+    if (flags & KMOD_LCTRL)  { result.set(km::ctrl_left); }
+    if (flags & KMOD_RCTRL)  { result.set(km::ctrl_right); }
+    if (flags & KMOD_LALT)   { result.set(km::alt_left); }
+    if (flags & KMOD_RALT)   { result.set(km::alt_right); }
+    if (flags & KMOD_LSHIFT) { result.set(km::shift_left); }
+    if (flags & KMOD_RSHIFT) { result.set(km::shift_right); }
+
+    return result;
+}
+
 void
-application_impl::handle_event_kb(SDL_KeyboardEvent const& event) {
+application_impl::handle_event_kb(SDL_KeyboardEvent const& event) {    
+    key_mods_ = make_flags_(SDL_GetModState());
+
     if (event.type != SDL_KEYDOWN) {
         return;
     }
 
-    key_modifier mods;
-
-    //TODO
-    auto const flags = event.keysym.mod;
-
-    if (flags & KMOD_LCTRL) {
-        mods.set(key_modifier_type::ctrl_left);
-    }
-    if (flags & KMOD_RCTRL) {
-        mods.set(key_modifier_type::ctrl_right);
-    }
-    if (flags & KMOD_LALT) {
-        mods.set(key_modifier_type::alt_left);
-    }
-    if (flags & KMOD_RALT) {
-        mods.set(key_modifier_type::alt_right);
-    }
-    if (flags & KMOD_LSHIFT) {
-        mods.set(key_modifier_type::shift_left);
-    }
-    if (flags & KMOD_RSHIFT) {
-        mods.set(key_modifier_type::shift_right);
-    }
-
     key_combo const key {
-        static_cast<scancode>(event.keysym.scancode)
-      , mods
+        static_cast<scancode>(event.keysym.scancode), key_mods_
     };
 
     auto const command = (*key_map_)[key];
@@ -457,6 +457,13 @@ application_impl::do_all_events() {
 void
 application_impl::sleep(int ms) const {
     SDL_Delay(ms);
+}
+
+
+//------------------------------------------------------------------------------
+bkrl::key_modifier
+application_impl::get_kb_mods() const {
+    return key_mods_;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
