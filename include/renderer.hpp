@@ -24,6 +24,11 @@ class texture;
 class config;
 class keymap;
 
+//TODO move elsewhere
+enum mouse_button : unsigned {
+    left, middle, right, x1
+};
+
 namespace detail { class renderer_impl; }
 namespace detail { class application_impl; }
 
@@ -34,9 +39,12 @@ namespace detail {
 struct application_base {
     using handle_t = opaque_handle<application>;
 
-    struct mouse_move_info {
-        int x, y;
-        int dx, dy;
+    struct mouse_button_state {
+        mouse_button_state(uint32_t const state = 0) noexcept
+          : state {state}
+        {
+        }
+        
         uint32_t state;
 
         bool is_down(unsigned const button) const noexcept {
@@ -52,15 +60,22 @@ struct application_base {
         }
     };
 
-    struct mouse_button_info {
-        enum class state_t : uint8_t {
-            released, pressed
-        };
+    struct mouse_move_info {
+        int x, y;
+        int dx, dy;
+        mouse_button_state buttons;
 
+        operator ipoint2() const noexcept { return {x, y}; }
+        operator ivec2()   const noexcept { return {dx, dy}; }
+    };
+
+    struct mouse_button_info {
         int x, y;
         uint8_t button;
-        state_t state;
+        uint8_t pressed;
         uint8_t clicks;
+
+        operator ipoint2() const noexcept { return {x, y}; }
     };
 
     struct mouse_wheel_info {

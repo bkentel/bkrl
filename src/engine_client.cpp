@@ -1260,19 +1260,27 @@ public:
         center_on_grid(p.x, p.y);
     }
 
+    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     void scroll_x(int const dx) noexcept {
         scroll_x_ += dx / zoom_;
     }
 
+    //--------------------------------------------------------------------------
     void scroll_y(int const dy) noexcept {
         scroll_y_ += dy / zoom_;
     }
 
+    //--------------------------------------------------------------------------
     void scroll(int const dx, int const dy) noexcept {
         scroll_x(dx);
         scroll_y(dy);
     }
 
+    //--------------------------------------------------------------------------
+    void scroll(ivec2 const v) noexcept { scroll(v.x, v.y); }
+
+    ////////////////////////////////////////////////////////////////////////////
     template <typename T>
     fpoint2 screen_to_point(point2d<T> const p) const {
         return screen_to_point(p.x, p.y);
@@ -1289,6 +1297,8 @@ public:
         return {static_cast<float>(sx), static_cast<float>(sy)};
     }
 
+    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     ipoint2 screen_to_grid(int const x, int const y) const {
         auto const p = screen_to_point(x, y);
 
@@ -1300,7 +1310,14 @@ public:
 
         return {static_cast<int>(gx), static_cast<int>(gy)};
     }
+    
+    //--------------------------------------------------------------------------
+    ipoint2 screen_to_grid(ipoint2 const p) const {
+        return screen_to_grid(p.x, p.y);
+    }
 
+    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     ipoint2 grid_to_screen(int const x, int const y) const {
         auto const tw = sheet_->tile_w();
         auto const th = sheet_->tile_h();
@@ -1689,7 +1706,7 @@ public:
 
     void yield() {
         if (frames_ % 5 == 0) {
-            //app_.sleep(15);
+            app_.sleep(15);
         }
     }
 
@@ -2380,23 +2397,24 @@ public:
 
     //--------------------------------------------------------------------------
     void on_mouse_move(application::mouse_move_info const& info) {
+        auto const& buttons = info.buttons;
+        
         if (input_state_) {
             input_state_.on_mouse_move(info);
-        } else if (info.is_down_ex(0)) {
-        } else if (info.is_down_ex(1)) {
-        } else if (info.is_down_ex(2)) {
-            view_.scroll(info.dx, info.dy);
-        } else if (info.is_down_ex(3)) {
-        } else if (!info.is_down_any()) {
+        } else if (buttons.is_down_ex(0)) {
+        } else if (buttons.is_down_ex(1)) {
+        } else if (buttons.is_down_ex(2)) {
+            view_.scroll(info);
+        } else if (buttons.is_down_ex(3)) {
+        } else if (!buttons.is_down_any()) {
             if (app_.get_kb_mods().test(key_modifier_type::shift)) {
-                auto const p = view_.screen_to_grid(info.x, info.y);
-                set_inspect_message(p);
+                set_inspect_message(view_.screen_to_grid(info));
             } else {
                 clear_inspect_message();
             }
         }
 
-        mouse_pos_ = ipoint2 {info.x, info.y};
+        mouse_pos_ = info;
     }
 
     //--------------------------------------------------------------------------
