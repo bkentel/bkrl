@@ -54,6 +54,8 @@ void timer::impl_t::update() {
     auto const now = clock_t::now();
     last_ = now;
 
+    bool updated = false;
+    
     //for each timer
     for (size_t i = 0; i < deadlines_.size(); ++i) {
         auto& cur = deadlines_[i];
@@ -62,14 +64,21 @@ void timer::impl_t::update() {
             break; //nothing left
         }
 
+        updated = true;
+
         auto const delta  = now - cur.start;
         auto const result = callbacks_[cur.index](cur.id, delta);
             
         cur.deadline = (result != zero) //if 0 was not returned
-            ? (now + result)              //then update the deadline
-            : (max);                      //otherwise set the deadline to max
+            ? (now + result)            //then update the deadline
+            : (max);                    //otherwise set the deadline to max
     }
         
+    
+    if (!updated) {
+        return;
+    }
+    
     //all deadlines set to max will be at the back
     sort_();
        

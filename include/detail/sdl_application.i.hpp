@@ -418,9 +418,7 @@ application_impl::handle_event_mouse_button(SDL_MouseButtonEvent const& event) {
     mouse_button_info const info {
         event.x, event.y
       , event.button
-      , (event.state == SDL_PRESSED)
-        ? mouse_button_info::state_t::pressed
-        : mouse_button_info::state_t::released
+      , ((event.state == SDL_PRESSED) ? uint8_t {1} : uint8_t {0})
       , event.clicks
     };
 

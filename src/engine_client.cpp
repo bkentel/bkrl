@@ -1706,7 +1706,7 @@ public:
 
     void yield() {
         if (frames_ % 5 == 0) {
-            app_.sleep(15);
+            app_.sleep(10);
         }
     }
 

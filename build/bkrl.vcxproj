@@ -106,6 +106,8 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">/Debug:FASTLINK %(AdditionalOptions)</AdditionalOptions>
+      <Profile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</Profile>
+      <Profile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</Profile>
     </Link>
     <Bscmake>
       <PreserveSbr Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</PreserveSbr>
