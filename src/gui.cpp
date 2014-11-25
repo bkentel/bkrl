@@ -905,3 +905,81 @@ bkrl::string_ref
 bkrl::gui::message_log::get_message_string_(message_type msg) const {
     return (*msgs_)[msg];
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// gui::map_inspect
+////////////////////////////////////////////////////////////////////////////////
+void bkrl::gui::map_inspect::reset(font_face& face, string_ref const msg) {
+    font_face_ = &face;
+
+    text_.reset(face, msg, 320);
+
+    render_w_ = text_.actual_width();
+    render_h_ = text_.actual_height();
+
+    //adjust the height to the next full line height
+    auto const h = face.line_gap();
+    auto const n = render_h_ % h;
+
+    if (n) {
+        render_h_ += (h - n);
+    }
+}
+
+void bkrl::gui::map_inspect::render(renderer& r) {
+    auto const color_text_background = make_color(50, 50, 50, 180);
+    auto const color_text_border     = make_color(180, 100, 0, 255);
+    auto constexpr padding = 4;
+    auto constexpr border = 2;
+
+    if (!visible_) {
+        return;
+    }
+
+    if (text_.empty()) {
+        return;
+    }
+
+    auto const restore = r.restore_view();
+
+    auto x = render_x_ - padding;
+    auto y = render_y_ - padding - (render_h_ + padding);
+    auto w = render_w_ + padding * 2;
+    auto h = render_h_ + padding * 2;
+
+    //TODO adjust for border size too; cleanup for readability
+
+    if (view_w_ && view_h_) {
+        if (y + h > view_h_) {
+            y += view_h_ - (y + h);
+        }
+
+        if (x + w > view_w_) {
+            x += view_w_ - (x + w);
+        }
+
+        if (y < 0) { y = 0; }
+        if (x < 0) { x = 0; }
+    }
+
+    r.set_draw_color(color_text_background);
+    r.draw_filled_rect(make_rect_size(x, y, w, h));
+
+    r.set_draw_color(color_text_border);
+    r.draw_filled_rect(make_rect_size(
+        x - border
+      , y - border
+      , w + border * 2
+      , border));
+    
+    r.draw_filled_rect(make_rect_size(
+        x - border
+      , y + h
+      , w + border * 2
+      , border));
+    
+    r.draw_filled_rect(make_rect_size(x - border, y, border, h));
+    r.draw_filled_rect(make_rect_size(x + w, y, border, h));
+    
+    text_.render(r, *font_face_, x + padding, y + padding);
+}

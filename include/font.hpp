@@ -181,8 +181,8 @@ public:
     transitory_text_layout(
         font_face& face
       , string_ref string
-      , int16_t     max_w = unlimited
-      , int16_t     max_h = unlimited
+      , int16_t    max_w = unlimited
+      , int16_t    max_h = unlimited
     );
 
     void reset(
@@ -190,6 +190,11 @@ public:
       , string_ref string
       , int16_t    max_w = unlimited
       , int16_t    max_h = unlimited
+    );
+
+    void append(
+        font_face& face
+      , string_ref string
     );
 
     void clear();
@@ -211,6 +216,8 @@ private:
         int   end;
     };
 
+    int16_t max_w_    = unlimited;
+    int16_t max_h_    = unlimited;
     int16_t actual_w_ = 0;
     int16_t actual_h_ = 0;
 

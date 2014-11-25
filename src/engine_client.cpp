@@ -1578,11 +1578,13 @@ public:
         }
 
         msg_log.render(r, 0, 0);
+        map_inspect.render(r);
     }
 
     gui::item_list   item_list;
     gui::equip_list  equip_list;
     gui::message_log msg_log;
+    gui::map_inspect map_inspect;
 };
 
 //==============================================================================
@@ -1692,6 +1694,8 @@ public:
         init_sinks();
         init_timers();
         
+        on_resize(app_.client_width(), app_.client_height());
+
         next_level(0);
         
         print_message(message_type::welcome);
@@ -1809,40 +1813,6 @@ public:
         do_zoom_reset();
     }
 
-    void draw_inspect_msg(renderer& r) {
-        static auto const color_text_background = make_color(50, 50, 50, 180);
-
-        if (inspect_message_.empty()) {
-            return;
-        }
-
-        auto const restore = r.restore_view();
-
-        auto const actual_h = inspect_message_.actual_height();
-        auto const line_h   = font_face_.line_gap();
-        auto const diff_h   = actual_h % line_h;
-
-        auto const msg_h = actual_h + (diff_h ? (line_h - diff_h) : 0);
-        auto const msg_w = inspect_message_.actual_width();
-
-        auto const x = mouse_pos_.x;
-        auto const y = mouse_pos_.y - msg_h;
-        auto const w = msg_w;
-        auto const h = msg_h;
-
-        constexpr auto border = 4;
-
-        r.set_draw_color(color_text_background);
-        r.draw_filled_rect(make_rect_size(
-            x - border
-          , y - border
-          , w + border * 2
-          , h + border * 2
-        ));
-
-        inspect_message_.render(r, font_face_, x, y);
-    }
-
     void draw_gui(renderer& r) {
         gui_.render(r);
     }
@@ -1866,7 +1836,6 @@ public:
         r.set_scale(s);
 
         draw_level(r);
-        draw_inspect_msg(r);
         draw_gui(r);
 
         r.present();
@@ -1923,20 +1892,21 @@ public:
     }
 
     void clear_inspect_message() {
-        inspect_message_.clear();
+        gui_.map_inspect.hide();
     }
 
-    void set_inspect_message(ipoint2 const p) {
-        constexpr auto w = 256;
-        constexpr auto h = transitory_text_layout::unlimited;
+    void set_inspect_message() {
+        auto const cur = view_.screen_to_grid(mouse_pos_cur_);
+        auto const pre = view_.screen_to_grid(mouse_pos_pre_);
 
-        auto const q = view_.screen_to_grid(mouse_pos_.x, mouse_pos_.y);
-        if (p == q) {
+        gui_.map_inspect.show(mouse_pos_cur_.x, mouse_pos_cur_.y);
+
+        if (cur == pre) {
             return;
         }
 
-        inspect_message_.reset(
-            font_face_, cur_level_->get_inspect_msg(p), w, h
+        gui_.map_inspect.reset(
+            font_face_, cur_level_->get_inspect_msg(cur)
         );
     }
 
@@ -1963,6 +1933,7 @@ public:
         auto scroll_y = 0;
         auto delta    = 0;
 
+        //TODO scroll to nearest multiple of tile size to avoid jitter
         if ((delta = dist_l - q.x) > 0) {
             scroll_x = delta;
         } else if ((delta = dist_r - q.x) < 0) {
@@ -2401,12 +2372,16 @@ public:
     //--------------------------------------------------------------------------
     void on_resize(unsigned const w, unsigned const h) {
         view_.set_size(w, h);
+        gui_.map_inspect.set_view_size(w, h);
     }
 
     //--------------------------------------------------------------------------
     void on_mouse_move(application::mouse_move_info const& info) {
         auto const& buttons = info.buttons;
         
+        mouse_pos_pre_ = mouse_pos_cur_;
+        mouse_pos_cur_ = info;
+
         if (input_state_) {
             input_state_.on_mouse_move(info);
         } else if (buttons.is_down_ex(0)) {
@@ -2416,19 +2391,21 @@ public:
         } else if (buttons.is_down_ex(3)) {
         } else if (!buttons.is_down_any()) {
             if (app_.get_kb_mods().test(key_modifier_type::shift)) {
-                set_inspect_message(view_.screen_to_grid(info));
+                set_inspect_message();
             } else {
                 clear_inspect_message();
             }
         }
-
-        mouse_pos_ = info;
     }
 
     //--------------------------------------------------------------------------
     void on_mouse_button(application::mouse_button_info const& info) {
         if (input_state_) {
             input_state_.on_mouse_button(info);
+        }
+
+        if (info.button) {
+            clear_inspect_message();
         }
     }
 private:
@@ -2466,7 +2443,8 @@ private:
 
     gui_root gui_;
 
-    ipoint2 mouse_pos_ = ipoint2 {0, 0};
+    ipoint2 mouse_pos_cur_ = ipoint2 {0, 0};
+    ipoint2 mouse_pos_pre_ = ipoint2 {0, 0};
 
     int frames_ = 0;
     float fps_ = 0.0f;

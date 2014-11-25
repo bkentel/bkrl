@@ -136,6 +136,7 @@ public:
 };
 
 //==============================================================================
+//!
 //==============================================================================
 class message_log {
 public:
@@ -182,6 +183,51 @@ private:
 
     int front_ = 0;
     std::array<transitory_text_layout, line_count> lines_;
+};
+
+//==============================================================================
+//!
+//==============================================================================
+class map_inspect {
+public:
+    map_inspect()                              = default;
+    map_inspect(map_inspect const&)            = delete;
+    map_inspect(map_inspect&&)                 = default;
+    map_inspect& operator=(map_inspect const&) = delete;
+    map_inspect& operator=(map_inspect&&)      = default;
+
+    void show() noexcept { visible_ = true; }
+
+    void show(int const x, int const y) noexcept {
+        show();
+
+        render_x_ = x;
+        render_y_ = y;
+    }
+
+    void hide() noexcept { visible_ = false; }
+
+    void reset(font_face& face, string_ref msg);
+
+    void set_view_size(int const w, int const h) {
+        BK_ASSERT(w > 0 && h > 0);
+
+        view_w_ = w;
+        view_h_ = h;
+    }
+
+    void render(renderer& r);
+private:
+    transitory_text_layout text_;
+
+    font_face* font_face_ = nullptr;
+    int        view_w_  = 0;
+    int        view_h_  = 0;
+    int        render_x_  = 0;
+    int        render_y_  = 0;
+    int        render_w_  = 0;
+    int        render_h_  = 0;
+    bool       visible_   = false;
 };
 
 }} //namespace bkrl::gui
