@@ -266,7 +266,9 @@ merge_walls(
 
 struct tile_sheet_set {
     enum type {
-        world, items, entities
+        world
+      , items
+      , entities
       , enum_size
     };
 
@@ -1323,8 +1325,8 @@ public:
         auto const th = sheet_->tile_h();
 
         return {
-            static_cast<int>(x * tw * zoom_ + scroll_x_)
-          , static_cast<int>(y * th * zoom_ + scroll_y_)
+            static_cast<int>(x * tw * zoom_ + scroll_x_ * zoom_)
+          , static_cast<int>(y * th * zoom_ + scroll_y_ * zoom_)
         };
     }
 private:
@@ -1548,6 +1550,7 @@ private:
 };
 
 //==============================================================================
+//! Gui root.
 //==============================================================================
 class gui_root {
 public:
@@ -1583,6 +1586,7 @@ public:
 };
 
 //==============================================================================
+//! Input state management.
 //==============================================================================
 class input_state {
 public:
@@ -1939,32 +1943,36 @@ public:
     void do_auto_scroll_(ipoint2 const p) {
         auto const border    = config_->auto_scroll_w;
         auto const border_lo = border;
-        auto const border_hi = 1.0f - border;
+        auto const border_hi = decltype(border){1} - border;
 
         auto const w = view_.width();
         auto const h = view_.height();
+        auto const z = view_.zoom();
         auto const q = view_.grid_to_screen(p.x, p.y);
-        
-        auto const dist_x = w - q.x;
-        auto const dist_y = h - q.y;
 
         auto const& sheet = tile_sheets_[tile_sheet_set::world];
-        auto const tw = sheet.tile_w();
-        auto const th = sheet.tile_h();
+        auto const tw = sheet.tile_w() * z;
+        auto const th = sheet.tile_h() * z;
+        
+        auto const dist_l = static_cast<int>(border_lo * w);
+        auto const dist_t = static_cast<int>(border_lo * h);
+        auto const dist_r = static_cast<int>(border_hi * w - tw);
+        auto const dist_b = static_cast<int>(border_hi * h - th);
 
         auto scroll_x = 0;
         auto scroll_y = 0;
+        auto delta    = 0;
 
-        if (dist_x < (w * border_lo)) {
-            scroll_x = -tw;
-        } else if (dist_x > (w * border_hi)) {
-            scroll_x = tw;
+        if ((delta = dist_l - q.x) > 0) {
+            scroll_x = delta;
+        } else if ((delta = dist_r - q.x) < 0) {
+            scroll_x = delta;
         }
 
-        if (dist_y < (h * border_lo)) {
-            scroll_y = -th;
-        } else if (dist_y > (h * border_hi)) {
-            scroll_y = th;
+        if ((delta = dist_t - q.y) > 0) {
+            scroll_y = delta;
+        } else if ((delta = dist_b - q.y) < 0) {
+            scroll_y = delta;
         }
 
         do_scroll(scroll_x, scroll_y);
