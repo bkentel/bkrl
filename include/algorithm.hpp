@@ -68,6 +68,36 @@ template<class _Container>
 namespace bkrl {
 
 //==============================================================================
+//
+//==============================================================================
+template <typename SortedContainer, typename T>
+inline auto binary_find_first(SortedContainer& c, T const& value) {
+    auto const beg = std::begin(c);
+    auto const end = std::end(c);
+    auto const it  = std::lower_bound(beg, end, value);
+
+    return std::make_pair(it, (it != end) && (*it == value));
+}
+
+//==============================================================================
+//
+//==============================================================================
+template <typename SrcContainer, typename DstContainer, typename Function>
+inline void transform_to_back(SrcContainer& in, DstContainer& out, Function&& function) {
+    auto const beg = std::begin(in);
+    auto const end = std::end(in);
+
+    out.reserve(std::distance(beg, end));
+
+    std::transform(
+        beg
+      , end
+      , std::back_inserter(out)
+      , std::forward<Function>(function)
+    );     
+}
+
+//==============================================================================
 //! as std::equal_range, but for the entire container
 //==============================================================================
 template <
@@ -118,13 +148,13 @@ template <
   , typename Predicate = std::less<>
 >
 inline void sort(
-    Container& container
-  , Predicate  predicate = Predicate {}
+    Container&  container
+  , Predicate&& predicate = Predicate {}
 ) {
     std::sort(
         std::begin(container)
       , std::end(container)
-      , predicate
+      , std::forward<Predicate>(predicate)
     );
 }
 

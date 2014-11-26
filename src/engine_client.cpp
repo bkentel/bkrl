@@ -339,31 +339,95 @@ public:
         generate_(substantive, trivial);
     }
     
+    bool try_move(entity& ent, ivec2 const v) {
+        auto const ok = can_move_by(ent, v);
+        if (ok) { ent.move_by(v); }
+        return ok;
+    }
+
+    //--------------------------------------------------------------------------
+    bool update_entity_(random::generator& trivial, entity& ent) {
+        auto constexpr move_percent   = 25;
+        auto constexpr sense_distance = 5;
+
+        auto const pos_self   = ent.position();
+        auto const pos_player = player_->position();
+        auto const delta      = pos_player - pos_self;
+
+        auto const dx = std::abs(delta.x);
+        auto const dy = std::abs(delta.y);
+
+        //
+        // adjacent to player
+        //
+        if ((dx | dy) == 1) {
+            return false;
+        }
+
+        //
+        // near player
+        //
+        if (dx <= sense_distance && dy <= sense_distance) {
+            auto const ux = sign_of(delta.x);
+            auto const uy = sign_of(delta.y);
+
+            // try to move diagonally first
+            if (try_move(ent, ivec2 {ux, uy})
+             || try_move(ent, ivec2 {ux,  0})
+             || try_move(ent, ivec2 { 0, uy})
+            ) {
+                return true;
+            }
+        }
+
+        //
+        // move randomly
+        //
+        auto const roll = random::percent(trivial);
+        if (roll < move_percent) {
+            return false;
+        }
+
+        return try_move(ent, random::direction(trivial));
+    }
+    
+    //--------------------------------------------------------------------------
+    void update_entities_(random::generator& trivial) {
+        BK_ASSERT_DBG(pending_entities_.empty());
+
+        transform_to_back(entities_, pending_entities_, [](entity const& e) {
+            return e.instance_id;
+        });
+
+        sort(pending_entities_);
+
+        //
+        // entities_ is not a stable collection, so we have to do a O(n*n)
+        // update algorithm here; this could be improved to (n*log(n)).
+        //
+        while (!pending_entities_.empty()) {
+            for (auto& ent : entities_) {
+                auto const id    = ent.instance_id;
+                auto const where = binary_find_first(pending_entities_, id);
+
+                // already finished this one
+                if (!where.second) {
+                    continue;
+                }
+
+                // have to sort again if ent was moved
+                if (update_entity_(trivial, ent)) {
+                    entities_.sort();
+                }
+
+                pending_entities_.erase(where.first);
+            }
+        }
+    }
+
     //--------------------------------------------------------------------------
     void advance(random::generator& trivial) {
-        for (auto& ent : entities_) {
-            auto const roll = random::percent(trivial);
-            if (roll < 25) {
-                continue;
-            }
-
-            auto const v = random::direction(trivial);
-            if (v.x == 0 && v.y == 0) {
-                continue;
-            }
-
-            if (!can_move_by(ent, v)) {
-                continue;
-            }
-
-            auto const p = ent.position() + v;
-            if (entity_at(p)) {
-                continue;
-            }
-
-            ent.move_to(p);
-            entities_.sort();
-        }
+        update_entities_(trivial);
     }
 
     //--------------------------------------------------------------------------
@@ -1159,6 +1223,7 @@ private:
 
     spatial_map<item_stack, int> items_;
     spatial_map<entity>          entities_;
+    std::vector<entity_id>       pending_entities_; //used during updates
 };
 
 //==============================================================================

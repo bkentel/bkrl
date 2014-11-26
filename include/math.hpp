@@ -75,6 +75,15 @@ clamp(
 }
 
 //==============================================================================
+//! return {-1, 0, 1}
+//==============================================================================
+template <typename T, std::enable_if_t<std::is_integral<T>::value>* = nullptr>
+inline T sign_of(T const n) noexcept {
+    return (n > T {0}) ? T { 1} :
+           (n < T {0}) ? T {-1} : T {0};
+}
+
+//==============================================================================
 //! linearize a 2d value to a 1d value.
 //==============================================================================
 inline int next_nearest_power_of_2(int value) noexcept {
@@ -233,6 +242,18 @@ lexicographical_compare(
         : (a.x == b.x)
             ? (a.y < b.y)
             : false;
+}
+
+//------------------------------------------------------------------------------
+template <typename T>
+inline point2d<T> sign_of(point2d<T> const p) noexcept {
+    return point2d<T> {sign_of(p.x), sign_of(p.y)};
+}
+
+//------------------------------------------------------------------------------
+template <typename T>
+inline vector2d<T> sign_of(vector2d<T> const v) noexcept {
+    return vector2d<T> {sign_of(v.x), sign_of(v.y)};
 }
 
 //------------------------------------------------------------------------------
