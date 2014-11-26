@@ -1577,7 +1577,7 @@ public:
             equip_list.render(r);
         }
 
-        msg_log.render(r, 0, 0);
+        msg_log.render(r);
         map_inspect.render(r);
     }
 
@@ -2373,6 +2373,7 @@ public:
     void on_resize(unsigned const w, unsigned const h) {
         view_.set_size(w, h);
         gui_.map_inspect.set_view_size(w, h);
+        gui_.msg_log.set_bounds(make_rect_size(0, 0, static_cast<int>(w), static_cast<int>(h)));
     }
 
     //--------------------------------------------------------------------------
@@ -2384,7 +2385,10 @@ public:
 
         if (input_state_) {
             input_state_.on_mouse_move(info);
-        } else if (buttons.is_down_ex(0)) {
+            return;
+        }
+
+        if (buttons.is_down_ex(0)) {
         } else if (buttons.is_down_ex(1)) {
         } else if (buttons.is_down_ex(2)) {
             view_.scroll(info);
@@ -2393,6 +2397,8 @@ public:
             if (app_.get_kb_mods().test(key_modifier_type::shift)) {
                 set_inspect_message();
             } else {
+                gui_.msg_log.on_mouse_move(info);
+
                 clear_inspect_message();
             }
         }

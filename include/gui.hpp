@@ -160,7 +160,13 @@ public:
         print_line_(format, std::forward<Params>(params)...);
     }
 
-    void render(renderer& r, int x, int y);
+    void render(renderer& r);
+
+    void set_bounds(irect bounds);
+
+    void on_mouse_move(ipoint2 const p) {
+        faded_ = !bkrl::intersects(bounds_, p);
+    }
 private:
     string_ref get_message_string_(message_type msg) const;
 
@@ -178,11 +184,16 @@ private:
     void make_line_(string_ref str);
 
     //--------------------------------------------------------------------------
+    //TODO change this to use a circular buffer
+    std::array<transitory_text_layout, line_count> lines_;
+
     font_face*         font_face_ = nullptr;
     message_map const* msgs_      = nullptr;
-
-    int front_ = 0;
-    std::array<transitory_text_layout, line_count> lines_;
+    
+    irect bounds_        = irect {};
+    int   visible_lines_ = 0;
+    int   front_         = 0;
+    bool  faded_         = true;
 };
 
 //==============================================================================

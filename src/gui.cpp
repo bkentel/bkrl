@@ -855,20 +855,33 @@ bkrl::gui::message_log::print_line(string_ref const str) {
 
 //--------------------------------------------------------------------------
 void
-bkrl::gui::message_log::render(
-    renderer& r
-  , int x
-  , int y
-) {
-    constexpr auto max_line = 3;
-    auto const line_h = font_face_->line_gap();
+bkrl::gui::message_log::render(renderer& r) {
+    auto const back_color = make_color(
+        50, 50, 50, (faded_ ? 50 : 240)
+    );
 
     auto const restore = r.restore_view();
 
-    auto beg = front_ - max_line;
-    beg = (beg < 0) ? (line_count + beg) : (beg);
+    //
+    // draw background
+    //
+
+    r.set_draw_color(back_color);
+    r.draw_filled_rect(bounds_);
+
+    //
+    // draw text
+    //
+    auto const line_h = font_face_->line_gap();
+
+    auto const beg = (front_ < visible_lines_)
+      ? (line_count + (front_ - visible_lines_))
+      : (front_ - visible_lines_);
 
     auto const end = front_;
+
+    auto const x = bounds_.left;
+    auto       y = bounds_.top;
 
     for (auto i = beg; i != end; i = (i + 1) % line_count) {
         auto const& line = lines_[i];
@@ -879,6 +892,16 @@ bkrl::gui::message_log::render(
         line.render(r, *font_face_, x, y);
         y += line_h;
     }
+}
+
+//--------------------------------------------------------------------------
+void bkrl::gui::message_log::set_bounds(irect const bounds) {
+    bounds_ = bounds;
+
+    auto const line_h = font_face_->line_gap();
+    bounds_.bottom = bounds_.top + line_h * 3;
+
+    visible_lines_ = bounds_.height() / line_h;
 }
 
 //--------------------------------------------------------------------------
@@ -927,7 +950,7 @@ void bkrl::gui::map_inspect::reset(font_face& face, string_ref const msg) {
 }
 
 void bkrl::gui::map_inspect::render(renderer& r) {
-    auto const color_text_background = make_color(50, 50, 50, 180);
+    auto const color_text_background = make_color(50, 50, 50, 240);
     auto const color_text_border     = make_color(180, 100, 0, 255);
     auto constexpr padding = 4;
     auto constexpr border = 2;
