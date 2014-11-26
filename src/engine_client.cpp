@@ -339,12 +339,6 @@ public:
         generate_(substantive, trivial);
     }
     
-    bool try_move(entity& ent, ivec2 const v) {
-        auto const ok = can_move_by(ent, v);
-        if (ok) { ent.move_by(v); }
-        return ok;
-    }
-
     //--------------------------------------------------------------------------
     bool update_entity_(random::generator& trivial, entity& ent) {
         auto constexpr move_percent   = 25;
@@ -357,12 +351,26 @@ public:
         auto const dx = std::abs(delta.x);
         auto const dy = std::abs(delta.y);
 
-        //
-        // adjacent to player
-        //
-        if ((dx | dy) == 1) {
+        BK_ASSERT_DBG(dx || dy);
+
+        // after trying to move, decide what to do
+        auto const on_move = [](move_result const m) {
+            switch (m) {
+            case move_result::ok:
+                return true;
+            case move_result::blocked_bounds:
+                break;
+            case move_result::blocked_terrain:
+                break;
+            case move_result::blocked_entity:
+                //TODO decide whether to attack
+                break;
+            default:
+                break;
+            }
+
             return false;
-        }
+        };
 
         //
         // near player
@@ -371,11 +379,11 @@ public:
             auto const ux = sign_of(delta.x);
             auto const uy = sign_of(delta.y);
 
-            // try to move diagonally first
-            if (try_move(ent, ivec2 {ux, uy})
-             || try_move(ent, ivec2 {ux,  0})
-             || try_move(ent, ivec2 { 0, uy})
-            ) {
+            auto result = on_move(try_move(ent, ivec2 {ux, uy}))
+                 || ux && on_move(try_move(ent, ivec2 {ux,  0}))
+                 || uy && on_move(try_move(ent, ivec2 { 0, uy}));
+
+            if (result) {
                 return true;
             }
         }
@@ -388,7 +396,12 @@ public:
             return false;
         }
 
-        return try_move(ent, random::direction(trivial));
+        auto v = random::direction(trivial);
+        while (!(v.x || v.y)) {
+            v = random::direction(trivial);
+        }
+
+        return try_move(ent, v) == move_result::ok;
     }
     
     //--------------------------------------------------------------------------
@@ -425,6 +438,8 @@ public:
         }
     }
 
+    //--------------------------------------------------------------------------
+    //! advance by one turn
     //--------------------------------------------------------------------------
     void advance(random::generator& trivial) {
         update_entities_(trivial);
@@ -712,10 +727,23 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    bool can_move_to(entity const& e, ipoint2 const p) const {
+    enum class move_result {
+        ok              //!< movement is possible.
+      , blocked_bounds  //!< movement is blocked by the level bounds.
+      , blocked_terrain //!< movement is blocked by terrain (i.e. wall).
+      , blocked_entity  //!< movement is blocked by another entity.
+    };
+
+    //--------------------------------------------------------------------------
+    //
+    //--------------------------------------------------------------------------
+    move_result can_move_to(entity const& e, ipoint2 const p) const {
         if (!grid_.is_valid(p)) {
-            return false;
+            return move_result::blocked_bounds;
         }
+
+        //it's a bit weird to move to one's current position
+        BK_ASSERT_DBG(p != e.position());
 
         auto const tile_ok = [&] {
             auto const type = grid_.get(attribute::tile_type, p);
@@ -736,31 +764,33 @@ public:
         }();
 
         if (!tile_ok) {
-            return false;
+            return move_result::blocked_terrain;
         }
 
         if (entity_at(p)) {
-            return false;
+            return move_result::blocked_entity;
         }
 
-        return true;
+        return move_result::ok;
     }
+
     //--------------------------------------------------------------------------
-    bool can_move_to(entity const& e, int const x, int const y) const {
-        return can_move_to(e, ipoint2 {x, y});
-    }
-    //--------------------------------------------------------------------------
-    bool can_move_by(entity const& e, ivec2 const v) {
+    move_result can_move_by(entity const& e, ivec2 const v) {
+        //TODO this has to properly implemented : tleleporting, blinking etc
         if (std::abs(v.x) > 1 || std::abs(v.y) > 1) {
             BK_TODO_FAIL();
         }
 
         return can_move_to(e, e.position() + v);
     }
+
     //--------------------------------------------------------------------------
-    bool can_move_by(entity const& e, int const dx, int const dy) {
-        return can_move_by(e, ivec2 {dx, dy});
+    move_result try_move(entity& ent, ivec2 const v) {
+        auto const result = can_move_by(ent, v);
+        if (result == move_result::ok) { ent.move_by(v); }
+        return result;
     }
+
     //--------------------------------------------------------------------------
     ipoint2 down_stair() const noexcept {
         return stairs_down_;
@@ -1004,48 +1034,97 @@ private:
     }
 
     //--------------------------------------------------------------------------
-    void place_entities_(random::generator& substantive) {
-        spawn_table stable {};
+    bool place_entity_(
+        random::generator& substantive
+      , entity&            ent
+      , irect const&       bounds
+      , ipoint2            p
+    ) {
+        auto limit = 20; // max number of attempts
 
-        for (auto const& room : rooms_) {
-            if (random::uniform_range(substantive, 0, 100) < 20) {
+        // try a new random adjacent tile
+        auto const get_next_pos = [&] {
+            auto const v = random::direction(substantive);
+            return p + v;
+        };
+
+        //
+        // find an initial good tile
+        //
+        auto old = p;
+        while (limit-- > 0) {
+            auto const r = can_move_to(ent, p);
+            
+            if (r == move_result::ok) {
+                break;
+            } else if (r == move_result::blocked_entity) {
+                old = p;
+                p = get_next_pos();
+            } else {
+                p = old;
+            }
+        }
+
+        if (limit <= 0) {
+            return false;
+        }
+
+        //
+        // try to move around a few more times
+        //
+        for (auto i = random::uniform_range(substantive, 1, 10); i > 0; --i) {
+            auto const q = get_next_pos();
+            auto const r = can_move_to(ent, q);
+            
+            if (r != move_result::ok) {
                 continue;
             }
             
-            auto const& items    = definitions_->get_items();
-            auto const& entities = definitions_->get_entities();
-           
+            p = q;
+        }
+
+        ent.move_to(p);
+        return true;
+    }
+
+    //--------------------------------------------------------------------------
+    void place_entities_(random::generator& substantive) {
+        auto constexpr generate_chance = 20;
+        
+        spawn_table stable {};
+
+        auto const& items    = definitions_->get_items();
+        auto const& entities = definitions_->get_entities();
+
+        for (auto const& room : rooms_) {
+            auto const count = [&] {
+                auto const roll = random::uniform_range(substantive, 0, 100);
+
+                if (roll < 50) { return 0; }
+                if (roll < 70) { return 1; }
+                if (roll < 80) { return 2; }
+                if (roll < 90) { return 3; }
+                if (roll < 95) { return 4; }
+                
+                return 6;
+            }();
+                      
             auto const bounds = room.bounds();
-            auto            p = room.center();
+            auto const p      = room.center();
 
             BK_ASSERT_DBG(intersects(bounds, p));
 
-            auto ent = generate_entity(substantive, entities, items, *item_store_, stable);
+            for (int i = 0; i < count; ++i) {
+                auto ent = generate_entity(substantive, entities, items, *item_store_, stable);
+                auto const result = place_entity_(substantive, ent, bounds, p);
 
-            while (!can_move_to(ent, p)) {
-                auto const v = random::direction(substantive);
-                auto const q = p + v;
-                
-                if (intersects(bounds, q)) {
-                    p = q;
+                if (!result) {
+                    break;
                 }
-            }
 
-            for (auto steps = random::uniform_range(substantive, 1, 10)
-               ; steps > 0
-               ; --steps
-            ) {
-                auto const v = random::direction(substantive);
-                auto const q = p + v;
-                
-                if (intersects(bounds, q) && can_move_to(ent, q)) {
-                    p = q;
-                }
+                entities_.emplace(std::move(ent));
+                entities_.sort();
             }
-
-            ent.move_to(p);
-            entities_.emplace(std::move(ent));
-            entities_.sort();
         }
     }
 
@@ -2178,12 +2257,18 @@ public:
         auto const v = ivec2 {dx, dy};
         auto const p = player_.position() + v;
         
-        if (!level.can_move_to(player_, p)) {
-            auto const ent = level.entity_at(p);
-            if (ent) {
-                do_attack(*ent);
-            }
-            
+        auto const result = level.try_move(player_, v);
+        switch (result) {
+        case level::move_result::blocked_entity : {
+            auto const maybe_ent = level.entity_at(p);
+            BK_ASSERT(!!maybe_ent);
+
+            do_attack(*maybe_ent);
+            return;
+        }
+        case level::move_result::ok :
+            break;
+        default :
             return;
         }
         

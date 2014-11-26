@@ -896,7 +896,11 @@ bkrl::generate_item(
         auto& weap = itm.data.weapon;
 
         auto const dmg_min = def.damage_min(gen);
-        auto const dmg_max = def.damage_max(gen);
+        
+        auto dmg_max = def.damage_max(gen);
+        while (dmg_max < dmg_min) {
+            dmg_max = def.damage_max(gen);
+        }
 
         if (dmg_min < 0 || dmg_max < 0 || dmg_max < dmg_min) {
             BK_TODO_FAIL();
