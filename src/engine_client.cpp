@@ -314,11 +314,149 @@ struct tile_sheet_set {
     std::vector<tile_sheet> sheets_;
 };
 
+class item_collection {
+public:
+    bool empty() const noexcept { return items_.empty(); }
+    int  size()  const noexcept { return static_cast<int>(items_.size()); }
+
+    void insert(item_id const itm) {
+        items_.push_back(itm);
+    }
+
+    //void erase(item_id const itm) {
+    //    bkrl::find_and(items_, itm, [&](auto& it) {
+    //        items_.erase(it);    
+    //    });
+    //}
+
+    template <typename Function>
+    void remove_nth_and(int const n, Function&& function) {
+        BK_ASSERT_DBG(n >= 0 && n < items_.size());
+
+        auto const it = items_.begin() + n;
+
+        function(*it);
+
+        items_.erase(it);
+    }
+
+    template <typename Function>
+    void remove_all_and(Function&& function) {
+        for (auto& i : items_) {
+            function(i);
+        }
+
+        items_.clear();
+    }
+
+    template <typename Function>
+    void for_each_item(Function&& function) const {
+        for (auto const& i : items_) {
+            function(i.value.first, i.value.second);
+        }
+    }
+private:
+    std::vector<item_id> items_;
+};
+
+class item_map {
+public:
+    using point_t = ipoint2;
+
+    struct record_t {
+        static bool less(point_t const lhs, point_t const rhs) noexcept {
+            return bkrl::lexicographical_compare(lhs, rhs);
+        }
+
+        operator point_t() const noexcept { return value.second; }
+
+        friend bool operator<(point_t  const lhs, record_t const rhs) noexcept { return less(lhs, rhs); }
+        friend bool operator<(point_t  const lhs, point_t  const rhs) noexcept { return less(lhs, rhs); }
+        friend bool operator<(record_t const lhs, record_t const rhs) noexcept { return less(lhs, rhs); }
+
+        friend bool operator==(record_t const lhs, record_t const rhs) noexcept {
+            return lhs.value.second == rhs.value.second;
+        }
+
+        friend bool operator!=(record_t const lhs, record_t const rhs) noexcept {
+            return !(lhs == rhs);
+        }
+
+        std::pair<item_id, point_t> value;
+    };
+
+    void insert_at(point_t const p, item_id const itm) {
+        items_.push_back(record_t {{itm, p}});
+        
+        bkrl::sort(items_);
+    }
+
+    void insert_at(point_t const p, item_collection& items) {
+        items.remove_all_and([&](item_id const itm) {
+            items_.push_back(record_t {{itm, p}});
+        });
+        
+        bkrl::sort(items_);
+    }
+
+    template <typename Iterator>
+    void insert_at(point_t const p, Iterator const beg, Iterator const end) {
+        std::for_each(beg, end, [&](item_id const itm) {
+            items_.push_back(record_t {{itm, p}});
+        });
+        
+        bkrl::sort(items_);
+    }
+
+    template <typename Function>
+    void for_each_item_at(point_t const p, Function&& function) const {
+        bkrl::for_each(bkrl::equal_range(items_, p), [&](record_t const& r) {
+            function(r.value.first);
+        });
+    }
+
+    template <typename Function>
+    void for_each_item(Function&& function) const {
+        for (auto const& i : items_) {
+            function(i.value.first, i.value.second);
+        }
+    }
+
+    template <typename Function>
+    void remove_nth_item_at(point_t const p, int n, Function&& function) {
+        BK_ASSERT(n >= 0);
+
+        auto const range = bkrl::equal_range(items_, p);
+        for (auto it = range.first; it != range.second; ++it) {
+            if (n-- == 0) {
+                function(it->value.first);
+                items_.erase(*it);
+                return;
+            }
+        }
+    }
+
+    template <typename Function>
+    void remove_items_at(point_t const p, Function&& function) {
+        auto const range = bkrl::equal_range(items_, p);
+
+        for (auto it = range.first; it != range.second; ++it) {
+            function(it->value.first);
+        }
+
+        items_.erase(range.first, range.second);
+    }
+private:
+    std::vector<record_t> items_;
+};
+
 //==============================================================================
 //! One level within the world.
 //==============================================================================
 class level {
 public:
+    //--------------------------------------------------------------------------
+    item_map item_map_;
     //--------------------------------------------------------------------------
     level(
         random::generator& substantive

@@ -70,11 +70,53 @@ namespace bkrl {
 //==============================================================================
 //
 //==============================================================================
-template <typename SortedContainer, typename T>
-inline auto binary_find_first(SortedContainer& c, T const& value) {
+template <typename Container, typename T, typename Function>
+inline void find_and(Container&& c, T const& value, Function&& function) {
     auto const beg = std::begin(c);
     auto const end = std::end(c);
-    auto const it  = std::lower_bound(beg, end, value);
+    auto const it  = std::find(std::begin(c), std::end(c), value);
+
+    if (it != end) {
+        function(it);
+    }
+}
+
+//==============================================================================
+//
+//==============================================================================
+template <typename Container, typename Function>
+inline void for_each(Container&& c, Function&& function) {
+    std::for_each(std::begin(c), std::end(c), std::forward<Function>(function));
+}
+
+template <typename Iterator, typename Function>
+inline void for_each(std::pair<Iterator, Iterator> range, Function&& function) {
+    std::for_each(range.first, range.second, std::forward<Function>(function));
+}
+
+//==============================================================================
+//
+//==============================================================================
+template <typename SortedContainer, typename Predicate = std::equal_to<>>
+inline bool has_duplicates(SortedContainer const& c, Predicate&& predicate = Predicate {}) {
+    auto const beg = std::cbegin(c);
+    auto const end = std::cend(c);
+
+    return end != std::adjacent_find(beg, end, std::forward<Predicate>(predicate));
+}
+
+//==============================================================================
+//
+//==============================================================================
+template <typename SortedContainer, typename T, typename Predicate = std::less<>>
+inline auto binary_find_first(
+    SortedContainer& c
+  , T const& value
+  , Predicate&& predicate = Predicate {}
+) {
+    auto const beg = std::begin(c);
+    auto const end = std::end(c);
+    auto const it  = std::lower_bound(beg, end, value, std::forward<Predicate>(predicate));
 
     return std::make_pair(it, (it != end) && (*it == value));
 }
@@ -114,7 +156,7 @@ inline auto equal_range(
         std::begin(container)
       , std::end(container)
       , value
-      , predicate
+      , std::forward<Predicate>(predicate)
     );
 }
 
