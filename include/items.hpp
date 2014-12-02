@@ -315,15 +315,12 @@ public:
             return bkrl::lexicographical_compare(lhs, rhs);
         }
 
-        operator point_t() const noexcept { return pos(); }
-        operator item_id() const noexcept { return id(); }
-
         item_id id()  const noexcept { return value.first; }
         point_t pos() const noexcept { return value.second; }
 
-        friend bool operator<(point_t  const lhs, record_t const rhs) noexcept { return less(lhs, rhs); }
-        friend bool operator<(point_t  const lhs, point_t  const rhs) noexcept { return less(lhs, rhs); }
-        friend bool operator<(record_t const lhs, record_t const rhs) noexcept { return less(lhs, rhs); }
+        friend bool operator<(record_t const lhs, record_t const rhs) noexcept { return less(lhs.pos(), rhs.pos()); }
+        friend bool operator<(point_t  const lhs, record_t const rhs) noexcept { return less(lhs,       rhs.pos()); }
+        friend bool operator<(record_t const lhs, point_t  const rhs) noexcept { return less(lhs.pos(), rhs      ); }
 
         friend bool operator==(record_t const lhs, record_t const rhs) noexcept {
             return lhs.value.second == rhs.value.second;

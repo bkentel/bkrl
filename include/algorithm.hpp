@@ -172,14 +172,19 @@ template <
 inline auto lower_bound(
     Container&  container
   , Type const& value
-  , Predicate   predicate = Predicate {}
+  , Predicate&& predicate = Predicate {}
 ) {
-    return std::lower_bound(
-        std::begin(container)
-      , std::end(container)
+    auto const beg = std::begin(container);
+    auto const end = std::end(container);
+
+    auto const it = std::lower_bound(
+        beg
+      , end
       , value
-      , predicate
+      , std::forward<Predicate>(predicate)
     );
+
+    return std::make_pair(it, it != end);
 }
 
 //==============================================================================

@@ -57,13 +57,15 @@ inline T uniform_range(generator& gen, range<T> const r) {
 
 template <typename T = int>
 inline vector2d<T> direction(generator& gen) {
-    constexpr auto min = T {-1};
-    constexpr auto max = T { 1};
+    constexpr T value[] = {-1, 1};
+    
+    constexpr auto min = T {0};
+    constexpr auto max = T {1};
 
-    auto const dx = uniform_range<T>(gen, min, max);
-    auto const dy = uniform_range<T>(gen, min, max);
+    auto const xi = uniform_range<T>(gen, min, max);
+    auto const yi = uniform_range<T>(gen, min, max);
 
-    return {dx, dy};
+    return {value[xi], value[yi]};
 }
 
 template <typename T = int>

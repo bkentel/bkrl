@@ -268,6 +268,10 @@ bkrl::string_ref bkrl::entity::name(defs_t defs) const {
     return defs.get_locale(id).name;
 }
 
+bkrl::string_ref bkrl::entity::description(defs_t defs) const {
+    return defs.get_locale(id).text;
+}
+
 bool bkrl::entity::apply_damage(health_t const delta) {
     auto& hp = data.health;
     return hp.modify(-delta), hp.is_min();

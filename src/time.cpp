@@ -115,15 +115,20 @@ timer::id_t timer::impl_t::add_timer(duration_t const period, callback_t&& callb
 }
 
 void timer::impl_t::remove_timer(id_t const id) {
-    auto const it = bkrl::lower_bound(deadlines_, id, [](auto const& lhs, auto const& rhs) {
+    auto const result = bkrl::lower_bound(deadlines_, id, [](auto const& lhs, auto const& rhs) {
         return lhs.id < rhs;
     });
 
-    if (it == std::cend(deadlines_)) {
+    if (!result.second) {
         BK_TODO_FAIL();
     }
 
-    auto const index = it->index;
+    auto const& it = result.first;
+    if (it->id != id) {
+        BK_TODO_FAIL();
+    }
+
+    auto const  index = it->index;
 
     deadlines_.erase(it);
     callbacks_.erase(std::begin(callbacks_) + index);

@@ -487,7 +487,7 @@ public:
         auto const dx = std::abs(delta.x);
         auto const dy = std::abs(delta.y);
 
-        BK_ASSERT_DBG(dx || dy);
+        //BK_ASSERT_DBG(dx || dy);
 
         // after trying to move, decide what to do
         auto const on_move = [](move_result const m) {
@@ -542,36 +542,9 @@ public:
     
     //--------------------------------------------------------------------------
     void update_entities_(random::generator& trivial) {
-        BK_ASSERT_DBG(pending_entities_.empty());
-
-        transform_to_back(entities_, pending_entities_, [](entity const& e) {
-            return e.instance_id;
+        entities_.with_each_entity([&](entity& ent) {
+            update_entity_(trivial, ent);
         });
-
-        sort(pending_entities_);
-
-        //
-        // entities_ is not a stable collection, so we have to do a O(n*n)
-        // update algorithm here; this could be improved to (n*log(n)).
-        //
-        while (!pending_entities_.empty()) {
-            for (auto& ent : entities_) {
-                auto const id    = ent.instance_id;
-                auto const where = binary_find_first(pending_entities_, id);
-
-                // already finished this one
-                if (!where.second) {
-                    continue;
-                }
-
-                // have to sort again if ent was moved
-                if (update_entity_(trivial, ent)) {
-                    entities_.sort();
-                }
-
-                pending_entities_.erase(where.first);
-            }
-        }
     }
 
     //--------------------------------------------------------------------------
@@ -666,14 +639,12 @@ public:
         auto const  tile_h = sheet.tile_h();
         auto const  size   = ipoint2 {tile_w, tile_h};
 
-        for (auto const& ent : entities_) {
-            auto const p = ent.position();          
-
+        entities_.for_each([&](entity const& ent) {
             auto const health = ent.health();
-            if (!health.is_max()) {
-                draw_health_bar(r, ent, p, size);
-            }
-        }
+            if (health.is_max()) { return; }
+            
+            draw_health_bar(r, ent, ent.position(), size);
+        });
     }
 
     //--------------------------------------------------------------------------
@@ -681,15 +652,15 @@ public:
         auto& sheet = (*tiles_sheets_)[tile_sheet_set::entities];
         auto& tex   = sheet.get_texture();
 
-        auto const& entities = definitions_->get_entities();
+        auto const& einfo = definitions_->get_entities();
 
-        for (auto const& ent : entities_) {
+        entities_.for_each([&](entity const& ent) {
             auto const p     = ent.position();          
-            auto const rinfo = ent.render_info(entities);
+            auto const rinfo = ent.render_info(einfo);
 
             r.set_color_mod(tex, rinfo.tex_color);
             sheet.render(r, rinfo.tex_position, p);
-        }
+        });
     }
 
     //--------------------------------------------------------------------------
@@ -761,16 +732,6 @@ public:
         return iid;
     }
 
-    //item_id get_nth_item_at(ipoint2 const p, int const n = 0) const {
-    //    return items_.get_nth_at(p, n);        
-    //}
-
-    //int count_items_at(ipoint2 const p) const {
-    //    auto count = 0;
-    //    items_.for_each_item_at(p, [&](item_id) { ++count; });
-    //    return count;
-    //}
-
     item_collection const& list_items_at(ipoint2 const p) const {
         static item_collection result; //TODO
 
@@ -833,20 +794,9 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    optional<entity const&> entity_at(ipoint2 const p) const {
-        if (player_->position() == p) {
-            return static_cast<entity const&>(*player_);
-        }
-
-        return entities_.at(p);
-    }
-
-    optional<entity&> entity_at(ipoint2 const p) {
-        if (player_->position() == p) {
-            return static_cast<entity&>(*player_);
-        }
-
-        return entities_.at(p);
+    template <typename Function>
+    bool with_entity_at(ipoint2 const p, Function&& function) {
+        return entities_.with_entity_at(p, std::forward<Function>(function));
     }
 
     //--------------------------------------------------------------------------
@@ -855,7 +805,17 @@ public:
 
         items_.insert_at(p, ent.items());
 
-        entities_.remove(p);
+        entities_.remove(p, ent.instance_id);
+    }
+
+    //--------------------------------------------------------------------------
+    optional<entity const&> entity_at(ipoint2 const p) const {
+        entity const& ent = *player_;
+        if (ent.position() == p) {
+            return {ent};
+        }
+
+        return entities_.at(p);
     }
 
     //--------------------------------------------------------------------------
@@ -869,46 +829,41 @@ public:
     //--------------------------------------------------------------------------
     //
     //--------------------------------------------------------------------------
-    move_result can_move_to(entity const& e, ipoint2 const p) const {
+    move_result can_move_to(entity const& ent, ipoint2 const p) const {
         if (!grid_.is_valid(p)) {
             return move_result::blocked_bounds;
         }
 
-        //it's a bit weird to move to one's current position
-        BK_ASSERT_DBG(p != e.position());
-
-        auto const tile_ok = [&] {
-            auto const type = grid_.get(attribute::tile_type, p);
-            switch (type) {
-            case tile_type::invalid : //TODO this is just for testing
-
-            case tile_type::floor :
-            case tile_type::corridor :
-            case tile_type::stair :
-                return true;
-            case tile_type::door :
-                return door_data {grid_, p}.is_open();
-            default :
-                break;
+        switch (grid_.get(attribute::tile_type, p)) {
+        case tile_type::invalid  : // TODO for debug
+        case tile_type::floor    :
+        case tile_type::corridor :
+        case tile_type::stair    :
+            break;
+        case tile_type::door :
+            if (door_data {grid_, p}.is_closed()) {
+                return move_result::blocked_terrain;
             }
-
-            return false;
-        }();
-
-        if (!tile_ok) {
+            break;
+        default :
             return move_result::blocked_terrain;
         }
 
-        if (entity_at(p)) {
-            return move_result::blocked_entity;
+        auto const& other_ent = entity_at(p);
+        if (!other_ent) {
+            return move_result::ok;
         }
 
-        return move_result::ok;
+        if (*other_ent == ent) {
+            return move_result::ok;
+        }
+
+        return move_result::blocked_entity;
     }
 
     //--------------------------------------------------------------------------
     move_result can_move_by(entity const& e, ivec2 const v) {
-        //TODO this has to properly implemented : tleleporting, blinking etc
+        //TODO this has to properly implemented : teleporting, blinking etc
         if (std::abs(v.x) > 1 || std::abs(v.y) > 1) {
             BK_TODO_FAIL();
         }
@@ -917,9 +872,24 @@ public:
     }
 
     //--------------------------------------------------------------------------
+    move_result try_move(player& p, ivec2 const v) {
+        auto const result = can_move_by(p, v);
+        if (result == move_result::ok) {
+            p.move_by(v);
+        }
+
+        return result;
+    }
+
     move_result try_move(entity& ent, ivec2 const v) {
         auto const result = can_move_by(ent, v);
-        if (result == move_result::ok) { ent.move_by(v); }
+        if (result == move_result::ok) {
+            entities_.with_entity_at(ent.position(), [&](entity& e) {
+                BK_ASSERT_DBG(e == ent);
+                e.move_by(v);
+            });
+        }
+        
         return result;
     }
 
@@ -954,7 +924,11 @@ public:
         }
 
         auto const type = grid_.get(attribute::tile_type, p);
-        auto result = utf8string {"Here:"};
+        auto result = utf8string {"Details: "};
+
+        result.append(std::to_string(p.x));
+        result.append(", ");
+        result.append(std::to_string(p.y));
 
         auto const& items = definitions_->get_items();
         items_.for_each_item_at(p, [&](item_id const itm) {
@@ -965,51 +939,20 @@ public:
             result.append(name);
         });
         
-        if (auto const ent = entity_at(p)) {
-            auto const& entities = definitions_->get_entities();
-            auto const& id       = ent->id;
-            auto const& name     = entities.get_locale(id).name;
-            auto const& text     = entities.get_locale(id).text;
-
+        entities_.with_entity_at(p, [&](entity const& ent) {
+            auto const& defs = definitions_->get_entities();
+            auto const& name = ent.name(defs);
+            auto const& desc = ent.description(defs);
+            
             result.push_back('\n');
             result.append(name.data(), name.size());
             result.append({" - "});
-            result.append(text.data(), text.size());
-        }
+            result.append(desc.data(), desc.size());
+        });
 
         return result;
     }
 private:
-    //--------------------------------------------------------------------------
-    //! Return the item stack at p. If no item stack exists already, create one.
-    //--------------------------------------------------------------------------
-    //item_stack& make_stack_at_(ipoint2 const p) {
-    //    auto const stack = items_.at(p);
-    //    if (!stack) {
-    //        items_.insert(p);
-    //        items_.sort(); //TODO
-    //    }
-
-    //    auto result = items_.at(p);
-    //    return *result;
-    //}
-
-    //--------------------------------------------------------------------------
-    //! Return the item stack at p. Fail if none exists.
-    //--------------------------------------------------------------------------
-    //item_stack& require_stack_at_(ipoint2 const p) {
-    //    auto const stack = items_.at(p);
-    //    if (!stack) {
-    //        BK_TODO_FAIL();
-    //    }
-
-    //    return *stack;
-    //}
-
-    //item_stack const& require_stack_at_(ipoint2 const p) const {
-    //    return const_cast<level*>(this)->require_stack_at_(p);
-    //}
-
     //--------------------------------------------------------------------------
     message_type use_stair_(ipoint2 const p, bool const down) const {
         auto const type = grid_.get(attribute::tile_type, p);
@@ -1160,57 +1103,122 @@ private:
     }
 
     //--------------------------------------------------------------------------
-    bool place_entity_(
-        random::generator& substantive
-      , entity&            ent
-      , irect const&       bounds
-      , ipoint2            p
-    ) {
-        auto limit = 20; // max number of attempts
+    move_result can_place_at(ipoint2 const p, entity const& ent) const {
+        if (!grid_.is_valid(p)) {
+            return move_result::blocked_bounds;
+        }
 
-        // try a new random adjacent tile
-        auto const get_next_pos = [&] {
-            auto const v = random::direction(substantive);
-            return p + v;
+        switch (grid_.get(attribute::tile_type, p)) {
+        case tile_type::floor    :
+        case tile_type::corridor :
+        case tile_type::stair    :
+            break;
+        case tile_type::door : //TODO
+        default :
+            return move_result::blocked_terrain;
+        }
+
+        auto const& other_ent = entity_at(p);
+        if (!other_ent) {
+            return move_result::ok;
+        }
+
+        if (*other_ent == ent) {
+            return move_result::ok;
+        }
+
+        return move_result::blocked_entity;
+    }
+
+    
+    //--------------------------------------------------------------------------
+    optional<ipoint2> generate_entity_placement_at(
+        random::generator& substantive
+      , irect   const      bounds
+      , entity  const&     ent
+      , ipoint2 const      p
+    ) const {
+        BK_ASSERT_DBG(intersects(bounds, p));
+
+        //
+        // randomly try all positions around p, including p
+        //
+        ivec2 off[] = {
+            {-1, -1}, {0, -1}, {1, -1}
+          , {-1,  0}, {0,  0}, {1,  0}
+          , {-1,  1}, {0,  1}, {1,  1}
+        };
+        
+        std::random_shuffle(std::begin(off), std::end(off), [&](size_t const n) {
+            return random::uniform_range(substantive, 0u, n - 1);
+        });
+
+        for (auto const v : off) {
+            auto const q = p + v;
+
+            if (!intersects(bounds, q)) { continue; }
+            if (can_place_at(q, ent) != move_result::ok) { continue; }
+            
+            return {q};
+        }
+
+        return {};
+    }
+
+    //--------------------------------------------------------------------------
+    optional<ipoint2> generate_entity_placement(
+        random::generator& substantive
+      , irect  const       bounds
+      , entity const&      ent
+    ) const {
+        constexpr auto min_random_attempts = 1;
+        constexpr auto max_random_attempts = 10;
+
+        auto const min_x = bounds.left;
+        auto const max_x = bounds.right - 1;
+        auto const min_y = bounds.top;
+        auto const max_y = bounds.bottom - 1;
+
+        auto const attempts = clamp(
+            bounds.area() / 2
+          , min_random_attempts
+          , max_random_attempts
+        );
+
+        //
+        // make a few random attempts first
+        //
+        for (auto n = 0; n < attempts; ++n) {
+            auto const p = ipoint2 {
+                random::uniform_range(substantive, min_x, max_x)
+              , random::uniform_range(substantive, min_y, max_y)
+            };
+
+            auto const q = generate_entity_placement_at(substantive, bounds, ent, p);
+            if (q) { return q; }
+        }
+        
+        //
+        // try all positions in bounds
+        //
+        auto const is_ok = [&](ipoint2 const p) {
+            return can_place_at(p, ent) == move_result::ok;
         };
 
-        //
-        // find an initial good tile
-        //
-        auto old = p;
-        while (limit-- > 0) {
-            auto const r = can_move_to(ent, p);
-            
-            if (r == move_result::ok) {
-                break;
-            } else if (r == move_result::blocked_entity) {
-                old = p;
-                p = get_next_pos();
-            } else {
-                p = old;
+        for (auto xi = min_x; xi < max_x + 1; ++xi) {
+            for (auto yi = min_y; yi < max_y + 1; ++yi) {               
+                auto const q = ipoint2 {xi, yi};
+                
+                BK_ASSERT_DBG(intersects(bounds, q));
+
+                if (is_ok(q)) { return {q}; }
             }
         }
 
-        if (limit <= 0) {
-            return false;
-        }
-
         //
-        // try to move around a few more times
+        // nowhere available in bounds
         //
-        for (auto i = random::uniform_range(substantive, 1, 10); i > 0; --i) {
-            auto const q = get_next_pos();
-            auto const r = can_move_to(ent, q);
-            
-            if (r != move_result::ok) {
-                continue;
-            }
-            
-            p = q;
-        }
-
-        ent.move_to(p);
-        return true;
+        return {};
     }
 
     //--------------------------------------------------------------------------
@@ -1236,20 +1244,19 @@ private:
             }();
                       
             auto const bounds = room.bounds();
-            auto const p      = room.center();
-
-            BK_ASSERT_DBG(intersects(bounds, p));
 
             for (int i = 0; i < count; ++i) {
                 auto ent = generate_entity(substantive, entities, items, *item_store_, stable);
-                auto const result = place_entity_(substantive, ent, bounds, p);
-
-                if (!result) {
+                
+                auto const p = generate_entity_placement(substantive, bounds, ent);
+                if (!p) {
                     break;
                 }
 
-                entities_.emplace(std::move(ent));
-                entities_.sort();
+                auto const result = entities_.insert_at(*p, std::move(ent));
+                if (!result) {
+                    BK_TODO_FAIL();
+                }
             }
         }
     }
@@ -1426,8 +1433,10 @@ private:
     ipoint2 stairs_up_   = ipoint2 {0, 0};
     ipoint2 stairs_down_ = ipoint2 {0, 0};
 
-    item_map items_;
-    spatial_map<entity>          entities_;
+    item_map   items_;
+    entity_map entities_;
+
+    //spatial_map<entity>          entities_;
     std::vector<entity_id>       pending_entities_; //used during updates
 };
 
@@ -2378,15 +2387,16 @@ public:
         auto& level = *cur_level_;
 
         auto const v = ivec2 {dx, dy};
-        auto const p = player_.position() + v;
+        auto const p = player_.position();
+        auto const q = p + v;
         
         auto const result = level.try_move(player_, v);
         switch (result) {
         case level::move_result::blocked_entity : {
-            auto const maybe_ent = level.entity_at(p);
-            BK_ASSERT(!!maybe_ent);
+            level.with_entity_at(q, [&](entity& e) {
+                do_attack(e);
+            });
 
-            do_attack(*maybe_ent);
             return;
         }
         case level::move_result::ok :
@@ -2395,8 +2405,7 @@ public:
             return;
         }
         
-        do_auto_scroll_(p);
-        player_.move_to(p);
+        do_auto_scroll_(q);
 
         advance();
     }

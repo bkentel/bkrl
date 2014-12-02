@@ -316,10 +316,23 @@ void transitory_text_layout::reset(
         auto const tab = tab_size - rem;
         x += tab;
     };
+    //--------------------------------------------------------------------------    
+    auto const do_escape = [&](codepoint_t const cp) {
+        switch (cp) {
+        case '\t' : next_tab();  return true;
+        case '\n' : next_line(); return true;
+        }
+
+        return false;
+    };
 
     //--------------------------------------------------------------------------    
     auto left = unicode::codepoint {};
     for (auto& rec : data_) {
+        if (do_escape(rec.codepoint)) {
+            continue;
+        }
+
         auto const cp = unicode::codepoint {rec.codepoint};
 
         auto const metrics = face.metrics(left, cp);

@@ -36,12 +36,19 @@ keymap::impl_t::impl_t(json::cref data) {
 
 command_type
 keymap::impl_t::operator[](key_combo const& key) const {
-    auto const lower = bkrl::lower_bound(mappings_, key, [](auto& lhs, auto& rhs) {
+    auto const result = bkrl::lower_bound(mappings_, key, [](auto& lhs, auto& rhs) {
         return lhs.keys.key < rhs.key; //match the key only; not mods
     });
 
+    if (!result.second) {
+        return command_type::invalid;
+    }
+
+    auto const& it = result.first;
+
+    //TODO
     //for each matching key; not mods
-    for (auto const& mapping : make_iterable(lower, std::end(mappings_))) {
+    for (auto const& mapping : make_iterable(it, std::end(mappings_))) {
         if (mapping.keys.key != key.key) {
             break;
         }

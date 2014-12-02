@@ -61,42 +61,6 @@ private:
 };
 
 //==============================================================================
-//class entity_map {
-//public:
-//    using point_t = ipoint2;
-//
-//    struct record_t {
-//        static bool less(point_t const lhs, point_t const rhs) noexcept {
-//            return bkrl::lexicographical_compare(lhs, rhs);
-//        }
-//
-//        operator point_t() const noexcept { return pos(); }
-//
-//        entity_id id()  const noexcept { return value.first; }
-//        point_t   pos() const noexcept { return value.second; }
-//
-//        friend bool operator<(point_t  const lhs, record_t const rhs) noexcept { return less(lhs, rhs); }
-//        friend bool operator<(point_t  const lhs, point_t  const rhs) noexcept { return less(lhs, rhs); }
-//        friend bool operator<(record_t const lhs, record_t const rhs) noexcept { return less(lhs, rhs); }
-//
-//        friend bool operator==(record_t const lhs, record_t const rhs) noexcept {
-//            return lhs.value.second == rhs.value.second;
-//        }
-//
-//        friend bool operator!=(record_t const lhs, record_t const rhs) noexcept {
-//            return !(lhs == rhs);
-//        }
-//
-//        std::pair<entity_id, point_t> value;
-//    };
-//
-//private:
-//    std::vector<entity>   entities_;
-//    std::vector<record_t> data_;
-//};
-
-//==============================================================================
-
 template <typename T>
 class ranged_value {
 public:
@@ -184,6 +148,7 @@ public:
 
     //--------------------------------------------------------------------------
     string_ref name(defs_t defs) const;
+    string_ref description(defs_t defs) const;
 
     item_collection&       items()       { return data.items; }
     item_collection const& items() const { return data.items; }
@@ -197,11 +162,19 @@ public:
 
     bool apply_damage(health_t delta);
 
-    friend bool operator==(entity const& rhs, entity const& lhs) noexcept {
+    friend bool operator==(entity const& lhs, entity const& rhs) noexcept {
         return lhs.instance_id == rhs.instance_id;
     }
 
-    friend bool operator!=(entity const& rhs, entity const& lhs) noexcept {
+    friend bool operator==(entity_id const lhs, entity const& rhs) noexcept {
+        return lhs == rhs.instance_id;
+    }
+
+    friend bool operator==(entity const& lhs, entity_id const rhs) noexcept {
+        return lhs.instance_id == rhs;
+    }
+
+    friend bool operator!=(entity const& lhs, entity const& rhs) noexcept {
         return !(lhs == rhs);
     }
 
@@ -211,6 +184,239 @@ public:
     entity_id     instance_id;
     entity_def_id id;
     entity_data_t data;
+};
+
+//==============================================================================
+class entity_map {
+public:
+    using point_t = ipoint2;
+
+    struct record_t {
+        static bool less(point_t const lhs, point_t const rhs) noexcept {
+            return bkrl::lexicographical_compare(lhs, rhs);
+        }
+
+        entity_id id()  const noexcept { return value.first; }
+        point_t   pos() const noexcept { return value.second; }
+
+        friend bool operator<(record_t const lhs, record_t const rhs) noexcept { return less(lhs.pos(), rhs.pos()); }
+        friend bool operator<(point_t  const lhs, record_t const rhs) noexcept { return less(lhs,       rhs.pos()); }
+        friend bool operator<(record_t const lhs, point_t  const rhs) noexcept { return less(lhs.pos(), rhs      ); }
+
+        friend bool operator==(record_t const lhs, record_t const rhs) noexcept {
+            return lhs.pos() == rhs.pos();
+        }
+
+        friend bool operator==(record_t const lhs, point_t const rhs) noexcept {
+            return lhs.pos() == rhs;
+        }
+
+        friend bool operator==(point_t const lhs, record_t const rhs) noexcept {
+            return lhs == rhs.pos();
+        }
+
+
+        friend bool operator!=(record_t const lhs, record_t const rhs) noexcept {
+            return !(lhs == rhs);
+        }
+
+        std::pair<entity_id, point_t> value;
+    };
+
+    struct less_pos_t {
+        static bool less(point_t const lhs, point_t const rhs) noexcept {
+            return bkrl::lexicographical_compare(lhs, rhs);
+        }
+
+        bool operator()(entity const& lhs, entity const& rhs) const noexcept {
+            return less(lhs.position(), rhs.position());
+        }
+
+        bool operator()(point_t const lhs, entity const& rhs) const noexcept {
+            return less(lhs, rhs.position());
+        }
+
+        bool operator()(entity const& lhs, point_t const rhs) const noexcept {
+            return less(lhs.position(), rhs);
+        }
+
+        bool operator()(entity const* lhs, entity const* rhs) const noexcept {
+            return less(lhs->position(), rhs->position());
+        }
+
+        bool operator()(point_t const lhs, entity const* rhs) const noexcept {
+            return less(lhs, rhs->position());
+        }
+
+        bool operator()(entity const* lhs, point_t const rhs) const noexcept {
+            return less(lhs->position(), rhs);
+        }
+    };
+
+    //--------------------------------------------------------------------------
+    //!
+    //--------------------------------------------------------------------------
+    bool insert_at(point_t const p, entity&& ent) {
+        ent.move_to(p);
+
+        auto const result = lower_bound(map_, p, less_pos_t {});
+        auto const it     = result.first;
+
+        if (result.second) {
+            auto const& other = **it;
+            if (other.position() == ent.position()) {
+                return false;
+            }
+        }
+
+        auto const resize = instances_.size() == instances_.capacity();
+        if (resize) {
+            instances_.reserve(
+                8 + instances_.capacity() * 2
+            );
+        }
+        
+        instances_.push_back(std::move(ent));
+
+        if (!resize) {
+            map_.insert(it, &instances_.back());
+        } else {
+            rebuild_map_();
+        }
+        
+        return true;
+    }
+
+    void rebuild_map_() {
+        map_.clear();
+        map_.reserve(instances_.capacity());
+        for (auto& e : instances_) { map_.push_back(&e); }
+        sort_map_();
+    }
+
+    //--------------------------------------------------------------------------
+    //!
+    //--------------------------------------------------------------------------
+    bool remove(point_t const p, entity_id const id) {
+        auto const beg = std::begin(instances_);
+        auto const end = std::end(instances_);
+        auto const it  = std::find_if(beg, end
+          , [&](entity const& e) { return e.position() == p; }
+        );
+        
+        if (it == end) {
+            return false;
+        }
+
+        BK_ASSERT(it->instance_id == id);
+
+        instances_.erase(it);
+        rebuild_map_();
+
+        return true;
+    }
+
+    //--------------------------------------------------------------------------
+    //!
+    //--------------------------------------------------------------------------
+    optional<entity const&> at(point_t const p) const {
+        auto const found = optional_find(map_, p, less_pos_t {});
+        if (!found) {
+            return {};
+        }
+
+        auto const& ent = (***found);
+        if (p != ent.position()) {
+            return {};
+        }
+
+        return {ent};
+    }
+
+    //--------------------------------------------------------------------------
+    //!
+    //--------------------------------------------------------------------------
+    template <typename Function>
+    bool with_entity_at(point_t const p, Function&& function) {
+        auto const beg = std::begin(map_);
+        auto const end = std::end(map_);
+        auto const it  = std::lower_bound(beg, end, p, less_pos_t {});
+
+        if (it == end) {
+            return false;
+        }
+
+        auto& ent = **it;
+
+        if(p != ent.position()) {
+            return false;
+        }
+
+        function(ent);
+
+        if (p != ent.position()) {
+            sort_map_();
+        }
+
+        return true;
+    }
+
+    template <typename Function>
+    bool with_entity_at(point_t const p, Function&& function) const {
+        return const_cast<entity_map*>(this)->with_entity_at(p, [&](entity const& ent) {
+            function(ent);
+        });
+    }
+
+    template <typename Function>
+    void with_each_entity(Function&& function) {
+        for (auto& ent : instances_) {
+            auto const id = ent.instance_id;
+            auto const p  = ent.position();
+
+            function(ent);
+
+            //would cause mayhem
+            BK_ASSERT_DBG(id == ent.instance_id);
+
+            if (p != ent.position()) {
+                sort_map_();
+            }
+        }
+    }
+
+    template <typename Function>
+    void for_each(Function&& function) const {
+        for (auto const& e : instances_) {
+            function(e);
+        }
+    }
+private:
+    std::vector<entity>  instances_;
+    std::vector<entity*> map_;
+
+    void sort_instances_() {
+        bkrl::sort(instances_, [](entity const& lhs, entity const& rhs) {
+            return lhs.instance_id < rhs.instance_id;
+        });
+    }
+
+    void sort_map_() {
+        bkrl::sort(map_, less_pos_t {});
+    }
+
+    template <typename Container, typename T, typename Predicate = std::less<>>
+    static auto optional_find(Container&& c, T const& value, Predicate&& predicate = Predicate {}) {
+        auto const result = bkrl::lower_bound(
+            std::forward<Container>(c)
+          , value
+          , std::forward<Predicate>(predicate)
+        );
+
+        using result_t = bkrl::optional<decltype(result.first)>;
+
+        return result.second ? result_t {result.first} : result_t {};        
+    }
 };
 
 //==============================================================================
