@@ -17,10 +17,8 @@ class renderer;
 class message_map;
 
 class item_definitions;
-class item_stack;
+class item_collection;
 class item_store;
-
-using item_list = std::vector<item_id>;
 
 namespace gui {
 
@@ -114,7 +112,7 @@ public:
     item_id at(int index);
     
     void insert(item_id id);
-    virtual void insert(bkrl::item_list const& items);
+    virtual void insert(item_collection const& items);
 
     int  size()  const noexcept;
     bool empty() const noexcept;
@@ -132,7 +130,7 @@ public:
 
     using item_list::item_list;
    
-    void insert(bkrl::item_list const& items) override;
+    void insert(item_collection const& items) override;
 };
 
 //==============================================================================

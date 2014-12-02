@@ -19,6 +19,8 @@
 #include "random_forward.hpp"
 #include "combat_types.hpp"
 
+#include "algorithm.hpp"
+
 ////////////////////////////////////////////////////////////////////////////////
 namespace bkrl {
 ////////////////////////////////////////////////////////////////////////////////
@@ -36,9 +38,70 @@ struct item_locale;
 namespace detail { class item_store_impl; }
 namespace detail { class item_definitions_impl; }
 namespace detail { class equipment_impl; }
+
+using weight_t = int16_t;
 ////////////////////////////////////////////////////////////////////////////////
 
-using item_list = std::vector<item_id>;
+//==============================================================================
+//! item_collection
+//==============================================================================
+class item_collection {
+public:
+    bool empty() const noexcept { return items_.empty(); }
+    int  size()  const noexcept { return static_cast<int>(items_.size()); }
+
+    void clear() {
+        items_.clear();
+    }
+
+    void reserve(size_t const n) {
+        items_.reserve(n);
+    }
+
+    void insert(item_id const itm) {
+        items_.push_back(itm);
+    }
+
+    bool remove(item_id const itm) {
+        auto result = false;
+        
+        bkrl::find_and(items_, itm, [&](auto& it) {
+            result = true;
+            items_.erase(it);    
+        });
+
+        return result;
+    }
+
+    template <typename Function>
+    void remove_nth_and(int const n, Function&& function) {
+        BK_ASSERT_DBG(n >= 0 && n < items_.size());
+
+        auto const it = items_.begin() + n;
+
+        function(*it);
+
+        items_.erase(it);
+    }
+
+    template <typename Function>
+    void remove_all_and(Function&& function) {
+        for (auto& i : items_) {
+            function(i);
+        }
+
+        items_.clear();
+    }
+
+    template <typename Function>
+    void for_each_item(Function&& function) const {
+        for (auto const& i : items_) {
+            function(i);
+        }
+    }
+private:
+    std::vector<item_id> items_;
+};
 
 //==============================================================================
 //! General item type.
@@ -116,52 +179,6 @@ public:
 };
 
 //==============================================================================
-//! A stack or pile of one or more items.
-//==============================================================================
-class item_stack {
-public:
-    using defs_t  = item_definitions const&;
-    using items_t = item_store const&;
-
-    void insert(item_id const id, defs_t defs, items_t items);
-
-    void insert(item_stack&& other, defs_t defs, items_t items);
-
-    item_id remove(item_id const id);
-    item_id remove(int const index);
-
-    item_id at(int const index) const {
-        BK_ASSERT(index >= 0);
-        return items_.at(static_cast<size_t>(index));
-    }
-
-    auto empty() const noexcept { return items_.empty(); }
-    
-    auto size() const noexcept { return static_cast<int>(items_.size()); }
-
-    auto begin()        & { return std::begin(items_); }
-    auto begin()  const & { return std::begin(items_); }
-
-    auto end()          & { return std::end(items_); }
-    auto end()    const & { return std::end(items_); }
-
-    auto cbegin() const & { return std::cbegin(items_); }
-    auto cend()   const & { return std::cend(items_); }
-
-    item_list const& list() const & { return items_; }
-
-    auto begin()        && = delete;
-    auto begin()  const && = delete;
-    auto end()          && = delete;
-    auto end()    const && = delete;
-    auto cbegin() const && = delete;
-    auto cend()   const && = delete;
-    item_list const& list() const && = delete;
-private:
-    std::vector<item_id> items_;
-};
-
-//==============================================================================
 //! Weapon (item_type::weapon) specific data.
 //==============================================================================
 struct weapon_data {
@@ -198,7 +215,7 @@ struct potion_data {
 union item_data_t {
     friend item;
 public:
-    item_stack  stack;
+    item_collection stack;
     weapon_data weapon;
     armor_data  armor;
     potion_data potion;
@@ -236,22 +253,254 @@ public:
     item(item&&);
     ~item();
 
-    string_ref get_name(defs_t defs) const;
+    //--------------------------------------------------------------------------
+    string_ref name(defs_t defs) const;
 
-    bool can_equip(defs_t defs) const;
-    bool can_equip(equipment const& eq, defs_t defs) const;
+    //--------------------------------------------------------------------------
+    bool is_equippable(defs_t defs) const;
+    
+    //--------------------------------------------------------------------------
     equip_slot_flags equip_slots(defs_t defs) const;
 
-    utf8string get_info_string(msg_t messages) const;
+    //--------------------------------------------------------------------------
+    utf8string short_description(msg_t messages) const;
+    
+    //--------------------------------------------------------------------------
+    utf8string long_description(msg_t messages) const;
 
-    int16_t get_weight(defs_t defs) const;
+    //--------------------------------------------------------------------------
+    weight_t weight(defs_t defs) const;
 
+    //--------------------------------------------------------------------------
     item_render_info_t render_info(defs_t defs) const;
+
+    //--------------------------------------------------------------------------
+    template <typename Visitor>
+    void with_data(Visitor&& visitor) const {
+        using it = item_type;
+
+        switch (type) {
+        default :
+        case it::enum_size:
+        case it::scroll:
+        case it::container:
+            BK_TODO_FAIL();
+            break;
+        case it::none   :                       break;
+        case it::weapon : visitor(data.weapon); break;
+        case it::armor  : visitor(data.armor);  break;
+        case it::potion : visitor(data.potion); break;
+        }
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    //
+    ////////////////////////////////////////////////////////////////////////////
 
     item_def_id     id;
     item_birthplace origin;
     item_data_t     data;
     item_type       type;
+};
+
+//==============================================================================
+//! item_map
+//==============================================================================
+class item_map {
+public:
+    using point_t = ipoint2;
+
+    struct record_t {
+        static bool less(point_t const lhs, point_t const rhs) noexcept {
+            return bkrl::lexicographical_compare(lhs, rhs);
+        }
+
+        operator point_t() const noexcept { return pos(); }
+        operator item_id() const noexcept { return id(); }
+
+        item_id id()  const noexcept { return value.first; }
+        point_t pos() const noexcept { return value.second; }
+
+        friend bool operator<(point_t  const lhs, record_t const rhs) noexcept { return less(lhs, rhs); }
+        friend bool operator<(point_t  const lhs, point_t  const rhs) noexcept { return less(lhs, rhs); }
+        friend bool operator<(record_t const lhs, record_t const rhs) noexcept { return less(lhs, rhs); }
+
+        friend bool operator==(record_t const lhs, record_t const rhs) noexcept {
+            return lhs.value.second == rhs.value.second;
+        }
+
+        friend bool operator!=(record_t const lhs, record_t const rhs) noexcept {
+            return !(lhs == rhs);
+        }
+
+        std::pair<item_id, point_t> value;
+    };
+
+    ////////////////////////////////////////////////////////////////////////////
+    // insert
+    ////////////////////////////////////////////////////////////////////////////
+
+    //--------------------------------------------------------------------------
+    //! insert @p itm at @p p.
+    //--------------------------------------------------------------------------
+    void insert_at(point_t const p, item_id const itm) {
+        insert_(p, itm);
+        bkrl::sort(items_);
+    }
+
+    //--------------------------------------------------------------------------
+    //! removes all the items from @p items and inserts them at @p p.
+    //--------------------------------------------------------------------------
+    void insert_at(point_t const p, item_collection& items) {
+        items.remove_all_and([&](item_id const itm) {
+            insert_(p, itm);
+        });
+        
+        bkrl::sort(items_);
+    }
+
+    //--------------------------------------------------------------------------
+    //! inserts all the items in the range given by [@p beg, @p end) at @p p.
+    //--------------------------------------------------------------------------
+    template <typename Iterator>
+    void insert_at(point_t const p, Iterator const beg, Iterator const end) {
+        std::for_each(beg, end, [&](item_id const itm) {
+            insert_(p, itm);
+        });
+        
+        bkrl::sort(items_);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // visitation
+    ////////////////////////////////////////////////////////////////////////////
+
+    //--------------------------------------------------------------------------
+    //! for each item at @p p calls @p function(item_id).
+    //--------------------------------------------------------------------------
+    template <typename Function>
+    void for_each_item_at(point_t const p, Function&& function) const {
+        bkrl::for_each(bkrl::equal_range(items_, p), [&](record_t const& r) {
+            function(r.id());
+        });
+    }
+
+    //--------------------------------------------------------------------------
+    //! for every item calls function(item_id, point_t).
+    //--------------------------------------------------------------------------
+    template <typename Function>
+    void for_each_item(Function&& function) const {
+        for (auto const& i : items_) {
+            function(i.id(), i.pos());
+        }
+    }
+
+    //--------------------------------------------------------------------------
+    //! for each range of items at the same position calls
+    //! function(p, i, n) where
+    //! p = the position
+    //! i = the first item at p
+    //! n = the number of items at p
+    //--------------------------------------------------------------------------
+    template <typename Function>
+    void for_each_stack(Function&& function) const {
+        auto const beg = std::begin(items_);
+        auto const end = std::end(items_);
+
+        auto range = std::make_pair(beg, end);
+
+        for (auto it = beg; it != end; it = range.second) {
+            auto const i = it->id();
+            auto const p = it->pos();
+
+            range = std::equal_range(it, end, p);
+
+            function(p, i, std::distance(range.first, range.second));
+        }
+    }
+
+    bool remove_item_at(point_t const p, item_id const itm) {
+        auto const beg   = std::begin(items_);
+        auto const end   = std::end(items_);
+        auto const range = std::equal_range(beg, end, p);
+
+        auto const it = std::find_if(range.first, range.second, [&](record_t const& r) {
+            return r.id() == itm;
+        });
+
+        if (it == end) {
+            return false;
+        }
+
+        items_.erase(it);
+        return true;
+    }
+
+    template <typename Function>
+    bool remove_nth_item_at_and(point_t const p, int const n, Function&& function) {
+        return with_nth_at_(p, n, [&](auto const& it) {
+            function(it->id());
+            items_.erase(it);
+        });
+    }
+
+    template <typename Function>
+    int remove_items_at_and(point_t const p, Function&& function) {
+        auto const range = bkrl::equal_range(items_, p);
+
+        bkrl::for_each(range, [&](record_t const& r) {
+            function(r.id());
+        });
+
+        auto const n = std::distance(range.first, range.second);
+        items_.erase(range.first, range.second);
+        return n;
+    }
+
+    template <typename Function>
+    bool with_nth_at(point_t const p, int const n, Function&& function) const {
+        return with_nth_at_(p, n, [&](auto const& it) {
+            function(it->id());
+        });
+    }
+
+    int count_items_at(point_t const p) const {
+        auto const range = bkrl::equal_range(items_, p);
+        return std::distance(range.first, range.second);
+    }
+private:
+    template <typename Function>
+    bool with_nth_at_(point_t const p, int const n, Function&& function) const {
+        auto  range = bkrl::equal_range(items_, p);
+        auto& it    = range.first;
+
+        if (!advance_(it, range.second, n)) {
+            return false;
+        }
+
+        function(it);
+
+        return true;
+    }
+
+    template <typename It>
+    static bool advance_(It& it, It const& end, int const n) {
+        if (n < 0 || std::distance(it, end) <= n) {
+            return false;
+        }
+
+        std::advance(it, n);
+
+        return true;
+    }
+
+    void insert_(point_t const p, item_id const itm) {
+        items_.push_back(record_t {
+            {itm, p}
+        });
+    }
+
+    std::vector<record_t> items_;
 };
 
 //==============================================================================
@@ -346,7 +595,7 @@ public:
 
     optional<item_id> match_any(equip_slot_flags flags) const;
 
-    item_list list() const;
+    item_collection list() const;
 private:
     std::unique_ptr<detail::equipment_impl> impl_;
 };
@@ -373,17 +622,29 @@ item_id generate_item(
 );
 #endif
 
-item_definition const& get_item_def(
-    item_id const id
+item_definition const& get_definition(
+    item_id                 id
   , item_definitions const& defs
-  , item_store const& store
+  , item_store       const& store
 );
 
-item_locale const& get_item_loc(
-    item_id const id
+item_locale const& get_locale(
+    item_id                 id
   , item_definitions const& defs
-  , item_store const& store
+  , item_store       const& store
 );
+
+string_ref get_localized_name(
+    item_id                 id
+  , item_definitions const& defs
+  , item_store       const& store
+);
+
+inline string_ref get_localized_name(
+    item_locale const& locale
+) {
+    return locale.name;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 } //namespace bkrl

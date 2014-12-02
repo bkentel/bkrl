@@ -65,21 +65,30 @@ void placement_move(T& dst, T& src) {
 ////////////////////////////////////////////////////////////////////////////////
 
 bkrl::item_definition const&
-bkrl::get_item_def(
-    item_id const id
+bkrl::get_definition(
+    item_id          const  id
   , item_definitions const& defs
-  , item_store const& store
+  , item_store       const& store
 ) {
     return defs.get_definition(store[id].id);
 }
 
 bkrl::item_locale const&
-bkrl::get_item_loc(
-    item_id const id
+bkrl::get_locale(
+    item_id          const  id
   , item_definitions const& defs
-  , item_store const& store
+  , item_store       const& store
 ) {
     return defs.get_locale(store[id].id);
+}
+
+bkrl::string_ref
+bkrl::get_localized_name(
+    item_id          const  id
+  , item_definitions const& defs
+  , item_store       const& store
+) {
+    return get_locale(id, defs, store).name;
 }
 
 template <> bkrl::item_type
@@ -159,7 +168,8 @@ bkrl::from_hash(hash_t const hash) {
     return find_mapping(mappings, hash, damage_type::invalid);
 }
 
-bkrl::string_ref bkrl::to_string(message_map const& msgs, damage_type const type) {
+bkrl::string_ref
+bkrl::to_string(message_map const& msgs, damage_type const type) {
     using dt = bkrl::damage_type;
     using mt = bkrl::message_type;
 
@@ -200,7 +210,7 @@ struct bkrl::item_definition {
 
     dist_t armor_level;
 
-    int16_t weight = 0;
+    weight_t weight = 0;
 
     item_type type = item_type::none;
 };
@@ -211,67 +221,67 @@ bkrl::tex_point_i bkrl::item_definition::tile_size     {0, 0};
 ////////////////////////////////////////////////////////////////////////////////
 // item_stack
 ////////////////////////////////////////////////////////////////////////////////
-namespace {
-
-template <typename T>
-static void sort_items(
-    T& container
-  , bkrl::item_definitions const& defs
-  , bkrl::item_store const& items
-) {
-    bkrl::sort(container, [&](bkrl::item_id const lhs, bkrl::item_id const rhs) {
-        auto const& lloc = get_item_loc(lhs, defs, items);
-        auto const& rloc = get_item_loc(rhs, defs, items);
-
-        auto const& left  = (!lloc.sort.empty() ? lloc.sort : lloc.name);
-        auto const& right = (!rloc.sort.empty() ? rloc.sort : rloc.name);
-
-        return left < right;
-    });
-}
-
-}
-
-//------------------------------------------------------------------------------
-void bkrl::item_stack::insert(item_id const id, defs_t defs, items_t items) {
-    items_.emplace_back(id);
-    
-    sort_items(items_, defs, items);
-}
-
-//------------------------------------------------------------------------------
-void bkrl::item_stack::insert(item_stack&& other, defs_t defs, items_t items) {
-    auto& result =  merge(items_, other.items_);
-    if (&result != &items_) {
-        items_ = std::move(result);
-    }
-
-    sort_items(items_, defs, items);
-}
-
-//------------------------------------------------------------------------------
-bkrl::item_id
-bkrl::item_stack::remove(item_id const id) {
-    auto const it = std::find(std::begin(items_), std::end(items_), id);
-    BK_ASSERT(it != std::end(items_));
-
-    items_.erase(it);
-
-    return id;
-}
-
-//------------------------------------------------------------------------------
-bkrl::item_id
-bkrl::item_stack::remove(int const index) {
-    auto it = std::begin(items_);
-    std::advance(it, index);
-
-    auto const id = *it;
-
-    items_.erase(it);
-
-    return id;
-}
+//namespace {
+//
+//template <typename T>
+//static void sort_items(
+//    T& container
+//  , bkrl::item_definitions const& defs
+//  , bkrl::item_store const& items
+//) {
+//    bkrl::sort(container, [&](bkrl::item_id const lhs, bkrl::item_id const rhs) {
+//        auto const& lloc = get_item_loc(lhs, defs, items);
+//        auto const& rloc = get_item_loc(rhs, defs, items);
+//
+//        auto const& left  = (!lloc.sort.empty() ? lloc.sort : lloc.name);
+//        auto const& right = (!rloc.sort.empty() ? rloc.sort : rloc.name);
+//
+//        return left < right;
+//    });
+//}
+//
+//}
+//
+////------------------------------------------------------------------------------
+//void bkrl::item_stack::insert(item_id const id, defs_t defs, items_t items) {
+//    items_.emplace_back(id);
+//    
+//    sort_items(items_, defs, items);
+//}
+//
+////------------------------------------------------------------------------------
+//void bkrl::item_stack::insert(item_stack&& other, defs_t defs, items_t items) {
+//    auto& result =  merge(items_, other.items_);
+//    if (&result != &items_) {
+//        items_ = std::move(result);
+//    }
+//
+//    sort_items(items_, defs, items);
+//}
+//
+////------------------------------------------------------------------------------
+//bkrl::item_id
+//bkrl::item_stack::remove(item_id const id) {
+//    auto const it = std::find(std::begin(items_), std::end(items_), id);
+//    BK_ASSERT(it != std::end(items_));
+//
+//    items_.erase(it);
+//
+//    return id;
+//}
+//
+////------------------------------------------------------------------------------
+//bkrl::item_id
+//bkrl::item_stack::remove(int const index) {
+//    auto it = std::begin(items_);
+//    std::advance(it, index);
+//
+//    auto const id = *it;
+//
+//    items_.erase(it);
+//
+//    return id;
+//}
 
 ////////////////////////////////////////////////////////////////////////////////
 // item
@@ -314,12 +324,13 @@ bkrl::item::~item() {
 
 //------------------------------------------------------------------------------
 bkrl::string_ref
-bkrl::item::get_name(defs_t defs) const {
+bkrl::item::name(defs_t defs) const {
     return defs.get_locale(id).name;
 }
 
 //------------------------------------------------------------------------------
-bool bkrl::item::can_equip(defs_t defs) const {
+bool
+bkrl::item::is_equippable(defs_t defs) const {
     switch (type) {
     case item_type::armor :
     case item_type::weapon :
@@ -330,66 +341,76 @@ bool bkrl::item::can_equip(defs_t defs) const {
 }
 
 //------------------------------------------------------------------------------
-bool bkrl::item::can_equip(equipment const& eq, defs_t defs) const {
-    BK_TODO_FAIL();
-    return false; //TODO
+bkrl::equip_slot_flags
+bkrl::item::equip_slots(defs_t defs) const {   
+    return defs.get_definition(id).slots;
 }
 
 //------------------------------------------------------------------------------
-bkrl::equip_slot_flags bkrl::item::equip_slots(defs_t defs) const {
-    switch (type) {
-    default :
-        return equip_slot_flags {};
-    case item_type::armor :
-    case item_type::weapon :
-        break;
+template <typename ReturnType, typename... Lambdas>
+struct lambda_visitor;
+
+template <typename ReturnType, typename Lambda1, typename... Lambdas>
+struct lambda_visitor<ReturnType, Lambda1 , Lambdas...> 
+  : lambda_visitor<ReturnType, Lambdas...>, Lambda1
+{
+    using Lambda1::operator();
+    using lambda_visitor<ReturnType , Lambdas...>::operator();
+
+    lambda_visitor(Lambda1 l1, Lambdas... lambdas)
+      : Lambda1(l1), lambda_visitor<ReturnType , Lambdas...>(lambdas...)
+    {
     }
-    
-    auto const& idef = defs.get_definition(id);
-    return idef.slots;
+};
+
+template <typename ReturnType, typename Lambda1>
+struct lambda_visitor<ReturnType, Lambda1> 
+  : Lambda1
+{
+    using Lambda1::operator();
+
+    lambda_visitor(Lambda1 l1) 
+      : Lambda1(l1)
+    {
+    }
+};
+
+template <typename ReturnType>
+struct lambda_visitor<ReturnType> {
+    lambda_visitor()
+    {
+    }
+};
+
+template <typename... Lambdas>
+auto make_lambda_visitor(Lambdas&&... lambdas) {
+    return lambda_visitor<void, Lambdas...>(std::forward<Lambdas>(lambdas)...);
 }
 
 //------------------------------------------------------------------------------
 bkrl::utf8string
-bkrl::item::get_info_string(msg_t messages) const {
-    //TODO split this into multiple functions
-    
-    using it = item_type;
+bkrl::item::short_description(msg_t msgs) const {   
+    std::stringstream str;
 
-    utf8string result;
+    with_data(make_lambda_visitor(
+        [&](weapon_data const& w) {
+            str << "[" << to_string(msgs, w.dmg_type) << "] "
+                << w.dmg_min << " - " << w.dmg_max;
+        }
+      , [&](armor_data const& a) {
+            str << a.base << " al";
+        }
+      , [&](potion_data const& p) {
+            str << p.count << "x";
+        }
+    ));
 
-    switch (type) {
-    default            : BK_TODO_FAIL();
-    case it::none      : break;
-    case it::container : break;
-    case it::weapon : {
-        auto const& w = data.weapon;
-
-        result.append(std::to_string(w.dmg_min));
-        result.append(" - ");
-        result.append(std::to_string(w.dmg_max));
-        result.append(" ");
-        result.append(to_string(messages, w.dmg_type).data());
-        
-        break;
-    }
-    case it::armor : {
-        auto const& a = data.armor;
-
-        result.append(std::to_string(a.base));
-        result.append(" armor");
-        
-        break;
-    }
-    case it::potion    : break;
-    }
-
-    return result;
+    return str.str();
 }
 
 //------------------------------------------------------------------------------
-bkrl::int16_t
-bkrl::item::get_weight(defs_t defs) const {
+bkrl::weight_t
+bkrl::item::weight(defs_t defs) const {
     return defs.get_definition(id).weight;
 }
 
@@ -961,7 +982,7 @@ public:
     using result_t = std::pair<equip_slot_flags, bool>;
 
     result_t can_equip(item_id const id, defs_t defs, items_t items) const {
-        auto const& def = get_item_def(id, defs, items);
+        auto const& def = get_definition(id, defs, items);
 
         if (!def.slots.any()) {
             return std::make_pair(equip_slot_flags {}, false);
@@ -981,7 +1002,7 @@ public:
             return try_equip;
         }
 
-        auto const& def = get_item_def(id, defs, items);
+        auto const& def = get_definition(id, defs, items);
 
         flags_ |= def.slots;
 
@@ -1019,7 +1040,7 @@ public:
     }
 
     optional<item_id> unequip(item_id id, defs_t defs, items_t items) {
-        auto const& def = get_item_def(id, defs, items);
+        auto const& def = get_definition(id, defs, items);
 
         for (int i = 1; i < equip_size; ++i) {
             if (!def.slots.test(i)) {
@@ -1054,16 +1075,23 @@ public:
         return {};
     }
 
-    item_list list() const {
-        item_list result;
-        result.reserve(equip_size);
+    item_collection list() const {
+        item_collection result;
+        
+        auto const empty_id = item_id {};
 
-        std::copy_if(
-            std::begin(items_)
-          , std::end(items_)
-          , std::back_inserter(result)
-          , [](item_id const iid) { return iid != item_id {}; }
+        auto const n = std::count_if(
+            std::cbegin(items_)
+          , std::cend(items_)
+          , [empty_id](item_id const itm) { return itm != empty_id; }
         );
+
+        result.reserve(n);
+
+        for (item_id const itm : items_) {
+            if (itm == empty_id) { continue; }
+            result.insert(itm);
+        }
 
         return result;
     }
@@ -1135,6 +1163,6 @@ bkrl::equipment::match_any(equip_slot_flags const flags) const {
     return impl_->match_any(flags);
 }
 
-bkrl::item_list bkrl::equipment::list() const {
+bkrl::item_collection bkrl::equipment::list() const {
     return impl_->list();
 }

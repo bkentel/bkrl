@@ -60,6 +60,43 @@ private:
     std::unique_ptr<detail::entity_definitions_impl> impl_;
 };
 
+//==============================================================================
+//class entity_map {
+//public:
+//    using point_t = ipoint2;
+//
+//    struct record_t {
+//        static bool less(point_t const lhs, point_t const rhs) noexcept {
+//            return bkrl::lexicographical_compare(lhs, rhs);
+//        }
+//
+//        operator point_t() const noexcept { return pos(); }
+//
+//        entity_id id()  const noexcept { return value.first; }
+//        point_t   pos() const noexcept { return value.second; }
+//
+//        friend bool operator<(point_t  const lhs, record_t const rhs) noexcept { return less(lhs, rhs); }
+//        friend bool operator<(point_t  const lhs, point_t  const rhs) noexcept { return less(lhs, rhs); }
+//        friend bool operator<(record_t const lhs, record_t const rhs) noexcept { return less(lhs, rhs); }
+//
+//        friend bool operator==(record_t const lhs, record_t const rhs) noexcept {
+//            return lhs.value.second == rhs.value.second;
+//        }
+//
+//        friend bool operator!=(record_t const lhs, record_t const rhs) noexcept {
+//            return !(lhs == rhs);
+//        }
+//
+//        std::pair<entity_id, point_t> value;
+//    };
+//
+//private:
+//    std::vector<entity>   entities_;
+//    std::vector<record_t> data_;
+//};
+
+//==============================================================================
+
 template <typename T>
 class ranged_value {
 public:
@@ -113,7 +150,7 @@ public:
 struct entity_data_t {
     ranged_value<health_t> health;
     ipoint2    position;
-    item_stack items;
+    item_collection items;
 };
 
 //==============================================================================
@@ -129,21 +166,27 @@ struct entity_render_info_t {
 //==============================================================================
 class entity {
 public:
+    ////////////////////////////////////////////////////////////////////////////
     using point_t = ipoint2;
     using defs_t  = entity_definitions const&;
-
+    
+    ////////////////////////////////////////////////////////////////////////////
     entity()                         = default;
     entity(entity&&)                 = default;
     entity& operator=(entity&&)      = default;
     entity(entity const&)            = delete;
     entity& operator=(entity const&) = delete;
+    
+    ////////////////////////////////////////////////////////////////////////////
 
+    //--------------------------------------------------------------------------
     entity_render_info_t render_info(defs_t defs) const;
 
+    //--------------------------------------------------------------------------
     string_ref name(defs_t defs) const;
 
-    item_stack&       items()       { return data.items; }
-    item_stack const& items() const { return data.items; }
+    item_collection&       items()       { return data.items; }
+    item_collection const& items() const { return data.items; }
 
     auto position() const noexcept { return data.position; }
 
@@ -204,7 +247,7 @@ public:
 
     entity_render_info_t render_info(entity_definitions const&) const;
 
-    item_stack get_equippable(defs_t idefs, items_t istore) const;
+    item_collection get_equippable(defs_t idefs, items_t istore) const;
 
     equipment::result_t equip_item(item_id iid, defs_t defs, items_t istore);
 
@@ -214,6 +257,8 @@ public:
     damage_t get_attack_value(random_t& gen, items_t items);
     
     defence_t get_defence_value(random_t& gen, defs_t defs, damage_type type);
+
+    
 private:
     equipment equip_;
 };

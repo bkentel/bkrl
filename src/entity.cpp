@@ -385,12 +385,10 @@ bkrl::generate_entity(
     origin.id   = id_to_value(id);
 
     auto const ltable = loot_table {};
-
+   
     for (int i = 0; i < item_count; ++i) {
         result.data.items.insert(
             generate_item(gen, items, item_defs, ltable, origin)
-          , item_defs
-          , items
         );
     }
 
@@ -408,15 +406,15 @@ bkrl::player::render_info(entity_definitions const&) const {
     };
 }
 
-bkrl::item_stack
+bkrl::item_collection
 bkrl::player::get_equippable(defs_t idefs, items_t istore) const {
-    item_stack result;
+    item_collection result;
 
-    for (auto const iid : items()) {
-        if (istore[iid].can_equip(idefs)) {
-            result.insert(iid, idefs, istore);
+    items().for_each_item([&](item_id const itm) {
+        if (istore[itm].is_equippable(idefs)) {
+            result.insert(itm);
         }
-    }
+    });
 
     return result;
 }
@@ -428,7 +426,8 @@ bkrl::player::equip_item(item_id iid, defs_t defs, items_t istore) {
         return try_equip;
     }
 
-    this->items().remove(iid);
+    auto const result = items().remove(iid);
+    BK_ASSERT(result == true);
 
     return try_equip;
 }

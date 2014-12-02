@@ -38,9 +38,9 @@
       , ["take_off_nothing", "You don't have anything equipped."]
       , ["take_off_ok",      "You unequip your %1%."]
       
-      , ["wield_wear_conflict", "You can't equip the %1%; remove your %2% first."]
+      , ["wield_wear_conflict", "You can't equip the <c:1>%1%</c>; remove your <c:1>%2%</c> first."]
       , ["wield_wear_nothing",  "You have nothing to equip."]
-      , ["wield_wear_ok",       "You equip the %1%."]
+      , ["wield_wear_ok",       "You equip the <c:1>%1%</c>."]
 
       , ["header_items", "Items"]
       , ["header_slot",  "Slot"]

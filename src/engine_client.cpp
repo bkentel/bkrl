@@ -314,149 +314,147 @@ struct tile_sheet_set {
     std::vector<tile_sheet> sheets_;
 };
 
-class item_collection {
-public:
-    bool empty() const noexcept { return items_.empty(); }
-    int  size()  const noexcept { return static_cast<int>(items_.size()); }
-
-    void insert(item_id const itm) {
-        items_.push_back(itm);
-    }
-
-    //void erase(item_id const itm) {
-    //    bkrl::find_and(items_, itm, [&](auto& it) {
-    //        items_.erase(it);    
-    //    });
-    //}
-
-    template <typename Function>
-    void remove_nth_and(int const n, Function&& function) {
-        BK_ASSERT_DBG(n >= 0 && n < items_.size());
-
-        auto const it = items_.begin() + n;
-
-        function(*it);
-
-        items_.erase(it);
-    }
-
-    template <typename Function>
-    void remove_all_and(Function&& function) {
-        for (auto& i : items_) {
-            function(i);
-        }
-
-        items_.clear();
-    }
-
-    template <typename Function>
-    void for_each_item(Function&& function) const {
-        for (auto const& i : items_) {
-            function(i.value.first, i.value.second);
-        }
-    }
-private:
-    std::vector<item_id> items_;
-};
-
-class item_map {
-public:
-    using point_t = ipoint2;
-
-    struct record_t {
-        static bool less(point_t const lhs, point_t const rhs) noexcept {
-            return bkrl::lexicographical_compare(lhs, rhs);
-        }
-
-        operator point_t() const noexcept { return value.second; }
-
-        friend bool operator<(point_t  const lhs, record_t const rhs) noexcept { return less(lhs, rhs); }
-        friend bool operator<(point_t  const lhs, point_t  const rhs) noexcept { return less(lhs, rhs); }
-        friend bool operator<(record_t const lhs, record_t const rhs) noexcept { return less(lhs, rhs); }
-
-        friend bool operator==(record_t const lhs, record_t const rhs) noexcept {
-            return lhs.value.second == rhs.value.second;
-        }
-
-        friend bool operator!=(record_t const lhs, record_t const rhs) noexcept {
-            return !(lhs == rhs);
-        }
-
-        std::pair<item_id, point_t> value;
-    };
-
-    void insert_at(point_t const p, item_id const itm) {
-        items_.push_back(record_t {{itm, p}});
-        
-        bkrl::sort(items_);
-    }
-
-    void insert_at(point_t const p, item_collection& items) {
-        items.remove_all_and([&](item_id const itm) {
-            items_.push_back(record_t {{itm, p}});
-        });
-        
-        bkrl::sort(items_);
-    }
-
-    template <typename Iterator>
-    void insert_at(point_t const p, Iterator const beg, Iterator const end) {
-        std::for_each(beg, end, [&](item_id const itm) {
-            items_.push_back(record_t {{itm, p}});
-        });
-        
-        bkrl::sort(items_);
-    }
-
-    template <typename Function>
-    void for_each_item_at(point_t const p, Function&& function) const {
-        bkrl::for_each(bkrl::equal_range(items_, p), [&](record_t const& r) {
-            function(r.value.first);
-        });
-    }
-
-    template <typename Function>
-    void for_each_item(Function&& function) const {
-        for (auto const& i : items_) {
-            function(i.value.first, i.value.second);
-        }
-    }
-
-    template <typename Function>
-    void remove_nth_item_at(point_t const p, int n, Function&& function) {
-        BK_ASSERT(n >= 0);
-
-        auto const range = bkrl::equal_range(items_, p);
-        for (auto it = range.first; it != range.second; ++it) {
-            if (n-- == 0) {
-                function(it->value.first);
-                items_.erase(*it);
-                return;
-            }
-        }
-    }
-
-    template <typename Function>
-    void remove_items_at(point_t const p, Function&& function) {
-        auto const range = bkrl::equal_range(items_, p);
-
-        for (auto it = range.first; it != range.second; ++it) {
-            function(it->value.first);
-        }
-
-        items_.erase(range.first, range.second);
-    }
-private:
-    std::vector<record_t> items_;
-};
+//class item_collection {
+//public:
+//    bool empty() const noexcept { return items_.empty(); }
+//    int  size()  const noexcept { return static_cast<int>(items_.size()); }
+//
+//    void insert(item_id const itm) {
+//        items_.push_back(itm);
+//    }
+//
+//    //void erase(item_id const itm) {
+//    //    bkrl::find_and(items_, itm, [&](auto& it) {
+//    //        items_.erase(it);    
+//    //    });
+//    //}
+//
+//    template <typename Function>
+//    void remove_nth_and(int const n, Function&& function) {
+//        BK_ASSERT_DBG(n >= 0 && n < items_.size());
+//
+//        auto const it = items_.begin() + n;
+//
+//        function(*it);
+//
+//        items_.erase(it);
+//    }
+//
+//    template <typename Function>
+//    void remove_all_and(Function&& function) {
+//        for (auto& i : items_) {
+//            function(i);
+//        }
+//
+//        items_.clear();
+//    }
+//
+//    template <typename Function>
+//    void for_each_item(Function&& function) const {
+//        for (auto const& i : items_) {
+//            function(i.value.first, i.value.second);
+//        }
+//    }
+//private:
+//    std::vector<item_id> items_;
+//};
+//
+//class item_map {
+//public:
+//    using point_t = ipoint2;
+//
+//    struct record_t {
+//        static bool less(point_t const lhs, point_t const rhs) noexcept {
+//            return bkrl::lexicographical_compare(lhs, rhs);
+//        }
+//
+//        operator point_t() const noexcept { return value.second; }
+//
+//        friend bool operator<(point_t  const lhs, record_t const rhs) noexcept { return less(lhs, rhs); }
+//        friend bool operator<(point_t  const lhs, point_t  const rhs) noexcept { return less(lhs, rhs); }
+//        friend bool operator<(record_t const lhs, record_t const rhs) noexcept { return less(lhs, rhs); }
+//
+//        friend bool operator==(record_t const lhs, record_t const rhs) noexcept {
+//            return lhs.value.second == rhs.value.second;
+//        }
+//
+//        friend bool operator!=(record_t const lhs, record_t const rhs) noexcept {
+//            return !(lhs == rhs);
+//        }
+//
+//        std::pair<item_id, point_t> value;
+//    };
+//
+//    void insert_at(point_t const p, item_id const itm) {
+//        items_.push_back(record_t {{itm, p}});
+//        
+//        bkrl::sort(items_);
+//    }
+//
+//    void insert_at(point_t const p, item_collection& items) {
+//        items.remove_all_and([&](item_id const itm) {
+//            items_.push_back(record_t {{itm, p}});
+//        });
+//        
+//        bkrl::sort(items_);
+//    }
+//
+//    template <typename Iterator>
+//    void insert_at(point_t const p, Iterator const beg, Iterator const end) {
+//        std::for_each(beg, end, [&](item_id const itm) {
+//            items_.push_back(record_t {{itm, p}});
+//        });
+//        
+//        bkrl::sort(items_);
+//    }
+//
+//    template <typename Function>
+//    void for_each_item_at(point_t const p, Function&& function) const {
+//        bkrl::for_each(bkrl::equal_range(items_, p), [&](record_t const& r) {
+//            function(r.value.first);
+//        });
+//    }
+//
+//    template <typename Function>
+//    void for_each_item(Function&& function) const {
+//        for (auto const& i : items_) {
+//            function(i.value.first, i.value.second);
+//        }
+//    }
+//
+//    template <typename Function>
+//    void remove_nth_item_at(point_t const p, int n, Function&& function) {
+//        BK_ASSERT(n >= 0);
+//
+//        auto const range = bkrl::equal_range(items_, p);
+//        for (auto it = range.first; it != range.second; ++it) {
+//            if (n-- == 0) {
+//                function(it->value.first);
+//                items_.erase(*it);
+//                return;
+//            }
+//        }
+//    }
+//
+//    template <typename Function>
+//    void remove_items_at(point_t const p, Function&& function) {
+//        auto const range = bkrl::equal_range(items_, p);
+//
+//        for (auto it = range.first; it != range.second; ++it) {
+//            function(it->value.first);
+//        }
+//
+//        items_.erase(range.first, range.second);
+//    }
+//private:
+//    std::vector<record_t> items_;
+//};
 
 //==============================================================================
 //! One level within the world.
 //==============================================================================
 class level {
 public:
-    //--------------------------------------------------------------------------
-    item_map item_map_;
     //--------------------------------------------------------------------------
     level(
         random::generator& substantive
@@ -702,24 +700,21 @@ public:
         auto const tile_w = sheet.tile_w();
         auto const tile_h = sheet.tile_h();
 
+        auto const fallback = item_render_info_t {
+            tex_point_i {tile_w * 15, tile_h * 0}
+          , make_color(255, 255, 255, 255)
+        };
+
         auto const& istore = *item_store_;
         auto const& idefs  = definitions_->get_items();
 
-        for (auto const& i : items_) {
-            ipoint2 const     stack_pos = i.first;
-            item_stack const& stack     = i.second;
+        items_.for_each_stack([&](ipoint2 const p, item_id const itm, int const n) {
+            auto const info = (n == 1)
+              ? istore[itm].render_info(idefs)
+              : fallback;
 
-            auto const tile_pos = [&] {
-                if (stack.size() == 1) {
-                    auto const rinfo = istore[stack.at(0)].render_info(idefs);
-                    return rinfo.tex_position;
-                }
-
-                return tile_sheet::tile_pos {tile_w * 15, tile_h * 0};
-            }();
-
-            sheet.render(r, tile_pos, stack_pos);
-        }
+            sheet.render(r, info.tex_position, p);
+        });
     }
 
     //--------------------------------------------------------------------------
@@ -734,60 +729,62 @@ public:
     //--------------------------------------------------------------------------
     //! @result message_type::get_no_items      - nothing here
     //!         message_type::get_which_prompt  - more than one item
-    //!         message_type::none              - ok; just one item
+    //!         message_type::get_ok            - ok; just one item
     //--------------------------------------------------------------------------
-    message_type can_get_item(ipoint2 const p) const {
-        auto const& stack = items_.at(p);
-        if (!stack) {
-            return message_type::get_no_items;
+    message_type can_get_item(ipoint2 const p) const {    
+        switch (items_.count_items_at(p)) {
+        case 0  : return message_type::get_no_items;
+        case 1  : return message_type::get_ok;
+        default : return message_type::get_which_prompt;
         }
-
-        auto const size = stack->size();
-        BK_ASSERT(size > 0);
-
-        if (size > 1) {
-            return message_type::get_which_prompt;
-        }
-
-        return message_type::none;
     }
 
     //--------------------------------------------------------------------------
     //! Get the item at @p index in the item stack at @p p, and remove it from the level.
     //--------------------------------------------------------------------------
-    item_id get_item(ipoint2 const p, item_id const iid) {
-        auto& stack = require_stack_at_(p);
+    item_id take_item_at(ipoint2 const p) {
+        item_id result {};
 
-        auto result = stack.remove(iid);
+        auto const n = items_.remove_items_at_and(p, [&](item_id const itm) {
+            result = itm;
+        });
 
-        if (stack.empty()) {
-            items_.remove(p);
-        }
+        BK_ASSERT(n == 1);
 
         return result;
     }
 
-    optional<item_stack const&> get_stack_at(ipoint2 const p) const {
-        return items_.at(p);
+    item_id take_item_at(ipoint2 const p, item_id const iid) {
+        auto const result = items_.remove_item_at(p, iid);
+        BK_ASSERT(result == true);
+
+        return iid;
     }
 
-    void add_to_stack_(item_stack& stack, item_id const id) {
-        auto const& item_defs = definitions_->get_items();
-        auto const& items     = *item_store_;
+    //item_id get_nth_item_at(ipoint2 const p, int const n = 0) const {
+    //    return items_.get_nth_at(p, n);        
+    //}
 
-        stack.insert(id, item_defs, items);
-    }
+    //int count_items_at(ipoint2 const p) const {
+    //    auto count = 0;
+    //    items_.for_each_item_at(p, [&](item_id) { ++count; });
+    //    return count;
+    //}
 
-    void add_to_stack_(item_stack& stack, item_stack&& other) {
-        auto const& item_defs = definitions_->get_items();
-        auto const& items     = *item_store_;
+    item_collection const& list_items_at(ipoint2 const p) const {
+        static item_collection result; //TODO
 
-        stack.insert(std::move(other), item_defs, items);
+        result.clear();
+        items_.for_each_item_at(p, [&](item_id const itm) {
+            result.insert(itm);
+        });
+
+        return result;
     }
 
     //--------------------------------------------------------------------------
     message_type drop_item_at(ipoint2 const p, item_id const id) {
-        add_to_stack_(make_stack_at_(p), id);
+        items_.insert_at(p, id);
         return message_type::none;
     }
 
@@ -854,12 +851,9 @@ public:
 
     //--------------------------------------------------------------------------
     void kill_entity(entity& ent) {
-        auto const p     = ent.position();
-        auto&      items = ent.items();
+        auto const p = ent.position();
 
-        if (!items.empty()) {
-            add_to_stack_(make_stack_at_(p), std::move(items));
-        }
+        items_.insert_at(p, ent.items());
 
         entities_.remove(p);
     }
@@ -962,18 +956,14 @@ public:
         auto const type = grid_.get(attribute::tile_type, p);
         auto result = utf8string {"Here:"};
 
-        auto const stack = items_.at(p);
-        if (stack) {
-            auto const& items = definitions_->get_items();
+        auto const& items = definitions_->get_items();
+        items_.for_each_item_at(p, [&](item_id const itm) {
+            auto const& id   = (*item_store_)[itm].id;
+            auto const& name = items.get_locale(id).name;
 
-            for (auto const& itm : *stack) {
-                auto const& id = (*item_store_)[itm].id;
-                auto const& name = items.get_locale(id).name;
-
-                result.push_back('\n');
-                result.append(name);
-            }
-        }
+            result.push_back('\n');
+            result.append(name);
+        });
         
         if (auto const ent = entity_at(p)) {
             auto const& entities = definitions_->get_entities();
@@ -993,32 +983,32 @@ private:
     //--------------------------------------------------------------------------
     //! Return the item stack at p. If no item stack exists already, create one.
     //--------------------------------------------------------------------------
-    item_stack& make_stack_at_(ipoint2 const p) {
-        auto const stack = items_.at(p);
-        if (!stack) {
-            items_.insert(p);
-            items_.sort(); //TODO
-        }
+    //item_stack& make_stack_at_(ipoint2 const p) {
+    //    auto const stack = items_.at(p);
+    //    if (!stack) {
+    //        items_.insert(p);
+    //        items_.sort(); //TODO
+    //    }
 
-        auto result = items_.at(p);
-        return *result;
-    }
+    //    auto result = items_.at(p);
+    //    return *result;
+    //}
 
     //--------------------------------------------------------------------------
     //! Return the item stack at p. Fail if none exists.
     //--------------------------------------------------------------------------
-    item_stack& require_stack_at_(ipoint2 const p) {
-        auto const stack = items_.at(p);
-        if (!stack) {
-            BK_TODO_FAIL();
-        }
+    //item_stack& require_stack_at_(ipoint2 const p) {
+    //    auto const stack = items_.at(p);
+    //    if (!stack) {
+    //        BK_TODO_FAIL();
+    //    }
 
-        return *stack;
-    }
+    //    return *stack;
+    //}
 
-    item_stack const& require_stack_at_(ipoint2 const p) const {
-        return const_cast<level*>(this)->require_stack_at_(p);
-    }
+    //item_stack const& require_stack_at_(ipoint2 const p) const {
+    //    return const_cast<level*>(this)->require_stack_at_(p);
+    //}
 
     //--------------------------------------------------------------------------
     message_type use_stair_(ipoint2 const p, bool const down) const {
@@ -1162,13 +1152,11 @@ private:
                 }
             }
 
-            add_to_stack_(
-                make_stack_at_(p)
+            items_.insert_at(
+                p
               , generate_item(substantive, items, item_defs, loot_table {}, origin)
             );
         }
-
-        items_.sort();
     }
 
     //--------------------------------------------------------------------------
@@ -1438,7 +1426,7 @@ private:
     ipoint2 stairs_up_   = ipoint2 {0, 0};
     ipoint2 stairs_down_ = ipoint2 {0, 0};
 
-    spatial_map<item_stack, int> items_;
+    item_map items_;
     spatial_map<entity>          entities_;
     std::vector<entity_id>       pending_entities_; //used during updates
 };
@@ -1736,7 +1724,7 @@ public:
     //--------------------------------------------------------------------------
     input_mode_base* enter_mode(
         gui::item_list&    list
-      , item_list const&   items
+      , item_collection const&   items
       , string_ref const   title
       , completion_handler handler
     ) {
@@ -1894,7 +1882,7 @@ public:
     template <typename Handler>
     void enter_selection_mode(
         gui::item_list&   list
-      , item_list const&  items
+      , item_collection const&  items
       , string_ref const  title
       , Handler&&         handler
     ) {
@@ -2232,30 +2220,6 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! Get the item with id = iid
-    //--------------------------------------------------------------------------
-    void get_item_(item_id const iid) {
-        auto const& p      = player_.position();
-        auto const& istore = item_store_;
-        auto const& idefs  = definitions_->get_items();
-
-        cur_level_->get_item(p, iid);
-        player_.items().insert(iid, idefs, istore);
-
-        print_message(message_type::get_ok, get_item_name_(iid));
-        
-        advance();
-    }
-
-    //--------------------------------------------------------------------------
-    string_ref get_item_name_(item_id const iid) const {
-        auto const& istore = item_store_;
-        auto const& idefs  = definitions_->get_items();
-
-        return get_item_loc(iid, idefs, istore).name;
-    }
-
-    //--------------------------------------------------------------------------
     string_ref get_message_string_(message_type const msg) const {
         auto const& messages = definitions_->get_messages();
         return messages[msg];
@@ -2267,33 +2231,54 @@ public:
         auto const& istore = item_store_;
 
         player_.equip().unequip(iid, idefs, istore);
-        player_.items().insert(iid, idefs, istore);
+        player_.items().insert(iid);
 
-        auto const& name = istore[iid].get_name(idefs);
+        auto const& name = istore[iid].name(idefs);
 
         print_message(message_type::take_off_ok, name);
     }
 
     //--------------------------------------------------------------------------
-    void equip_item_(item_id const iid) {
-        auto const& istore = item_store_;
-        auto const& idefs  = definitions_->get_items();
+    string_ref get_localized_name(item_id const itm) const {
+        return bkrl::get_localized_name(itm, definitions_->get_items(), item_store_);
+    }
 
-        auto const& result = player_.equip_item(iid, idefs, istore);
-        if (result.second) {
-            print_message(message_type::wield_wear_ok, get_item_name_(iid));
-            return;
-        }
-
-        auto const& conflicting = player_.equip().match_any(result.first);
-        if (!conflicting) {
+    //TODO
+    //--------------------------------------------------------------------------
+    template <typename T>
+    inline decltype(auto) require(optional<T>&& o) {
+        if (!o) {
             BK_TODO_FAIL();
         }
 
+        return *o;
+    }
+
+    //--------------------------------------------------------------------------
+    void equip_item_(item_id const itm) {
+        auto const& istore = item_store_;
+        auto const& idefs  = definitions_->get_items();
+
+        auto slots    = equip_slot_flags {};
+        auto equip_ok = false;
+        
+        std::tie(slots, equip_ok) = player_.equip_item(itm, idefs, istore);
+        
+        if (equip_ok) {
+            print_message(
+                message_type::wield_wear_ok
+              , get_localized_name(itm)
+            );
+
+            return;
+        }
+
+        auto const& conflicting_itm = require(player_.equip().match_any(slots));
+
         print_message(
             message_type::wield_wear_conflict
-          , get_item_name_(iid)
-          , get_item_name_(*conflicting)
+          , get_localized_name(itm)
+          , get_localized_name(conflicting_itm)
         );
     }
 
@@ -2306,7 +2291,7 @@ public:
         player_.items().remove(iid);
         cur_level_->drop_item_at(p, iid);
 
-        print_message(message_type::drop_ok, get_item_name_(iid));
+        print_message(message_type::drop_ok, get_localized_name(iid));
     }
 
     //--------------------------------------------------------------------------
@@ -2488,7 +2473,7 @@ public:
     void do_drop() {
         auto const title = get_message_string_(message_type::title_drop);
         auto&      list  = gui_.item_list;
-        auto&      items = player_.items().list();
+        auto&      items = player_.items();
         
         if (items.empty()) {
             print_message(message_type::drop_nothing);
@@ -2505,39 +2490,56 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    void do_get() {
-        auto const title = get_message_string_(message_type::title_get);
-        auto&      list  = gui_.item_list;
-        auto const p     = player_.position();
+    void get_item_(item_id const itm) {
+        player_.items().insert(itm);
+        print_message(message_type::get_ok, get_localized_name(itm));
+        advance();
+    }
 
-        auto const& maybe_stack = cur_level_->get_stack_at(p);
-        if (!maybe_stack) {
-            print_message(message_type::get_no_items);
-            return;
-        }
+    //--------------------------------------------------------------------------
+    template <typename Function>
+    void show_get_dialog_(ipoint2 const p, Function&& function) {
+        input_state_.enter_selection_mode(
+            gui_.item_list
+          , cur_level_->list_items_at(p)
+          , get_message_string_(message_type::title_get)
+          , [=](optional<item_id> maybe_sel) {
+                if (!maybe_sel) { return; }
 
-        auto& stack = *maybe_stack;
-        if (stack.size() == 1) {
-            get_item_(stack.at(0));
-            return;
-        }
+                auto const itm = *maybe_sel;
+                auto const ok  = (cur_level_->take_item_at(p, itm) == itm);
 
-        auto& items = stack.list();
+                BK_ASSERT_DBG(ok == true);
 
-        input_state_.enter_selection_mode(list, items, title, [this](optional<item_id> maybe_sel) {
-            if (!maybe_sel) {
-                return;
+                function(itm);
             }
+        );
+    }
 
-            get_item_(*maybe_sel);
-        });
+    //--------------------------------------------------------------------------
+    void do_get() {
+        using mt = message_type;
+
+        auto const p = player_.position();
+
+        switch (cur_level_->can_get_item(p)) {
+        default               : BK_TODO_FAIL();                         break;
+        case mt::get_no_items : print_message(mt::get_no_items);        break;
+        case mt::get_ok       : get_item_(cur_level_->take_item_at(p)); break;
+        case mt::get_which_prompt :
+            show_get_dialog_(p, [this](item_id const itm) {
+                get_item_(itm);
+            });
+
+            break;
+        }
     }
 
     //--------------------------------------------------------------------------
     void do_inventory() {
         auto const title = get_message_string_(message_type::title_inventory);
         auto&      list  = gui_.item_list;
-        auto&      items = player_.items().list();
+        auto&      items = player_.items();
        
         if (items.empty()) {
             print_message(message_type::inventory_nothing);
@@ -2555,14 +2557,13 @@ public:
         auto const  title  = get_message_string_(message_type::title_wield_wear);
         auto&       list   = gui_.item_list;
         auto const& equip  = player_.get_equippable(idefs, istore);
-        auto const& items  = equip.list();
 
-        if (items.empty()) {
+        if (equip.empty()) {
             print_message(message_type::wield_wear_nothing);
             return;
         }
 
-        input_state_.enter_selection_mode(list, items, title, [this](optional<item_id> maybe_sel) {
+        input_state_.enter_selection_mode(list, equip, title, [this](optional<item_id> maybe_sel) {
             if (!maybe_sel) {
                 return;
             }

@@ -595,7 +595,7 @@ public:
         insert_item_(id, istore, idefs, msgs);
     }
 
-    void insert_item(bkrl::item_list const& items) {
+    void insert_item(item_collection const& items) {
         clear();
 
         auto const& istore = *item_store_;
@@ -607,9 +607,9 @@ public:
         list_.add_col("Type");
         list_.add_col("Details");
 
-        for (auto const& iid : items) {
-            insert_item_(iid, istore, idefs, msgs);
-        }
+        items.for_each_item([&](item_id const itm) {
+            insert_item_(itm, istore, idefs, msgs);
+        });
 
         list_.layout();
 
@@ -618,10 +618,10 @@ public:
 
     void insert_item_(item_id const id, item_store const& istore, item_definitions const& idefs, message_map const& msgs) {
         auto const& itm    = istore[id];
-        auto const& name   = itm.get_name(idefs);
+        auto const& name   = itm.name(idefs);
         auto const& type   = to_string(msgs, itm.type);
-        auto const& weight = std::to_string(itm.get_weight(idefs));
-        auto const& info   = itm.get_info_string(msgs);
+        auto const& weight = std::to_string(itm.weight(idefs));
+        auto const& info   = itm.short_description(msgs);
 
         name_buffer_.clear();
         name_buffer_.push_back(prefix_++);
@@ -636,7 +636,7 @@ public:
         items_.push_back(id);
     }
 
-    void insert_equip(bkrl::item_list const& items) {
+    void insert_equip(item_collection const& items) {
         using msg = message_type;
         using eqs = equip_slot;
 
@@ -688,13 +688,13 @@ public:
 
         items_.resize(slot_count, item_id {0});
 
-        for (auto const& iid : items) {
+        items.for_each_item([&](item_id const iid) {
             auto const& itm    = istore[iid];
-            auto const& name   = itm.get_name(idefs);
-            auto const& info   = itm.get_info_string(msgs);
-            auto const& weight = std::to_string(itm.get_weight(idefs));
+            auto const& name   = itm.name(idefs);
+            auto const& info   = itm.short_description(msgs);
+            auto const& weight = std::to_string(itm.weight(idefs));
 
-            BK_ASSERT_DBG(itm.can_equip(idefs));
+            BK_ASSERT_DBG(itm.is_equippable(idefs));
 
             auto const slots = itm.equip_slots(idefs);
 
@@ -708,7 +708,7 @@ public:
                 list_.set_text(row, col_eq_details, info);
                 items_[row] = iid;
             }
-        }
+        });
 
         list_.layout();
     }
@@ -788,7 +788,7 @@ bkrl::item_id bkrl::gui::item_list::at(int const index) {
     return impl_->at(index);
 }
 
-void bkrl::gui::item_list::insert(bkrl::item_list const& items) {
+void bkrl::gui::item_list::insert(item_collection const& items) {
     impl_->insert_item(items);
 }
 
@@ -827,7 +827,7 @@ bool bkrl::gui::item_list::empty() const noexcept {
 ////////////////////////////////////////////////////////////////////////////////
 // gui::equip_list
 ////////////////////////////////////////////////////////////////////////////////
-void bkrl::gui::equip_list::insert(bkrl::item_list const& items) {
+void bkrl::gui::equip_list::insert(item_collection const& items) {
     impl_->insert_equip(items);
 }
 
