@@ -12,7 +12,6 @@
 #include "entity.hpp"
 #include "messages.hpp"
 #include "time.hpp"
-#include "spatial_map.hpp"
 #include "scope_exit.hpp"
 #include "definitions.hpp"
 #include "gui.hpp"
@@ -314,142 +313,6 @@ struct tile_sheet_set {
     std::vector<tile_sheet> sheets_;
 };
 
-//class item_collection {
-//public:
-//    bool empty() const noexcept { return items_.empty(); }
-//    int  size()  const noexcept { return static_cast<int>(items_.size()); }
-//
-//    void insert(item_id const itm) {
-//        items_.push_back(itm);
-//    }
-//
-//    //void erase(item_id const itm) {
-//    //    bkrl::find_and(items_, itm, [&](auto& it) {
-//    //        items_.erase(it);    
-//    //    });
-//    //}
-//
-//    template <typename Function>
-//    void remove_nth_and(int const n, Function&& function) {
-//        BK_ASSERT_DBG(n >= 0 && n < items_.size());
-//
-//        auto const it = items_.begin() + n;
-//
-//        function(*it);
-//
-//        items_.erase(it);
-//    }
-//
-//    template <typename Function>
-//    void remove_all_and(Function&& function) {
-//        for (auto& i : items_) {
-//            function(i);
-//        }
-//
-//        items_.clear();
-//    }
-//
-//    template <typename Function>
-//    void for_each_item(Function&& function) const {
-//        for (auto const& i : items_) {
-//            function(i.value.first, i.value.second);
-//        }
-//    }
-//private:
-//    std::vector<item_id> items_;
-//};
-//
-//class item_map {
-//public:
-//    using point_t = ipoint2;
-//
-//    struct record_t {
-//        static bool less(point_t const lhs, point_t const rhs) noexcept {
-//            return bkrl::lexicographical_compare(lhs, rhs);
-//        }
-//
-//        operator point_t() const noexcept { return value.second; }
-//
-//        friend bool operator<(point_t  const lhs, record_t const rhs) noexcept { return less(lhs, rhs); }
-//        friend bool operator<(point_t  const lhs, point_t  const rhs) noexcept { return less(lhs, rhs); }
-//        friend bool operator<(record_t const lhs, record_t const rhs) noexcept { return less(lhs, rhs); }
-//
-//        friend bool operator==(record_t const lhs, record_t const rhs) noexcept {
-//            return lhs.value.second == rhs.value.second;
-//        }
-//
-//        friend bool operator!=(record_t const lhs, record_t const rhs) noexcept {
-//            return !(lhs == rhs);
-//        }
-//
-//        std::pair<item_id, point_t> value;
-//    };
-//
-//    void insert_at(point_t const p, item_id const itm) {
-//        items_.push_back(record_t {{itm, p}});
-//        
-//        bkrl::sort(items_);
-//    }
-//
-//    void insert_at(point_t const p, item_collection& items) {
-//        items.remove_all_and([&](item_id const itm) {
-//            items_.push_back(record_t {{itm, p}});
-//        });
-//        
-//        bkrl::sort(items_);
-//    }
-//
-//    template <typename Iterator>
-//    void insert_at(point_t const p, Iterator const beg, Iterator const end) {
-//        std::for_each(beg, end, [&](item_id const itm) {
-//            items_.push_back(record_t {{itm, p}});
-//        });
-//        
-//        bkrl::sort(items_);
-//    }
-//
-//    template <typename Function>
-//    void for_each_item_at(point_t const p, Function&& function) const {
-//        bkrl::for_each(bkrl::equal_range(items_, p), [&](record_t const& r) {
-//            function(r.value.first);
-//        });
-//    }
-//
-//    template <typename Function>
-//    void for_each_item(Function&& function) const {
-//        for (auto const& i : items_) {
-//            function(i.value.first, i.value.second);
-//        }
-//    }
-//
-//    template <typename Function>
-//    void remove_nth_item_at(point_t const p, int n, Function&& function) {
-//        BK_ASSERT(n >= 0);
-//
-//        auto const range = bkrl::equal_range(items_, p);
-//        for (auto it = range.first; it != range.second; ++it) {
-//            if (n-- == 0) {
-//                function(it->value.first);
-//                items_.erase(*it);
-//                return;
-//            }
-//        }
-//    }
-//
-//    template <typename Function>
-//    void remove_items_at(point_t const p, Function&& function) {
-//        auto const range = bkrl::equal_range(items_, p);
-//
-//        for (auto it = range.first; it != range.second; ++it) {
-//            function(it->value.first);
-//        }
-//
-//        items_.erase(range.first, range.second);
-//    }
-//private:
-//    std::vector<record_t> items_;
-//};
-
 //==============================================================================
 //! One level within the world.
 //==============================================================================
@@ -475,6 +338,158 @@ public:
         generate_(substantive, trivial);
     }
     
+    ////////////////////////////////////////////////////////////////////////////
+    // Rendering
+    ////////////////////////////////////////////////////////////////////////////
+
+    //--------------------------------------------------------------------------
+    //! Draw the map.
+    //--------------------------------------------------------------------------
+    void draw_map(renderer& r) {
+        auto const w = grid_.width();
+        auto const h = grid_.height();
+
+        auto& sheet = (*tiles_sheets_)[tile_sheet_set::world];
+        
+        //set to default color
+        r.set_color_mod(sheet.get_texture());
+        
+        for (grid_index y = 0; y < h; ++y) {
+            for (grid_index x = 0; x < w; ++x) {
+                auto const i = grid_.get(attribute::texture_id, x, y);
+                sheet.render(r, i, x, y);
+            }
+        }
+    }
+
+    //--------------------------------------------------------------------------
+    //! Draw the player.
+    //--------------------------------------------------------------------------
+    void draw_player(renderer& r) {
+        auto& sheet = (*tiles_sheets_)[tile_sheet_set::entities];
+        auto& tex   = sheet.get_texture();
+
+        auto const& entities    = definitions_->get_entities();
+        auto const& the_player  = *player_;
+        auto const  player_info = the_player.render_info(entities);
+        auto const  player_pos  = the_player.position();
+
+        r.set_color_mod(tex, player_info.tex_color);
+        sheet.render(r, player_info.tex_position, player_pos);
+    }
+
+    //--------------------------------------------------------------------------
+    //! Draw a health bar above ent.
+    //! @pre @p ent must not be at full health.
+    //--------------------------------------------------------------------------
+    void draw_health_bar(
+        renderer&      r
+      , entity  const& ent
+      , ipoint2 const  tile_size
+    ) {
+        constexpr auto bar_border = 1;
+        constexpr auto bar_size   = 2;
+        constexpr auto bar_h      = bar_size + bar_border * 2;
+
+        auto const backcolor = make_color(100, 100, 100);
+        auto const forecolor = make_color(255, 50, 50);
+
+        auto const p  = ent.position();
+        auto const hp = ent.health();
+
+        BK_ASSERT_DBG(!hp.is_max());
+
+        auto const tw = tile_size.x;
+        auto const th = tile_size.y;
+
+        auto const x = p.x * tw;
+        auto const y = p.y * th - bar_h;
+        auto const w = tw;
+        auto const h = bar_size;
+
+        auto const width = hp.scale_to(w);
+
+        auto const back_rect = make_rect_size(
+            x - bar_border
+          , y - bar_border
+          , w + bar_border * 2
+          , h + bar_border * 2
+        );
+
+        auto const fore_rect = make_rect_size(
+            x, y, width, h
+        );
+
+        r.set_draw_color(backcolor);
+        r.draw_filled_rect(back_rect);
+
+        r.set_draw_color(forecolor);
+        r.draw_filled_rect(fore_rect);
+    }
+
+    //--------------------------------------------------------------------------
+    //! Draw a health bar above all entities not at full health.
+    //--------------------------------------------------------------------------
+    void draw_health_bars(renderer& r, ipoint2 const tile_size) {
+        entities_.for_each([&](entity const& ent) {
+            if (!ent.health().is_max()) {
+                draw_health_bar(r, ent, tile_size);
+            }
+        });
+    }
+
+    //--------------------------------------------------------------------------
+    //! Draw all entities on the level.
+    //--------------------------------------------------------------------------
+    void draw_entities(renderer& r, tile_sheet& sheet) {
+        auto&       tex   = sheet.get_texture();
+        auto const& edefs = definitions_->get_entities();
+
+        entities_.for_each([&](entity const& ent) {
+            auto const p     = ent.position();          
+            auto const rinfo = ent.render_info(edefs);
+
+            r.set_color_mod(tex, rinfo.tex_color);
+            sheet.render(r, rinfo.tex_position, p);
+        });
+    }
+
+    //--------------------------------------------------------------------------
+    //! Draw all items on the level.
+    //--------------------------------------------------------------------------
+    void draw_items(renderer& r, tile_sheet& sheet) {
+        auto const& istore = *item_store_;
+        auto const& idefs  = definitions_->get_items();
+
+        items_.for_each_stack([&](ipoint2 const p, item_id const itm, int const n) {
+            auto const info = (n == 1)
+              ? istore[itm].render_info(idefs)
+              : idefs.get_stack_info(n);
+
+            sheet.render(r, info.tex_position, p);
+        });
+    }
+
+    //--------------------------------------------------------------------------
+    //! Render the level.
+    //--------------------------------------------------------------------------
+    void render(renderer& r) {
+        auto& sheet_items    = (*tiles_sheets_)[tile_sheet_set::items];
+        auto& sheet_entities = (*tiles_sheets_)[tile_sheet_set::entities];
+        
+        //TODO
+        auto const entity_tile_size = ipoint2 {
+            sheet_entities.tile_w()
+          , sheet_entities.tile_h()
+        };
+
+        draw_map(r);
+        draw_items(r, sheet_items);
+        draw_entities(r, sheet_entities);
+        draw_player(r);
+        draw_health_bars(r, entity_tile_size);
+    }
+
     //--------------------------------------------------------------------------
     bool update_entity_(random::generator& trivial, entity& ent) {
         auto constexpr move_percent   = 25;
@@ -552,149 +567,6 @@ public:
     //--------------------------------------------------------------------------
     void advance(random::generator& trivial) {
         update_entities_(trivial);
-    }
-
-    //--------------------------------------------------------------------------
-    void draw_map(renderer& r) {
-        auto const w = grid_.width();
-        auto const h = grid_.height();
-
-        auto& sheet = (*tiles_sheets_)[tile_sheet_set::world];
-        
-        //set to default color
-        r.set_color_mod(sheet.get_texture());
-        
-        for (grid_index y = 0; y < h; ++y) {
-            for (grid_index x = 0; x < w; ++x) {
-                auto const i = grid_.get(attribute::texture_id, x, y);
-                sheet.render(r, i, x, y);
-            }
-        }
-    }
-
-    //--------------------------------------------------------------------------
-    void draw_player(renderer& r) {
-        auto& sheet = (*tiles_sheets_)[tile_sheet_set::entities];
-        auto& tex   = sheet.get_texture();
-
-        auto const& entities    = definitions_->get_entities();
-        auto const& the_player  = *player_;
-        auto const  player_info = the_player.render_info(entities);
-        auto const  player_pos  = the_player.position();
-
-        r.set_color_mod(tex, player_info.tex_color);
-        sheet.render(r, player_info.tex_position, player_pos);
-    }
-
-    //--------------------------------------------------------------------------
-    void draw_health_bar(
-        renderer& r
-      , entity const& ent
-      , ipoint2 const p
-      , ipoint2 const tile_size
-    ) {
-        constexpr auto bar_border = 1;
-        constexpr auto bar_size   = 2;
-        constexpr auto bar_h      = bar_size + bar_border * 2;
-
-        static auto const backcolor = make_color(100, 100, 100);
-        static auto const forecolor = make_color(255, 50, 50);
-
-        auto const tw = tile_size.x;
-        auto const th = tile_size.x;
-
-        auto const x = p.x * tw;
-        auto const y = p.y * th - bar_h;
-        auto const w = tw;
-        auto const h = bar_size;
-
-        auto const& hp = ent.health();
-
-        //auto const percent = static_cast<float>(hp.hi - hp.size()) / hp.hi;
-        //auto const width   = static_cast<int>(std::round(percent * w));
-        auto const width = hp.scale_to(w);
-
-        auto const back_rect = make_rect_size(
-            x - bar_border
-          , y - bar_border
-          , w + bar_border * 2
-          , h + bar_border * 2
-        );
-
-        auto const fore_rect = make_rect_size(
-            x, y, width, h
-        );
-
-        r.set_draw_color(backcolor);
-        r.draw_filled_rect(back_rect);
-
-        r.set_draw_color(forecolor);
-        r.draw_filled_rect(fore_rect);
-    }
-
-    //--------------------------------------------------------------------------
-    void draw_health_bars(renderer& r) {
-        auto const& sheet  = (*tiles_sheets_)[tile_sheet_set::entities];
-        auto const  tile_w = sheet.tile_w();
-        auto const  tile_h = sheet.tile_h();
-        auto const  size   = ipoint2 {tile_w, tile_h};
-
-        entities_.for_each([&](entity const& ent) {
-            auto const health = ent.health();
-            if (health.is_max()) { return; }
-            
-            draw_health_bar(r, ent, ent.position(), size);
-        });
-    }
-
-    //--------------------------------------------------------------------------
-    void draw_entities(renderer& r) {
-        auto& sheet = (*tiles_sheets_)[tile_sheet_set::entities];
-        auto& tex   = sheet.get_texture();
-
-        auto const& einfo = definitions_->get_entities();
-
-        entities_.for_each([&](entity const& ent) {
-            auto const p     = ent.position();          
-            auto const rinfo = ent.render_info(einfo);
-
-            r.set_color_mod(tex, rinfo.tex_color);
-            sheet.render(r, rinfo.tex_position, p);
-        });
-    }
-
-    //--------------------------------------------------------------------------
-    void draw_items(renderer& r) {
-        auto& sheet = (*tiles_sheets_)[tile_sheet_set::items];
-        auto& tex   = sheet.get_texture();
-
-        auto const tile_w = sheet.tile_w();
-        auto const tile_h = sheet.tile_h();
-
-        auto const fallback = item_render_info_t {
-            tex_point_i {tile_w * 15, tile_h * 0}
-          , make_color(255, 255, 255, 255)
-        };
-
-        auto const& istore = *item_store_;
-        auto const& idefs  = definitions_->get_items();
-
-        items_.for_each_stack([&](ipoint2 const p, item_id const itm, int const n) {
-            auto const info = (n == 1)
-              ? istore[itm].render_info(idefs)
-              : fallback;
-
-            sheet.render(r, info.tex_position, p);
-        });
-    }
-
-    //--------------------------------------------------------------------------
-    void render(renderer& r) {
-        draw_map(r);
-        draw_items(r);
-        draw_entities(r);
-        draw_player(r);
-        draw_health_bars(r);
     }
 
     //--------------------------------------------------------------------------
@@ -1435,9 +1307,6 @@ private:
 
     item_map   items_;
     entity_map entities_;
-
-    //spatial_map<entity>          entities_;
-    std::vector<entity_id>       pending_entities_; //used during updates
 };
 
 //==============================================================================

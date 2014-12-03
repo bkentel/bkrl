@@ -187,41 +187,11 @@ public:
 };
 
 //==============================================================================
+//! entity_map
+//==============================================================================
 class entity_map {
 public:
     using point_t = ipoint2;
-
-    struct record_t {
-        static bool less(point_t const lhs, point_t const rhs) noexcept {
-            return bkrl::lexicographical_compare(lhs, rhs);
-        }
-
-        entity_id id()  const noexcept { return value.first; }
-        point_t   pos() const noexcept { return value.second; }
-
-        friend bool operator<(record_t const lhs, record_t const rhs) noexcept { return less(lhs.pos(), rhs.pos()); }
-        friend bool operator<(point_t  const lhs, record_t const rhs) noexcept { return less(lhs,       rhs.pos()); }
-        friend bool operator<(record_t const lhs, point_t  const rhs) noexcept { return less(lhs.pos(), rhs      ); }
-
-        friend bool operator==(record_t const lhs, record_t const rhs) noexcept {
-            return lhs.pos() == rhs.pos();
-        }
-
-        friend bool operator==(record_t const lhs, point_t const rhs) noexcept {
-            return lhs.pos() == rhs;
-        }
-
-        friend bool operator==(point_t const lhs, record_t const rhs) noexcept {
-            return lhs == rhs.pos();
-        }
-
-
-        friend bool operator!=(record_t const lhs, record_t const rhs) noexcept {
-            return !(lhs == rhs);
-        }
-
-        std::pair<entity_id, point_t> value;
-    };
 
     struct less_pos_t {
         static bool less(point_t const lhs, point_t const rhs) noexcept {
@@ -287,13 +257,6 @@ public:
         return true;
     }
 
-    void rebuild_map_() {
-        map_.clear();
-        map_.reserve(instances_.capacity());
-        for (auto& e : instances_) { map_.push_back(&e); }
-        sort_map_();
-    }
-
     //--------------------------------------------------------------------------
     //!
     //--------------------------------------------------------------------------
@@ -319,13 +282,16 @@ public:
     //--------------------------------------------------------------------------
     //!
     //--------------------------------------------------------------------------
-    optional<entity const&> at(point_t const p) const {
-        auto const found = optional_find(map_, p, less_pos_t {});
-        if (!found) {
+    optional<entity&> at_(point_t const p) const {
+        auto const beg = std::begin(map_);
+        auto const end = std::end(map_);
+        auto const it  = std::lower_bound(beg, end, p, less_pos_t {});
+
+        if (it == end) {
             return {};
         }
 
-        auto const& ent = (***found);
+        auto& ent = *(*it);
         if (p != ent.position()) {
             return {};
         }
@@ -336,21 +302,26 @@ public:
     //--------------------------------------------------------------------------
     //!
     //--------------------------------------------------------------------------
+    inline optional<entity const&> at(point_t const p) const {
+        auto const result = at_(p);
+        if (!result) {
+            return {};
+        }
+
+        return {result.get()};
+    }
+
+    //--------------------------------------------------------------------------
+    //!
+    //--------------------------------------------------------------------------
     template <typename Function>
     bool with_entity_at(point_t const p, Function&& function) {
-        auto const beg = std::begin(map_);
-        auto const end = std::end(map_);
-        auto const it  = std::lower_bound(beg, end, p, less_pos_t {});
-
-        if (it == end) {
+        auto const& maybe_ent = at_(p);
+        if (!maybe_ent) {
             return false;
         }
-
-        auto& ent = **it;
-
-        if(p != ent.position()) {
-            return false;
-        }
+        
+        auto& ent = *maybe_ent;
 
         function(ent);
 
@@ -361,6 +332,9 @@ public:
         return true;
     }
 
+    //--------------------------------------------------------------------------
+    //!
+    //--------------------------------------------------------------------------
     template <typename Function>
     bool with_entity_at(point_t const p, Function&& function) const {
         return const_cast<entity_map*>(this)->with_entity_at(p, [&](entity const& ent) {
@@ -368,6 +342,9 @@ public:
         });
     }
 
+    //--------------------------------------------------------------------------
+    //!
+    //--------------------------------------------------------------------------
     template <typename Function>
     void with_each_entity(Function&& function) {
         for (auto& ent : instances_) {
@@ -385,6 +362,9 @@ public:
         }
     }
 
+    //--------------------------------------------------------------------------
+    //!
+    //--------------------------------------------------------------------------
     template <typename Function>
     void for_each(Function&& function) const {
         for (auto const& e : instances_) {
@@ -395,6 +375,13 @@ private:
     std::vector<entity>  instances_;
     std::vector<entity*> map_;
 
+    void rebuild_map_() {
+        map_.clear();
+        map_.reserve(instances_.capacity());
+        for (auto& e : instances_) { map_.push_back(&e); }
+        sort_map_();
+    }
+    
     void sort_instances_() {
         bkrl::sort(instances_, [](entity const& lhs, entity const& rhs) {
             return lhs.instance_id < rhs.instance_id;

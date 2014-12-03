@@ -507,7 +507,11 @@ public:
     static locale     const undefined_locale;
 
     ////////////////////////////////////////////////////////////////////////////
-    item_definitions_impl() {
+    item_definitions_impl() {   
+    }
+
+    item_render_info_t get_stack_info(int const size) const {
+        return stack_info_;
     }
 
     definition const& get_definition(item_def_id const id) const {
@@ -552,6 +556,14 @@ public:
     ////////////////////////////////////////////////////////////////////////////
     void load_definitions(cref data) {
         rule_def_root(data);
+
+        //TODO need to load this from the actual json
+        auto const size = item_definition::tile_size;
+        stack_info_.tex_position = tex_point_i {
+            size.x * 15, size.y * 0
+        };
+
+        stack_info_.tex_color = make_color(255, 255, 255, 255);
     }
     
     //--------------------------------------------------------------------------
@@ -820,6 +832,8 @@ private:
     map_t<lang_id,     locale_map> locales_;
 
     locale_map const* current_locale_ = nullptr;
+
+    item_render_info_t stack_info_;
 };
 
 bkrl::utf8string const bkrl::detail::item_definitions_impl::undefined_name {"{undefined name}"};
@@ -874,6 +888,10 @@ bkrl::item_definitions::get_definition(item_def_id const id) const {
 bkrl::item_locale const&
 bkrl::item_definitions::get_locale(item_def_id const id) const {
     return impl_->get_locale(id);
+}
+
+bkrl::item_render_info_t bkrl::item_definitions::get_stack_info(int const size) const {
+    return impl_->get_stack_info(size);
 }
 
 //------------------------------------------------------------------------------

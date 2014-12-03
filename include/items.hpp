@@ -549,6 +549,8 @@ public:
     item_locale     const& get_locale(item_def_id id)     const;
     item_definition const& get_definition(item_def_id id) const;
 
+    item_render_info_t get_stack_info(int size) const;
+
     void set_locale(lang_id const lang);
 
     int get_definitions_size() const;
