@@ -7,6 +7,7 @@
 #pragma once
 
 #include <algorithm>
+#include <numeric>
 #include <boost/predef.h>
 
 #if !BOOST_COMP_MSVC

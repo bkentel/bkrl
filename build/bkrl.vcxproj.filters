@@ -117,6 +117,9 @@
     <ClCompile Include="..\test\keyboard.t.cpp">
       <Filter>test</Filter>
     </ClCompile>
+    <ClCompile Include="..\test\loot.t.cpp">
+      <Filter>test</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\engine_client.hpp">
