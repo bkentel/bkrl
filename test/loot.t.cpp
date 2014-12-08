@@ -1,6 +1,8 @@
 #include "catch/catch.hpp"
 
+#include <memory>
 #include <vector>
+#include <functional>
 #include <boost/container/flat_map.hpp>
 #include "items.hpp"
 #include "json.hpp"
@@ -10,210 +12,35 @@
 
 namespace bkrl {
 
-class loot_table_definitions;
-class loot_table_;
-class loot_table_parser;
-
-//==============================================================================
-//!
-//==============================================================================
-struct loot_rule_data_t {
-    enum class id_t {
-        item_ref  //!< the rule refers to an item definition
-      , table_ref //!< the rule refers to a loot table definition
-    };
-
-    hash_t   id;
-    uint16_t count_lo;
-    uint16_t count_hi;
-    id_t     id_type;
-    std::array<char, 16> id_debug_string;
-};
-
-//==============================================================================
-//!
-//==============================================================================
-class loot_table_definitions {
-public:
-    ~loot_table_definitions() = default;
-
-    loot_table_definitions() = default;
-    loot_table_definitions(loot_table_definitions&&) = default;
-    loot_table_definitions& operator=(loot_table_definitions&&) = default;
-
-    loot_table_ const& operator[](loot_table_def_id id) const;
-private:
-};
-
-template <typename F>
+template <typename F, void (F::*)(size_t) const = &F::operator()>
 inline void repeat_n(size_t const n, F&& f) {
-    while (n > 0) { f(); }
+    for (size_t i = 0; i < n; ++i) {
+        f(i);
+    }
 }
 
-//==============================================================================
-//!
-//==============================================================================
-class loot_table_ {
-public:
-    enum class roll_t {
-        roll_all   //!< all entries are rolled for success / failure.
-      , choose_one //!< one weighted entry is chosen.
-    };
-
-    using defs_t = loot_table_definitions const&;
-    using rule_t = loot_rule_data_t const&;
-
-    loot_table_()
-      : type_ {roll_t::roll_all}
-    {
+template <typename F, void (F::*)() const = &F::operator()>
+inline void repeat_n(size_t const n, F&& f) {
+    for (size_t i = 0; i < n; ++i) {
+        f();
     }
+}
 
-    loot_table_(loot_table_&&) = default;
-    loot_table_& operator=(loot_table_&&) = default;
-    loot_table_(loot_table_ const&) = delete;
-    loot_table_& operator=(loot_table_ const&) = delete;
+template <typename SrcCont, typename DstCont>
+inline void append_to(SrcCont const& src, DstCont& dst) {
+    using std::begin;
+    using std::end;
 
-    template <typename Data, typename Rules>
-    loot_table_(
-        roll_t const  type
-      , Data   const& data
-      , Rules  const& rules
-    )
-      : type_ {type}
-    {
-        auto const size_data  = data.size();
-        auto const size_rules = rules.size();
+    dst.insert(end(dst), begin(src), end(src));
+}
 
-        if (type == roll_t::roll_all) {
-            BK_ASSERT_DBG(size_data == size_rules * 2);
-        } else if (type == roll_t::choose_one) {
-            BK_ASSERT_DBG(size_data == size_rules);
-        }
-
-        using std::begin;
-        using std::end;
-
-        roll_data_.reserve(size_data);
-        std::copy(begin(data), end(data), std::back_inserter(roll_data_));
-
-        rules_.reserve(size_rules);
-        std::copy(begin(rules), end(rules), std::back_inserter(rules_));
-
-        if (type == roll_t::choose_one) {
-            uint16_t sum = 0;
-            for (auto& w : roll_data_) {
-                auto const n = w;
-                w += sum;
-                sum = w;
-            }
-        }
-    }
-
-    template <typename Write>
-    void generate(random_t& gen, defs_t defs, Write&& write) const {
-        if (type_ == roll_t::roll_all) {
-            roll_all_(gen, defs, std::forward<Write>(write));
-        } else if (type_ == roll_t::choose_one) {
-            choose_one_(gen, defs, std::forward<Write>(write));
-        } else {
-            BK_TODO_FAIL();
-        }
-    }
-
-    void set_id(string_ref const id_str, loot_table_def_id const id) {
-        id_string_.assign(id_str.data(), id_str.size());
-        id_ = id;
-    }
-
-    loot_table_def_id id() const noexcept {
-        return id_;
-    }
-private:
-    template <typename Write>
-    void roll_all_(random_t& gen, defs_t defs, Write&& write) const {
-        //TODO change to an algorithm
-        for (size_t i = 0; i < rules_.size(); ++i) {
-            auto const& rule = rules_[i];
-
-            auto const num = roll_data_[i*2 + 0];
-            auto const den = roll_data_[i*2 + 1];
-
-            auto const lo = static_cast<uint16_t>(0);
-            auto const hi = static_cast<uint16_t>(den - 1);
-
-            auto const roll = random::uniform_range(gen, lo, hi);
-            if (roll < num) {
-                roll_one_(gen, defs, rule, std::forward<Write>(write));
-            }
-        }
-    }
-    
-    template <typename Write>
-    void choose_one_(random_t& gen, defs_t defs, Write&& write) const {
-        auto const find_index = [&](uint32_t const n) {
-            int i = 0;
-            for (auto const sum : roll_data_) {
-                if (n < sum) { return i; }
-                ++i;
-            }
-
-            BK_TODO_FAIL();
-        };
-
-        auto const  sum  = roll_data_.back();
-        auto const  roll = random::uniform_range<uint16_t>(gen, uint16_t {0}, sum - 1);
-        auto const  i    = find_index(roll);
-        auto const& rule = rules_[i];
-
-        roll_one_(gen, defs, rule, std::forward<Write>(write));
-    }
-
-    template <typename Write>
-    void roll_one_(random_t& gen, defs_t defs, rule_t rule, Write&& write) const {
-        using id_t = loot_rule_data_t::id_t;
-        
-        if (rule.id_type == id_t::item_ref) {
-            roll_one_item_(gen, rule, std::forward<Write>(write));
-        } else if (rule.id_type == id_t::table_ref) {
-            roll_one_table_(gen, defs, rule, std::forward<Write>(write));
-        } else {
-            BK_TODO_FAIL();
-        }
-    }
-
-    template <typename Write>
-    void roll_one_item_(random_t& gen, rule_t rule, Write&& write) const {
-        BK_ASSERT_DBG(rule.id_type == loot_rule_data_t::id_t::item_ref);
-
-        auto const id = item_def_id {rule.id};
-        auto const n  = random::uniform_range(gen, rule.count_lo, rule.count_hi);
-
-        if (n > 0) {
-            write(id, n);
-        }
-    }
-
-    template <typename Write>
-    void roll_one_table_(random_t& gen, defs_t defs, rule_t rule, Write&& write) const {
-        BK_ASSERT_DBG(rule.id_type == loot_rule_data_t::id_t::table_ref);
-
-        auto const id = loot_table_def_id {rule.id};
-        auto const n  = random::uniform_range(gen, rule.count_lo, rule.count_hi);
-
-        auto const& table = defs[id];
-
-        repeat_n(n, [&] {
-            table.generate(gen, defs, std::forward<Write>(write));
-        });
-    }
-
-    std::vector<uint16_t>         roll_data_;
-    std::vector<loot_rule_data_t> rules_;
-    utf8string                    id_string_;
-    loot_table_def_id             id_;
-    roll_t                        type_;
-};
-
+// ROOT -> {FILE_TYPE, DEFINITIONS}
+//
+// FILE_TYPE -> "file_type": "LOOT"
+//
+// DEFINITIONS -> "definitions": [DEFINITION*]
+//
+// DEFINITION -> LOOT_TABLE
 
 // LOOT_TABLE -> NAMED_TABLE | SIMPLE_TABLE
 //
@@ -242,6 +69,245 @@ private:
 // COUNT -> int | [int, int]
 //
 // TYPE -> null | "ITEM" | "TABLE"
+
+class loot_table_definitions;
+class loot_table_definitions_impl;
+class loot_table_;
+
+//==============================================================================
+//! data defining the result of a successful roll.
+//==============================================================================
+struct loot_rule_data_t {
+    enum class id_t : uint8_t {
+        item_ref  //!< the rule refers to an item definition.
+      , table_ref //!< the rule refers to a loot table definition.
+    };
+
+    using string_t = std::array<char, 31>;
+
+    hash_t   id;              //!< id of the resulting item or table.
+    uint16_t count_lo;        //!< the lower bound on the quantity generated.
+    uint16_t count_hi;        //!< the upper bound on the quantity generated.
+    string_t id_debug_string; //!< snipped of the string used to generate the id hash.
+    id_t     id_type;         //!< indicated either an item or table result.
+};
+
+//==============================================================================
+//! collection of named loot tables.
+//==============================================================================
+class loot_table_definitions {
+public:
+    ~loot_table_definitions();
+
+    loot_table_definitions();
+    loot_table_definitions(loot_table_definitions&&);
+    loot_table_definitions& operator=(loot_table_definitions&&);
+
+    //--------------------------------------------------------------------------
+    void load_definitions(json::cref data);
+
+    //--------------------------------------------------------------------------
+    loot_table_ const& operator[](loot_table_def_id id) const;
+private:
+    std::unique_ptr<loot_table_definitions_impl> impl_;
+};
+
+//==============================================================================
+//! the definition for a single loot table.
+//==============================================================================
+class loot_table_ {
+public:
+    enum class roll_t {
+        roll_all   //!< all entries are rolled for success / failure.
+      , choose_one //!< one weighted entry is chosen.
+    };
+
+    using defs_t = loot_table_definitions const&;
+    using rule_t = loot_rule_data_t const&;
+
+    using write_t = std::function<void (item_def_id, int)>;
+
+    //--------------------------------------------------------------------------
+    loot_table_(loot_table_&&)                 = default;
+    loot_table_& operator=(loot_table_&&)      = default;
+    loot_table_(loot_table_ const&)            = delete;
+    loot_table_& operator=(loot_table_ const&) = delete;
+
+    //--------------------------------------------------------------------------
+    loot_table_()
+      : type_ {roll_t::roll_all}
+    {
+    }
+
+    //--------------------------------------------------------------------------
+    template <typename Data, typename Rules>
+    loot_table_(
+        roll_t const  type
+      , Data   const& data
+      , Rules  const& rules
+    )
+      : type_ {type}
+    {
+        auto const size_data  = data.size();
+        auto const size_rules = rules.size();
+
+        BK_ASSERT_DBG(
+            (type == roll_t::roll_all)   && (size_data == size_rules * 2)
+         || (type == roll_t::choose_one) && (size_data == size_rules * 1)
+        );
+
+        append_to(data,  roll_data_);
+        append_to(rules, rules_);
+
+        tranform_data_();
+    }
+
+    //--------------------------------------------------------------------------
+    template <typename Write>
+    void generate(random_t& gen, defs_t defs, Write&& write) const {
+        if (type_ == roll_t::roll_all) {
+            roll_all_(gen, defs, std::forward<Write>(write));
+        } else if (type_ == roll_t::choose_one) {
+            choose_one_(gen, defs, std::forward<Write>(write));
+        } else {
+            BK_TODO_FAIL();
+        }
+    }
+
+    //--------------------------------------------------------------------------
+    void set_id(string_ref const id_str, loot_table_def_id const id) {
+        id_string_.assign(id_str.data(), id_str.size());
+        id_ = id;
+    }
+
+    //--------------------------------------------------------------------------
+    loot_table_def_id id() const noexcept {
+        return id_;
+    }
+private:
+    //--------------------------------------------------------------------------
+    void tranform_data_() {
+        if (type_ != roll_t::choose_one) {
+            return;
+        }
+
+        constexpr auto max = min_max_value<uint16_t>::max;
+        
+        uint32_t sum = 0;
+
+        for (auto& w : roll_data_) {
+            auto const new_w = w + sum;
+
+            if (new_w > max) {
+                BK_TODO_FAIL();
+            }
+
+            w   = static_cast<uint16_t>(new_w);
+            sum = w;
+        }
+    }
+
+    //--------------------------------------------------------------------------
+    template <typename Write>
+    void roll_all_(random_t& gen, defs_t defs, Write&& write) const {
+        repeat_n(rules_.size(), [&](size_t const i) {
+            auto const& rule = rules_[i];
+
+            auto const num = roll_data_[i*2 + 0];
+            auto const den = roll_data_[i*2 + 1];
+
+            auto const lo = static_cast<uint16_t>(0);
+            auto const hi = static_cast<uint16_t>(den - 1);
+
+            auto const roll = random::uniform_range(gen, lo, hi);
+            if (roll < num) {
+                roll_one_(gen, defs, rule, std::forward<Write>(write));
+            }
+        });
+    }
+    
+    //--------------------------------------------------------------------------
+    template <typename Write>
+    void choose_one_(random_t& gen, defs_t defs, Write&& write) const {
+        auto const find_index = [&](uint32_t const n) {
+            int i = 0;
+            for (auto const sum : roll_data_) {
+                if (n < sum) { return i; }
+                ++i;
+            }
+
+            BK_TODO_FAIL();
+        };
+
+        auto const  sum  = roll_data_.back();
+        auto const  roll = random::uniform_range<uint16_t>(gen, uint16_t {0}, sum - 1);
+        auto const  i    = find_index(roll);
+        auto const& rule = rules_[i];
+
+        roll_one_(gen, defs, rule, std::forward<Write>(write));
+    }
+
+    //--------------------------------------------------------------------------
+    template <typename Write>
+    void roll_one_(random_t& gen, defs_t defs, rule_t rule, Write&& write) const {
+        using id_t = loot_rule_data_t::id_t;
+        
+        if (rule.id_type == id_t::item_ref) {
+            roll_one_item_(gen, rule, std::forward<Write>(write));
+        } else if (rule.id_type == id_t::table_ref) {
+            roll_one_table_(gen, defs, rule, std::forward<Write>(write));
+        } else {
+            BK_TODO_FAIL();
+        }
+    }
+
+    //--------------------------------------------------------------------------
+    template <typename Write>
+    void roll_one_item_(random_t& gen, rule_t rule, Write&& write) const {
+        BK_ASSERT_DBG(rule.id_type == loot_rule_data_t::id_t::item_ref);
+
+        auto const id = item_def_id {rule.id};
+        auto const n  = random::uniform_range(gen, rule.count_lo, rule.count_hi);
+
+        if (n > 0) {
+            write(id, n);
+        }
+    }
+
+    //--------------------------------------------------------------------------
+    template <typename Write>
+    void roll_one_table_(random_t& gen, defs_t defs, rule_t rule, Write&& write) const {
+        BK_ASSERT_DBG(rule.id_type == loot_rule_data_t::id_t::table_ref);
+
+        auto const id = loot_table_def_id {rule.id};
+        auto const n  = random::uniform_range(gen, rule.count_lo, rule.count_hi);
+
+        auto const& table = defs[id];
+
+        repeat_n(n, [&] {
+            table.generate(gen, defs, std::forward<Write>(write));
+        });
+    }
+
+    //--------------------------------------------------------------------------
+    std::vector<uint16_t>         roll_data_;
+    std::vector<loot_rule_data_t> rules_;
+    utf8string                    id_string_;
+    loot_table_def_id             id_;
+    roll_t                        type_;
+};
+
+} //namespace bkrl
+
+////////////////////////////////////////////////////////////////////////////////
+// .cpp
+////////////////////////////////////////////////////////////////////////////////
+
+namespace bkrl {
+
+//==============================================================================
+//! loot_table_parser
+//==============================================================================
 class loot_table_parser {
 public:
     enum : size_t {
@@ -252,6 +318,7 @@ public:
       , index_type   = 3
     };
 
+    //--------------------------------------------------------------------------
     static auto make_rule(
         string_ref                    const id
       , std::pair<uint16_t, uint16_t> const count
@@ -279,6 +346,7 @@ public:
         return std::make_pair(std::move(rule), data);
     }
 
+    //--------------------------------------------------------------------------
     static auto make_rule(
         string_ref                    const id
       , std::pair<uint16_t, uint16_t> const count
@@ -509,18 +577,9 @@ private:
     loot_table_def_id             table_id_;
 };
 
-loot_table_ const& loot_table_definitions::operator[](loot_table_def_id id) const {
-    static loot_table_ table;
-    return table;
-}
-
-// ROOT -> {FILE_TYPE, DEFINITIONS}
-//
-// FILE_TYPE -> "file_type": "LOOT"
-//
-// DEFINITIONS -> "definitions": [DEFINITION*]
-//
-// DEFINITION -> LOOT_TABLE
+//==============================================================================
+//! loot_table_definitions_parser
+//==============================================================================
 class loot_table_definitions_parser {
 public:
     //--------------------------------------------------------------------------
@@ -561,7 +620,7 @@ public:
         rule_file_type(definitions);
         rule_definitions(definitions);
     }
-private:
+protected:
     loot_table_parser table_parser_;
 
     template <typename K, typename V>
@@ -572,31 +631,55 @@ private:
 
 } //namespace bkrl
 
-namespace {
-
-char const entity_string[] = R"(
-{ "file_type": "ENTITY"
-, "file_name": "./data/entities.bmp"
-, "tile_size": [18, 18]
-, "player" : [13, 13]
-, "definitions": [
-    { "id": "SKELETON"
-    , "tile": [5, 9]
-    , "color": [85, 85, 85]
-    , "health": ["dice", 3, 4]
-    , "items": [
-        [10, "BASIC_WEAPON", 1, "TABLE"]
-      , [10, "BASIC_POTION", 1, "TABLE"]
-      , [50, "WEAPON_SHORT_BOW", 1, "ITEM"]
-      ]
+//==============================================================================
+//! loot_table_definitions_impl
+//==============================================================================
+class bkrl::loot_table_definitions_impl : loot_table_definitions_parser {
+public:
+    //--------------------------------------------------------------------------
+    void load_definitions(json::cref data) {
+        rule_root(data);
     }
-  ]
+
+    //--------------------------------------------------------------------------
+    loot_table_ const& operator[](loot_table_def_id const id) const {
+        auto const result = tables_.find(id);
+        
+        if (result == std::cend(tables_)) {
+            BK_TODO_FAIL();
+        }
+
+        return result->second;
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// loot_table_definitions
+////////////////////////////////////////////////////////////////////////////////
+bkrl::loot_table_definitions::~loot_table_definitions() = default;
+
+bkrl::loot_table_definitions::loot_table_definitions(loot_table_definitions&&) = default;
+bkrl::loot_table_definitions&
+
+bkrl::loot_table_definitions::operator=(loot_table_definitions&&) = default;
+
+bkrl::loot_table_definitions::loot_table_definitions()
+  : impl_ {std::make_unique<loot_table_definitions_impl>()}
+{
 }
-)";
 
+void bkrl::loot_table_definitions::load_definitions(json::cref data) {
+    impl_->load_definitions(data);
+}
 
-} //namespace
+bkrl::loot_table_ const&
+bkrl::loot_table_definitions::operator[](loot_table_def_id const id) const {
+    return (*impl_)[id];
+}
 
+////////////////////////////////////////////////////////////////////////////////
+// tests
+////////////////////////////////////////////////////////////////////////////////
 
 TEST_CASE("Loot test simple", "[loot]") {
     char const table[] = R"(
@@ -692,20 +775,9 @@ TEST_CASE("Loot test definitions", "[loot]") {
     }
     )";
 
-    bkrl::loot_table_definitions        defs;
-    bkrl::loot_table_definitions_parser parser;
-    bkrl::random_t                      rand {900010};
-    std::map<bkrl::hash_t, int>         rolls;
+    bkrl::loot_table_definitions defs;
 
     auto json = bkrl::json::common::from_memory(table_defs);
-    parser.rule_root(json);
 
-    //for (int i = 0; i < 10000; ++i) {
-    //    result.generate(rand, defs, [&](bkrl::item_def_id const id, int const n) {
-    //        BK_ASSERT(n > 0);
-
-    //        auto& sum = rolls[bkrl::id_to_value(id)];
-    //        sum++;
-    //    });
-    //}
+    defs.load_definitions(json);
 }

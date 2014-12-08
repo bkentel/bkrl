@@ -36,6 +36,11 @@ BK_DEF_MINMAX(int16_t, INT16_MIN, INT16_MAX);
 BK_DEF_MINMAX(int32_t, INT32_MIN, INT32_MAX);
 BK_DEF_MINMAX(int64_t, INT64_MIN, INT64_MAX);
 
+BK_DEF_MINMAX(uint8_t,  0, UINT8_MAX );
+BK_DEF_MINMAX(uint16_t, 0, UINT16_MAX);
+BK_DEF_MINMAX(uint32_t, 0, UINT32_MAX);
+BK_DEF_MINMAX(uint64_t, 0, UINT64_MAX);
+
 #undef BK_DEF_MINMAX
 
 ////////////////////////////////////////////////////////////////////////////////
