@@ -247,6 +247,7 @@
     <ClInclude Include="..\lib\json11\json11.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <Natvis Include="bkrl.natvis" />
     <Natvis Include="boost_container.natvis">
       <SubType>Designer</SubType>
     </Natvis>

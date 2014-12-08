@@ -260,5 +260,6 @@
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="boost_container.natvis" />
+    <Natvis Include="bkrl.natvis" />
   </ItemGroup>
 </Project>

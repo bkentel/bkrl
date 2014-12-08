@@ -1,6 +1,7 @@
 #include "catch/catch.hpp"
 
 #include <vector>
+#include <boost/container/flat_map.hpp>
 #include "items.hpp"
 #include "json.hpp"
 #include "random.hpp"
@@ -26,6 +27,7 @@ struct loot_rule_data_t {
     uint16_t count_lo;
     uint16_t count_hi;
     id_t     id_type;
+    std::array<char, 16> id_debug_string;
 };
 
 //==============================================================================
@@ -66,6 +68,11 @@ public:
     {
     }
 
+    loot_table_(loot_table_&&) = default;
+    loot_table_& operator=(loot_table_&&) = default;
+    loot_table_(loot_table_ const&) = delete;
+    loot_table_& operator=(loot_table_ const&) = delete;
+
     template <typename Data, typename Rules>
     loot_table_(
         roll_t const  type
@@ -78,9 +85,9 @@ public:
         auto const size_rules = rules.size();
 
         if (type == roll_t::roll_all) {
-            BK_ASSERT_DBG(size_rules == size_data * 2);
+            BK_ASSERT_DBG(size_data == size_rules * 2);
         } else if (type == roll_t::choose_one) {
-            BK_ASSERT_DBG(size_rules == size_data);
+            BK_ASSERT_DBG(size_data == size_rules);
         }
 
         using std::begin;
@@ -96,8 +103,8 @@ public:
             uint16_t sum = 0;
             for (auto& w : roll_data_) {
                 auto const n = w;
-                w = sum;
-                sum += n;
+                w += sum;
+                sum = w;
             }
         }
     }
@@ -112,9 +119,33 @@ public:
             BK_TODO_FAIL();
         }
     }
+
+    void set_id(string_ref const id_str, loot_table_def_id const id) {
+        id_string_.assign(id_str.data(), id_str.size());
+        id_ = id;
+    }
+
+    loot_table_def_id id() const noexcept {
+        return id_;
+    }
 private:
     template <typename Write>
     void roll_all_(random_t& gen, defs_t defs, Write&& write) const {
+        //TODO change to an algorithm
+        for (size_t i = 0; i < rules_.size(); ++i) {
+            auto const& rule = rules_[i];
+
+            auto const num = roll_data_[i*2 + 0];
+            auto const den = roll_data_[i*2 + 1];
+
+            auto const lo = static_cast<uint16_t>(0);
+            auto const hi = static_cast<uint16_t>(den - 1);
+
+            auto const roll = random::uniform_range(gen, lo, hi);
+            if (roll < num) {
+                roll_one_(gen, defs, rule, std::forward<Write>(write));
+            }
+        }
     }
     
     template <typename Write>
@@ -122,7 +153,7 @@ private:
         auto const find_index = [&](uint32_t const n) {
             int i = 0;
             for (auto const sum : roll_data_) {
-                if (n <= sum) { return i; }
+                if (n < sum) { return i; }
                 ++i;
             }
 
@@ -130,7 +161,7 @@ private:
         };
 
         auto const  sum  = roll_data_.back();
-        auto const  roll = random::uniform_range<uint16_t>(gen, 0, sum - 1);
+        auto const  roll = random::uniform_range<uint16_t>(gen, uint16_t {0}, sum - 1);
         auto const  i    = find_index(roll);
         auto const& rule = rules_[i];
 
@@ -142,7 +173,7 @@ private:
         using id_t = loot_rule_data_t::id_t;
         
         if (rule.id_type == id_t::item_ref) {
-            roll_one_item_(gen, defs, rule, std::forward<Write>(write));
+            roll_one_item_(gen, rule, std::forward<Write>(write));
         } else if (rule.id_type == id_t::table_ref) {
             roll_one_table_(gen, defs, rule, std::forward<Write>(write));
         } else {
@@ -151,7 +182,7 @@ private:
     }
 
     template <typename Write>
-    void roll_one_item_(random_t& gen, defs_t defs, rule_t rule, Write&& write) const {
+    void roll_one_item_(random_t& gen, rule_t rule, Write&& write) const {
         BK_ASSERT_DBG(rule.id_type == loot_rule_data_t::id_t::item_ref);
 
         auto const id = item_def_id {rule.id};
@@ -178,7 +209,9 @@ private:
 
     std::vector<uint16_t>         roll_data_;
     std::vector<loot_rule_data_t> rules_;
-    roll_t type_;
+    utf8string                    id_string_;
+    loot_table_def_id             id_;
+    roll_t                        type_;
 };
 
 
@@ -213,27 +246,53 @@ class loot_table_parser {
 public:
     enum : size_t {
         index_weight = 0
+      , index_chance = 0
       , index_id     = 1
       , index_count  = 2
       , index_type   = 3
     };
 
-    std::pair<loot_rule_data_t, std::pair<uint16_t, uint16_t>>
-    make_rule(
-        hash_t                        const id
+    static auto make_rule(
+        string_ref                    const id
       , std::pair<uint16_t, uint16_t> const count
       , loot_rule_data_t::id_t        const type
-      , uint16_t                      const data0
-      , uint16_t                      const data1
+      , std::pair<uint16_t, uint16_t> const data
     ) {
-        return std::make_pair(
-            loot_rule_data_t {id, count.first, count.second, type}
-          , std::make_pair(data0, data1)
-        ); 
+        loot_rule_data_t rule;
+
+        rule.id       = slash_hash32(id);
+        rule.count_lo = count.first;
+        rule.count_hi = count.second;
+        rule.id_type  = type;
+
+        auto const size = std::min(id.size(), rule.id_debug_string.size());
+
+        std::copy_n(
+            std::cbegin(id)
+          , size
+          , std::begin(rule.id_debug_string)
+        );
+
+        auto const last = std::min(size, rule.id_debug_string.size() - 1);
+        rule.id_debug_string[last] = 0;
+
+        return std::make_pair(std::move(rule), data);
     }
 
-    auto rule_weight(json::cref value) {
-        auto const w = json::require_int<uint16_t>(value);
+    static auto make_rule(
+        string_ref                    const id
+      , std::pair<uint16_t, uint16_t> const count
+      , loot_rule_data_t::id_t        const type
+      , uint16_t                      const data
+    ) {
+        return make_rule(id, count, type, std::make_pair(data, uint16_t {}));
+    }
+
+    //--------------------------------------------------------------------------
+    auto rule_weight(json::cref value) const {
+        auto const& weight = value[index_weight];
+
+        auto const w = json::require_int<uint16_t>(weight);
         if (w <= 0) {
             BK_TODO_FAIL();
         }
@@ -241,16 +300,20 @@ public:
         return w;
     }
 
-    auto rule_id(json::cref value) {
-        auto const str = json::require_string(value);
-        return slash_hash32(str);
+    //--------------------------------------------------------------------------
+    auto rule_id(json::cref value) const {
+        auto const& id = value[index_id];
+        return json::require_string(id);
     }
 
-    auto rule_count(json::cref value) {
-        if (value.is_array()) {
+    //--------------------------------------------------------------------------
+    auto rule_count(json::cref value) const {
+        auto const& count = value[index_count];
+
+        if (count.is_array()) {
             auto result = std::make_pair(
-                json::require_int<uint16_t>(value[0])
-              , json::require_int<uint16_t>(value[1])
+                json::require_int<uint16_t>(count[0])
+              , json::require_int<uint16_t>(count[1])
             );
 
             if (result.second == 0 || result.first >= result.second) {
@@ -260,7 +323,7 @@ public:
             return result;
         }
 
-        auto const n = json::require_int<uint16_t>(value);
+        auto const n = json::require_int<uint16_t>(count);
         if (n <= 0) {
             BK_TODO_FAIL();
         }
@@ -268,30 +331,43 @@ public:
         return std::make_pair(n, n);
     }
 
-    auto rule_chance(json::cref value) {
-        json::require_array(value, 1, 2);
+    //--------------------------------------------------------------------------
+    auto rule_chance(json::cref value) const {
+        auto const& chance = value[index_chance];
 
-        auto const size = value.array_items().size();
+        if (!chance.is_array()) {
+            auto const n = json::require_int<uint16_t>(chance);
+            if (n > 100) {
+                BK_TODO_FAIL();
+            }
 
-        auto const num = json::require_int<uint16_t>(value[0]);
-        auto const den = (size == 1) ? 100 : json::require_int<uint16_t>(value[1]);
+            return std::make_pair(n, uint16_t {100});
+        }
 
-        if (num == 0 || den == 0) {
+        json::require_array(chance, 2, 2);
+
+        auto const num = json::require_int<uint16_t>(chance[0]);
+        auto const den = json::require_int<uint16_t>(chance[1]);
+
+        if (num == 0 || den == 0 || num > den) {
             BK_TODO_FAIL();
         }
 
         return std::make_pair(num, den);
     }
 
-    auto rule_type(json::cref value) {
+    //--------------------------------------------------------------------------
+    auto rule_type(json::cref value) const {
+        auto const& type = value[index_type];
+
         static auto const item_hash  = slash_hash32("ITEM");
         static auto const table_hash = slash_hash32("TABLE");
         
-        if (value.is_null()) {
+        if (type.is_null()) {
             return loot_rule_data_t::id_t::item_ref;
         }
 
-        auto const str  = json::require_string(value);
+        auto const str  = json::require_string(type);
         auto const hash = slash_hash32(str);
 
         if (hash == item_hash) {
@@ -305,59 +381,36 @@ public:
         return loot_rule_data_t::id_t::table_ref;
     }
 
-    auto rule_choose_one_2(json::cref value) {
-        return make_rule(
-            rule_id(value[index_id])
-          , std::make_pair(1, 1)
-          , loot_rule_data_t::id_t::item_ref
-          , rule_weight(value[index_weight])
-          , 0
-        );
-    }
-    
-    auto rule_choose_one_3(json::cref value) {
-        return make_rule(
-            rule_id(value[index_id])
-          , rule_count(value[index_count])
-          , loot_rule_data_t::id_t::item_ref
-          , rule_weight(value[index_weight])
-          , 0
-        );
-    }
-
-    auto rule_choose_one_4(json::cref value) {
-        return make_rule(
-            rule_id(value[index_id])
-          , rule_count(value[index_count])
-          , rule_type(value[index_type])
-          , rule_weight(value[index_weight])
-          , 0
-        );
-    }
-
-    auto rule_rule(json::cref value) {
+    //--------------------------------------------------------------------------
+    auto rule_choose_one_rule(json::cref value) {
         json::require_array(value, 2, 4);
 
         auto const size = value.array_items().size();
-        if (size == 2) {
-            return rule_choose_one_2(value);
-        } else if (size == 3) {
-            return rule_choose_one_3(value);
-        }
-
-        if (size != 4) {
-            BK_TODO_FAIL();
-        }
-
-        return rule_choose_one_4(value);
+        
+        return make_rule(
+            rule_id(value)
+          , (size > 2) ? rule_count(value) : std::make_pair(1, 1)
+          , (size > 3) ? rule_type(value)  : loot_rule_data_t::id_t::item_ref
+          , rule_weight(value)
+        );
     }
 
-    void rule_named_table(json::cref value) {
-    
-        //table_type_ = loot_table_::roll_t::roll_all;
+    //--------------------------------------------------------------------------
+    auto rule_roll_all_rule(json::cref value) {
+        json::require_array(value, 2, 4);
+
+        auto const size = value.array_items().size();
+        
+        return make_rule(
+            rule_id(value)
+          , (size > 2) ? rule_count(value) : std::make_pair(1, 1)
+          , (size > 3) ? rule_type(value)  : loot_rule_data_t::id_t::item_ref
+          , rule_chance(value)
+        );
     }
 
-    void rule_simple_table(json::cref value) {
+    //--------------------------------------------------------------------------
+    void rule_rules(json::cref value) {
         json::require_array(value, 1);
 
         auto const size = value.array_items().size();
@@ -365,18 +418,72 @@ public:
         rules_.reserve(size);
         rule_data_.reserve(size);
 
-        for(auto const& rule : value.array_items()) {
-            std::tie(cur_rule_, cur_data_) = rule_rule(rule);
-            rules_.push_back(cur_rule_);
-            rule_data_.push_back(cur_data_.first);
+        if (table_type_ == loot_table_::roll_t::roll_all) {
+            for(auto const& rule : value.array_items()) {
+                std::tie(cur_rule_, cur_data_) = rule_roll_all_rule(rule);
+                rules_.push_back(cur_rule_);
+                rule_data_.push_back(cur_data_.first);
+                rule_data_.push_back(cur_data_.second);
+            }
+        } else if (table_type_ == loot_table_::roll_t::choose_one) {
+            for(auto const& rule : value.array_items()) {
+                std::tie(cur_rule_, cur_data_) = rule_choose_one_rule(rule);
+                rules_.push_back(cur_rule_);
+                rule_data_.push_back(cur_data_.first);
+            }
         }
 
-        table_type_ = loot_table_::roll_t::choose_one;
     }
 
+    //--------------------------------------------------------------------------
+    void rule_named_table_id(json::cref value) {
+        table_string_ = json::common::get_id_string(value).to_string();
+        table_id_     = loot_table_def_id {slash_hash32(table_string_)};
+    }
+    
+    //--------------------------------------------------------------------------
+    void rule_named_table_type(json::cref value) {
+        static auto const hash_choose_one = slash_hash32("choose_one");
+        static auto const hash_roll_all   = slash_hash32("roll_all");
+
+        auto const& type = value[string_ref{"type"}];
+
+        if (type.is_null()) {
+            table_type_ = loot_table_::roll_t::roll_all;
+            return;
+        }
+
+        auto const str  = json::require_string(type);
+        auto const hash = slash_hash32(str);
+
+        if (hash == hash_choose_one) {
+            table_type_ = loot_table_::roll_t::choose_one;
+        } else if (hash == hash_roll_all) {
+            table_type_ = loot_table_::roll_t::roll_all;
+        } else {
+            BK_TODO_FAIL();
+        }
+    }
+
+    //--------------------------------------------------------------------------
+    void rule_named_table(json::cref value) {
+        rule_named_table_id(value);
+        rule_named_table_type(value);
+        rule_rules(value[string_ref{"rules"}]);
+    }
+
+    //--------------------------------------------------------------------------
+    void rule_simple_table(json::cref value) {
+        table_type_ = loot_table_::roll_t::roll_all;
+        rule_rules(value);
+    }
+
+    //--------------------------------------------------------------------------
     loot_table_ rule_root(json::cref value) {
         rule_data_.clear();
         rules_.clear();
+        table_string_.clear();
+        table_id_ = loot_table_def_id {0};
 
         if (value.is_object()) {
             rule_named_table(value);
@@ -386,21 +493,82 @@ public:
             BK_TODO_FAIL();
         }
 
-        return loot_table_ {table_type_, rule_data_, rules_};
+        auto result = loot_table_ {table_type_, rule_data_, rules_};
+        result.set_id(table_string_, table_id_);
+        
+        return result;
     }
-   
+private:
     loot_rule_data_t              cur_rule_;
     std::pair<uint16_t, uint16_t> cur_data_;
 
     std::vector<uint16_t>         rule_data_;
     std::vector<loot_rule_data_t> rules_;
     loot_table_::roll_t           table_type_;
+    utf8string                    table_string_;
+    loot_table_def_id             table_id_;
 };
 
 loot_table_ const& loot_table_definitions::operator[](loot_table_def_id id) const {
     static loot_table_ table;
     return table;
 }
+
+// ROOT -> {FILE_TYPE, DEFINITIONS}
+//
+// FILE_TYPE -> "file_type": "LOOT"
+//
+// DEFINITIONS -> "definitions": [DEFINITION*]
+//
+// DEFINITION -> LOOT_TABLE
+class loot_table_definitions_parser {
+public:
+    //--------------------------------------------------------------------------
+    void rule_definition(json::cref value) {
+        auto table = table_parser_.rule_root(value);
+        auto const id = table.id();
+
+        auto const result = tables_.emplace(id, std::move(table));
+        if (!result.second) {
+            BK_TODO_FAIL();
+        }
+    }
+    
+    //--------------------------------------------------------------------------
+    void rule_definitions(json::cref value) {
+        auto const& defs = json::require_array(value[string_ref{"definitions"}], 1);
+
+        for (auto const& def : defs.array_items()) {
+            rule_definition(def);
+        }
+    }
+    
+    //--------------------------------------------------------------------------
+    void rule_file_type(json::cref value) const {
+        static auto const hash_loot = slash_hash32("LOOT");
+
+        auto const str  = json::require_string(value[string_ref{"file_type"}]);
+        auto const hash = slash_hash32(str);
+
+        if (hash != hash_loot) {
+            BK_TODO_FAIL();
+        }
+    }
+    
+    //--------------------------------------------------------------------------
+    void rule_root(json::cref value) {
+        auto const& definitions = json::require_object(value);
+        rule_file_type(definitions);
+        rule_definitions(definitions);
+    }
+private:
+    loot_table_parser table_parser_;
+
+    template <typename K, typename V>
+    using map_t = boost::container::flat_map<K, V, std::less<>>;
+
+    map_t<loot_table_def_id, loot_table_> tables_;
+};
 
 } //namespace bkrl
 
@@ -427,72 +595,117 @@ char const entity_string[] = R"(
 )";
 
 
-
-char const tables_string[] = R"(
-{ "file_type": "LOOT"
-, "definitions": [
-    { "id": "BASIC_WEAPON"
-    , "type": "CHOOSE_ONE"
-    , "rules": [
-        [1, "WEAPON_SWORD_SHORT", 1]
-      , [1, "WEAPON_LONG_SWORD", 1]
-      , [1, "WEAPON_HAMMER", 1]
-      , [1, "WEAPON_STAFF", 1]
-      , [1, "WEAPON_DAGGER", 1]
-      , [1, "WEAPON_AXE", 1]
-      ]
-    }
-  , { "id": "TEST"
-    , "type": "DEFAULT"
-    , "rules": [
-        [10, "BASIC_WEAPON", 1, "TABLE"]
-      , [10, "BASIC_POTION", 1, "TABLE"]
-      , [50, "WEAPON_SHORT_BOW", 1]
-      ]
-    }
-  ]
-}
-)";
-
-char const tables_simple[] = R"(
-{ "loot": [
-    [1, "WEAPON_SWORD_SHORT"]
-  , [1, "WEAPON_LONG_SWORD"]
-  , [10, "WEAPON_HAMMER"]
-  , [1, "WEAPON_STAFF"]
-  , [1, "WEAPON_DAGGER"]
-  , [1, "WEAPON_AXE"]
-  , [1, "POTION_MINOR", [0, 3]]
-  ]
-}
-)";
-
 } //namespace
 
 
-TEST_CASE("Loot test", "[llot]") {
-    bkrl::loot_table_parser parser;
-
-    auto json = bkrl::json::common::from_memory(tables_simple);
-
-    auto const result = parser.rule_root(json[bkrl::string_ref("loot")]);
-
-    bkrl::random_t rand {10010};
+TEST_CASE("Loot test simple", "[loot]") {
+    char const table[] = R"(
+    { "loot": [
+        [10,  "WEAPON_SWORD_SHORT"]
+      , [10,  "WEAPON_LONG_SWORD"]
+      , [20,  "WEAPON_HAMMER"]
+      , [10,  "WEAPON_STAFF"]
+      , [10,  "WEAPON_DAGGER"]
+      , [10,  "WEAPON_AXE"]
+      , [100, "TROPHY"]
+      , [[1, 250], "POTION_MINOR", [1, 3]]
+      ]
+    }
+    )";
 
     bkrl::loot_table_definitions defs;
+    bkrl::loot_table_parser      parser;
+    bkrl::random_t               rand {900010};
+    std::map<bkrl::hash_t, int>  rolls;
 
-    std::map<bkrl::hash_t, int> rolls;
+    auto json = bkrl::json::common::from_memory(table);
+    auto const result = parser.rule_root(json[bkrl::string_ref("loot")]);
 
-    for (int i = 0; i < 1000000; ++i) {
+    for (int i = 0; i < 10000; ++i) {
+        result.generate(rand, defs, [&](bkrl::item_def_id const id, int const n) {
+            BK_ASSERT(n > 0);
 
-    result.generate(rand, defs, [&](bkrl::item_def_id const id, int const n) {
-        BK_ASSERT(n > 0);
-
-        auto& sum = rolls[bkrl::id_to_value(id)];
-        sum++;
-
-        //printf("rolled %u of %x\n", n, bkrl::id_to_value(id));
-    });
-
+            auto& sum = rolls[bkrl::id_to_value(id)];
+            sum++;
+        });
     }
+}
+
+TEST_CASE("Loot test named", "[loot]") {
+char const table[] = R"(
+    { "id": "BASIC_WEAPON"
+    , "type": "choose_one"
+    , "rules": [
+        [10, "WEAPON_SWORD_SHORT"]
+      , [10, "WEAPON_LONG_SWORD"]
+      , [1,  "TROPHY"]
+      , [10, "WEAPON_HAMMER"]
+      , [10, "WEAPON_STAFF"]
+      , [10, "WEAPON_DAGGER"]
+      , [2,  "POTION_MINOR", [1, 5]]
+      , [10, "WEAPON_AXE"]
+      ]
+    }
+    )";
+
+    bkrl::loot_table_definitions defs;
+    bkrl::loot_table_parser      parser;
+    bkrl::random_t               rand {900010};
+    std::map<bkrl::hash_t, int>  rolls;
+
+    auto json = bkrl::json::common::from_memory(table);
+    auto const result = parser.rule_root(json);
+
+    for (int i = 0; i < 6300; ++i) {
+        result.generate(rand, defs, [&](bkrl::item_def_id const id, int const n) {
+            BK_ASSERT(n > 0);
+
+            auto& sum = rolls[bkrl::id_to_value(id)];
+            sum++;
+        });
+    }
+}
+
+TEST_CASE("Loot test definitions", "[loot]") {
+    char const table_defs[] = R"(
+    { "file_type": "LOOT"
+    , "definitions": [
+        { "id": "BASIC_WEAPON"
+        , "type": "choose_one"
+        , "rules": [
+            [1, "WEAPON_SWORD_SHORT", 1]
+          , [1, "WEAPON_LONG_SWORD", 1]
+          , [1, "WEAPON_HAMMER", 1]
+          , [1, "WEAPON_STAFF", 1]
+          , [1, "WEAPON_DAGGER", 1]
+          , [1, "WEAPON_AXE", 1]
+          ]
+        }
+      , { "id": "TEST"
+        , "rules": [
+            [10, "BASIC_WEAPON", 1, "TABLE"]
+          , [10, "BASIC_POTION", 1, "TABLE"]
+          , [50, "WEAPON_SHORT_BOW", 1]
+          ]
+        }
+      ]
+    }
+    )";
+
+    bkrl::loot_table_definitions        defs;
+    bkrl::loot_table_definitions_parser parser;
+    bkrl::random_t                      rand {900010};
+    std::map<bkrl::hash_t, int>         rolls;
+
+    auto json = bkrl::json::common::from_memory(table_defs);
+    parser.rule_root(json);
+
+    //for (int i = 0; i < 10000; ++i) {
+    //    result.generate(rand, defs, [&](bkrl::item_def_id const id, int const n) {
+    //        BK_ASSERT(n > 0);
+
+    //        auto& sum = rolls[bkrl::id_to_value(id)];
+    //        sum++;
+    //    });
+    //}
 }

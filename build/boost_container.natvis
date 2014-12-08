@@ -250,14 +250,6 @@
     </Expand>
 </Type>
 
-<!-- boost <= 1.54 -->
-<Type Name="boost::container::stable_vector_detail::iterator&lt;*&gt;">
-    <DisplayString>{pn->value}</DisplayString>
-    <Expand>
-        <Item Name="[value]">pn->value</Item>
-    </Expand>
-</Type>
-
 <!-- boost 1.55 >= -->
 <Type Name="boost::container::stable_vector&lt;*,*&gt;">
     <DisplayString>{{ size={index.m_holder.m_size ? index.m_holder.m_size - ExtraPointers : 0} }}</DisplayString>
@@ -287,17 +279,17 @@
 </Type>
 
 <Type Name="std::basic_string&lt;char,*&gt;">
-  <DisplayString Condition="_Myres &lt; _BUF_SIZE">{_Bx._Buf,s8}</DisplayString>
-  <DisplayString Condition="_Myres &gt;= _BUF_SIZE">{_Bx._Ptr,s8}</DisplayString>
-  <StringView Condition="_Myres &lt; _BUF_SIZE">_Bx._Buf,s8</StringView>
-  <StringView Condition="_Myres &gt;= _BUF_SIZE">_Bx._Ptr,s8</StringView>
+  <DisplayString Condition="_Mypair._Myval2._Myres &lt; _BUF_SIZE">{_Mypair._Myval2._Bx._Buf,s8}</DisplayString>
+  <DisplayString Condition="_Mypair._Myval2._Myres &gt;= _BUF_SIZE">{_Mypair._Myval2._Bx._Ptr,s8}</DisplayString>
+  <StringView Condition="_Mypair._Myval2._Myres &lt; _BUF_SIZE">_Mypair._Myval2._Bx._Buf,s8</StringView>
+  <StringView Condition="_Mypair._Myval2._Myres &gt;= _BUF_SIZE">_Mypair._Myval2._Bx._Ptr,s8</StringView>
   <Expand>
-    <Item Name="[size]">_Mysize</Item>
-    <Item Name="[capacity]">_Myres</Item>
+    <Item Name="[size]">_Mypair._Myval2._Mysize</Item>
+    <Item Name="[capacity]">_Mypair._Myval2._Myres</Item>
     <ArrayItems>
-      <Size>_Mysize</Size>
-      <ValuePointer Condition="_Myres &lt; _BUF_SIZE">_Bx._Buf</ValuePointer>
-      <ValuePointer Condition="_Myres &gt;= _BUF_SIZE">_Bx._Ptr</ValuePointer>
+      <Size>_Mypair._Myval2._Mysize</Size>
+      <ValuePointer Condition="_Mypair._Myval2._Myres &lt; _BUF_SIZE">_Mypair._Myval2._Bx._Buf</ValuePointer>
+      <ValuePointer Condition="_Mypair._Myval2._Myres &gt;= _BUF_SIZE">_Mypair._Myval2._Bx._Ptr</ValuePointer>
     </ArrayItems>
   </Expand>
 </Type>
