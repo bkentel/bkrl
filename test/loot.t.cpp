@@ -234,7 +234,13 @@ public:
     void set_id(string_ref const id_str, loot_table_def_id const id);
 
     //--------------------------------------------------------------------------
-    loot_table_def_id id() const noexcept;
+    loot_table_def_id id() const noexcept { return id_; }
+
+    //--------------------------------------------------------------------------
+    string_ref id_string() const noexcept { return id_string_; }
+
+    //--------------------------------------------------------------------------
+    roll_t type() const noexcept { return type_; }
 private:
     //--------------------------------------------------------------------------
     void tranform_data_();
@@ -491,10 +497,15 @@ public:
 
     //--------------------------------------------------------------------------
     void rule_named_table_id(json::cref value) {
-        auto const id = json::require_string_id(value, json::common::field_id);
+        auto const& id = value[json::common::field_id];
+        if (id.is_null()) {
+            return;
+        }
 
-        assign(id.first, table_string_);
-        table_id_ = loot_table_def_id {id.second};
+        auto const string_id = json::require_string_id(id);
+
+        assign(string_id.first, table_string_);
+        table_id_ = loot_table_def_id {string_id.second};
     }
     
     //--------------------------------------------------------------------------
@@ -565,6 +576,10 @@ public:
         auto table = table_parser_.rule_root(value);
         auto const id = table.id();
 
+        if (table.id() == loot_table_def_id {0}) {
+            BK_TODO_FAIL();
+        }
+
         auto const result = tables_.emplace(id, std::move(table));
         if (!result.second) {
             BK_TODO_FAIL();
@@ -580,7 +595,7 @@ public:
     
     //--------------------------------------------------------------------------
     void rule_file_type(json::cref value) const {
-        json::common::get_filetype(value, string_ref{"file_type"}); //TODO
+        json::common::get_filetype(value, string_ref{"LOOT"}); //TODO
     }
     
     //--------------------------------------------------------------------------
@@ -625,12 +640,6 @@ void bkrl::loot_table_::generate(random_t& gen, defs_t defs, write_t const& writ
 void bkrl::loot_table_::set_id(string_ref const id_str, loot_table_def_id const id) {
     id_string_.assign(id_str.data(), id_str.size());
     id_ = id;
-}
-
-//--------------------------------------------------------------------------
-bkrl::loot_table_def_id
-bkrl::loot_table_::id() const noexcept {
-    return id_;
 }
 
 //--------------------------------------------------------------------------
@@ -783,103 +792,253 @@ bkrl::loot_table_definitions::operator[](loot_table_def_id const id) const {
 // tests
 ////////////////////////////////////////////////////////////////////////////////
 
-TEST_CASE("Loot test simple", "[loot]") {
+struct test_data {
+    struct result_t {
+        result_t()
+          : count {0}
+          , min_n {std::numeric_limits<int>::max()}
+          , max_n {std::numeric_limits<int>::min()}
+        {
+        }
+
+        void increment(int const n) {
+            ++count;
+
+            min_n = std::min(n, min_n);
+            max_n = std::max(n, max_n);
+        }
+
+        bool check_with_tolerance(
+            double const expected
+          , double const tolerance
+        ) const {
+            auto const delta = std::abs(count - expected);
+            return delta <= expected * tolerance;
+        }
+
+        bool check_min_max(int const lo, int const hi) const {
+            return min_n == lo && max_n == hi;
+        }
+
+        int count;
+        int min_n;
+        int max_n;
+    };
+
+    bkrl::loot_table_definitions defs;
+    
+    bkrl::random_t gen {900010};
+    
+    std::map<bkrl::hash_t, result_t> results;
+
+    auto make_table(char const* data, bkrl::string_ref const root = "") {    
+        bkrl::loot_table_parser parser;
+
+        auto json = bkrl::json::common::from_memory(data);
+        return root.empty()
+            ? parser.rule_root(json)
+            : parser.rule_root(json[bkrl::string_ref("loot")]);
+    }
+
+    void roll_sink(bkrl::item_def_id const id, uint16_t const n) {
+        results[bkrl::id_to_value(id)].increment(n);
+    }
+
+    void roll(bkrl::loot_table_ const& table, size_t const n) {
+        auto const f = [&](bkrl::item_def_id const id, uint16_t const n) {
+            roll_sink(id, n);
+        };
+
+        for (size_t i = 0; i < n; ++i) {
+            table.generate(gen, defs, f);
+        }
+    }
+};
+
+//==============================================================================
+TEST_CASE("Check a roll_all table with a single percentage entry", "[loot_table]") {
+    constexpr auto iterations = 1000;
+
     char const table[] = R"(
-    { "loot": [
-        [10,  "WEAPON_SWORD_SHORT"]
-      , [10,  "WEAPON_LONG_SWORD"]
-      , [20,  "WEAPON_HAMMER"]
-      , [10,  "WEAPON_STAFF"]
-      , [10,  "WEAPON_DAGGER"]
-      , [10,  "WEAPON_AXE"]
-      , [100, "TROPHY"]
-      , [[1, 250], "POTION_MINOR", [1, 3]]
-      ]
-    }
-    )";
-
-    bkrl::loot_table_definitions defs;
-    bkrl::loot_table_parser      parser;
-    bkrl::random_t               rand {900010};
-    std::map<bkrl::hash_t, int>  rolls;
-
-    auto json = bkrl::json::common::from_memory(table);
-    auto const result = parser.rule_root(json[bkrl::string_ref("loot")]);
-
-    for (int i = 0; i < 10000; ++i) {
-        result.generate(rand, defs, [&](bkrl::item_def_id const id, int const n) {
-            BK_ASSERT(n > 0);
-
-            auto& sum = rolls[bkrl::id_to_value(id)];
-            sum++;
-        });
-    }
-}
-
-TEST_CASE("Loot test named", "[loot]") {
-char const table[] = R"(
-    { "id": "BASIC_WEAPON"
-    , "type": "choose_one"
+    { "type": "roll_all"
     , "rules": [
-        [10, "WEAPON_SWORD_SHORT"]
-      , [10, "WEAPON_LONG_SWORD"]
-      , [1,  "TROPHY"]
-      , [10, "WEAPON_HAMMER"]
-      , [10, "WEAPON_STAFF"]
-      , [10, "WEAPON_DAGGER"]
-      , [2,  "POTION_MINOR", [1, 5]]
-      , [10, "WEAPON_AXE"]
+        [10, "TEST"]
       ]
     }
     )";
 
-    bkrl::loot_table_definitions defs;
-    bkrl::loot_table_parser      parser;
-    bkrl::random_t               rand {900010};
-    std::map<bkrl::hash_t, int>  rolls;
+    test_data test;
+    auto const test_table = test.make_table(table);
+    test.roll(test_table, iterations);
 
-    auto json = bkrl::json::common::from_memory(table);
-    auto const result = parser.rule_root(json);
-
-    for (int i = 0; i < 6300; ++i) {
-        result.generate(rand, defs, [&](bkrl::item_def_id const id, int const n) {
-            BK_ASSERT(n > 0);
-
-            auto& sum = rolls[bkrl::id_to_value(id)];
-            sum++;
-        });
-    }
+    REQUIRE(test.results.size() == 1);
+    
+    auto const& result = test.results.begin()->second;
+    
+    REQUIRE(result.check_min_max(1, 1));
+    REQUIRE(result.check_with_tolerance(iterations * (10.0 / 100.0), 0.1));
 }
 
-TEST_CASE("Loot test definitions", "[loot]") {
+//==============================================================================
+TEST_CASE("Check a roll_all table with a single fractional entry", "[loot_table]") {
+    constexpr auto iterations = 1000;
+
+    char const table[] = R"(
+    { "type": "roll_all"
+    , "rules": [
+        [[2, 3], "TEST"]
+      ]
+    }
+    )";
+
+    test_data test;
+    auto const test_table = test.make_table(table);
+    test.roll(test_table, iterations);
+
+    REQUIRE(test.results.size() == 1);
+    
+    auto const& result = test.results.begin()->second;
+    
+    REQUIRE(result.check_min_max(1, 1));
+    REQUIRE(result.check_with_tolerance(iterations * (2.0 / 3.0), 0.1));
+}
+
+//==============================================================================
+TEST_CASE("Check a roll_all table with a single guarenteed entry", "[loot_table]") {
+    constexpr auto iterations = 1000;
+
+    char const table[] = R"(
+    { "type": "roll_all"
+    , "rules": [
+        [100, "TEST"]
+      ]
+    }
+    )";
+
+    test_data test;
+    auto const test_table = test.make_table(table);
+    test.roll(test_table, iterations);
+
+    REQUIRE(test.results.size() == 1);
+    
+    auto const& result = test.results.begin()->second;
+    REQUIRE(result.count == iterations);
+    REQUIRE(result.check_min_max(1, 1));
+}
+
+//==============================================================================
+TEST_CASE("Check uniform quantity with 0", "[loot_table]") {   
+    constexpr auto iterations = 100;
+
+    char const table[] = R"(
+    { "type": "choose_one"
+    , "rules": [
+        [1, "TEST", [0, 10]]
+      ]
+    }
+    )";
+
+    test_data test;
+    auto const test_table = test.make_table(table);
+    test.roll(test_table, iterations);
+
+    REQUIRE(test.results.size() == 1);
+    
+    auto const& result = test.results.begin()->second;
+    
+    //A result of 0 quantity means that loot is never generated
+    REQUIRE(result.count <= iterations);
+    REQUIRE(result.check_min_max(1, 10));
+}
+
+//==============================================================================
+TEST_CASE("Check a choose_one table with a single entry", "[loot_table]") {
+    constexpr auto iterations = 100;
+
+    char const table[] = R"(
+    { "type": "choose_one"
+    , "rules": [
+        [1, "TEST"]
+      ]
+    }
+    )";
+
+    test_data test;
+    auto const test_table = test.make_table(table);
+    test.roll(test_table, iterations);
+
+    REQUIRE(test.results.size() == 1);
+    
+    auto const& result = test.results.begin()->second;
+    REQUIRE(result.count == iterations);
+    REQUIRE(result.check_min_max(1, 1));
+}
+
+//==============================================================================
+TEST_CASE("Check a choose_one table with unevenly weighted entries", "[loot_table]") {
+    constexpr auto iterations = 1000;
+
+    char const table[] = R"(
+    { "type": "choose_one"
+    , "rules": [
+        [2,  "TEST0"]
+      , [10, "TEST1"]
+      ]
+    }
+    )";
+
+    test_data test;
+    auto const test_table = test.make_table(table);
+    test.roll(test_table, iterations);
+
+    REQUIRE(test.results.size() == 2);
+    
+    auto it = test.results.begin();
+
+    auto const& result0 = it->second;
+    auto const& result1 = (++it)->second;
+
+    REQUIRE((result0.count + result1.count) == iterations);
+
+    REQUIRE(result0.check_min_max(1, 1));
+    REQUIRE(result1.check_min_max(1, 1));
+
+    auto const expected0 = iterations * ( 2.0 / 12.0);
+    auto const expected1 = iterations * (10.0 / 12.0);
+
+    REQUIRE(result0.check_with_tolerance(expected0, 0.1));
+    REQUIRE(result1.check_with_tolerance(expected1, 0.1));
+}
+
+//==============================================================================
+TEST_CASE("Simple check loot_table_definitions", "[loot_table]") {
     char const table_defs[] = R"(
     { "file_type": "LOOT"
     , "definitions": [
-        { "id": "BASIC_WEAPON"
+        { "id": "ID0"
         , "type": "choose_one"
-        , "rules": [
-            [1, "WEAPON_SWORD_SHORT", 1]
-          , [1, "WEAPON_LONG_SWORD", 1]
-          , [1, "WEAPON_HAMMER", 1]
-          , [1, "WEAPON_STAFF", 1]
-          , [1, "WEAPON_DAGGER", 1]
-          , [1, "WEAPON_AXE", 1]
-          ]
+        , "rules": [[1, "TEST"]]
         }
-      , { "id": "TEST"
-        , "rules": [
-            [10, "BASIC_WEAPON", 1, "table"]
-          , [10, "BASIC_POTION", 1, "table"]
-          , [50, "WEAPON_SHORT_BOW", 1]
-          ]
+      , { "id": "ID1"
+        , "type": "roll_all"
+        , "rules": [[1, "TEST"]]
+        }
+      , { "id": "ID2"
+        , "rules": [[1, "TEST"]]
         }
       ]
     }
     )";
 
     bkrl::loot_table_definitions defs;
-
     auto json = bkrl::json::common::from_memory(table_defs);
-
     defs.load_definitions(json);
+
+    auto const& t0 = defs[bkrl::loot_table_def_id {bkrl::slash_hash32("ID0")}];
+    auto const& t1 = defs[bkrl::loot_table_def_id {bkrl::slash_hash32("ID1")}];
+    auto const& t2 = defs[bkrl::loot_table_def_id {bkrl::slash_hash32("ID2")}];
+
+    REQUIRE(t0.type() == bkrl::loot_table_::roll_t::choose_one);
+    REQUIRE(t1.type() == bkrl::loot_table_::roll_t::roll_all);
+    REQUIRE(t2.type() == bkrl::loot_table_::roll_t::roll_all);
 }

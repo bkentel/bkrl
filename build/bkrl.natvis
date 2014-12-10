@@ -17,6 +17,10 @@
      Condition = "id_type == loot_rule_data_t::id_t::table_ref">
       {{ (table) [{count_lo}, {count_hi}] {id_debug_string._Elems,s} }}
     </DisplayString>
+    <DisplayString
+     Condition = "id_type != loot_rule_data_t::id_t::table_ref &amp;&amp; id_type != loot_rule_data_t::id_t::item_ref">
+      {{ invalid }}
+    </DisplayString>
     <Expand>
       <Synthetic Name="quantity">
         <DisplayString>[{count_lo}, {count_hi}]</DisplayString>
@@ -26,7 +30,7 @@
 
   <Type Name="bkrl::loot_table_">
     <DisplayString Condition="id_.value_" >{{ id={id_string_} }}</DisplayString>
-    <DisplayString Condition="!id_.value_">{{ id={{empty}} }}</DisplayString>
+    <DisplayString Condition="!id_.value_">{{ anonymous }}</DisplayString>
     <Expand>
       <Item Name="[type]">type_</Item>
       <Item Name="[size]">rules_._Mypair._Myval2._Mylast - rules_._Mypair._Myval2._Myfirst</Item>
