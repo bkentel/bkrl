@@ -1,7 +1,14 @@
 <?xml version='1.0' encoding='utf-8'?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
-  <Type Name="bkrl::loot_rule_data_t">
+    <Type Name="bkrl::tagged_id &lt; * &gt;">
+      <DisplayString>{{ id={value_,x} }}</DisplayString>
+      <Expand>
+        <Item Name="[tag]">"$T1"</Item>
+      </Expand>
+    </Type>
+
+    <Type Name="bkrl::loot_rule_data_t">
     <DisplayString
      Condition = "id_type == loot_rule_data_t::id_t::item_ref">
       {{ (item) [{count_lo}, {count_hi}] {id_debug_string._Elems,s} }}
@@ -18,7 +25,7 @@
   </Type>
 
   <Type Name="bkrl::loot_table_">
-    <DisplayString Condition="id_.value_" >{{ id={id_string_}({id_.value_,x}) }}</DisplayString>
+    <DisplayString Condition="id_.value_" >{{ id={id_string_} }}</DisplayString>
     <DisplayString Condition="!id_.value_">{{ id={{empty}} }}</DisplayString>
     <Expand>
       <Item Name="[type]">type_</Item>
