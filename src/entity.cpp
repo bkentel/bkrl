@@ -1,5 +1,6 @@
 #include "entity.hpp"
 #include "json.hpp"
+#include "loot_table.hpp"
 
 #include <boost/container/flat_map.hpp>
 
@@ -16,7 +17,7 @@ struct bkrl::entity_definition {
 
     entity_def_id id;      //!< entity id
     utf8string    id_string;
-    dist_t        items;   //!< number of carried items
+    loot_table    drops;
     tex_point_i   tile_position = tex_point_i {0, 0};
     argb8         tile_color = argb8 {255, 255, 255, 255};
     dist_t        health;  //!< health
@@ -135,7 +136,15 @@ public:
 
     //--------------------------------------------------------------------------
     void rule_ent_items(cref value) {
-        cur_def_.items = jc::get_random(value[jc::field_items]);
+        //TODO need to reuse the parser somehow
+
+        auto const& items = value[jc::field_items];
+
+        if (items.is_null()) {
+            return;
+        }
+        
+        cur_def_.drops = loot_table::make_table(items);
     }
 
     //--------------------------------------------------------------------------
@@ -378,24 +387,19 @@ bkrl::generate_entity(
     result.data.health = ranged_value<health_t> {max_health};
     result.data.position = {0, 0};
 
-    auto const item_count = def.items(gen);
-
-    if (item_count == 0) {
-        return result;
-    }
-
     item_birthplace origin;
     origin.type = item_birthplace::entity;
     origin.id   = id_to_value(id);
 
-    auto const ltable = loot_table {};
-   
-    for (int i = 0; i < item_count; ++i) {
-        result.data.items.insert(
-            generate_item(gen, items, item_defs, ltable, origin)
-        );
-    }
+    //TODO temp
+    loot_table_definitions defs;
 
+    def.drops.generate(gen, defs, [&](item_def_id const itm_id, uint16_t const n) {
+        result.data.items.insert(
+            generate_item(gen, itm_id, items, item_defs, origin)
+        );
+    });
+   
     return result;
 }
 

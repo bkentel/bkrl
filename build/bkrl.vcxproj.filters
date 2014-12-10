@@ -120,6 +120,9 @@
     <ClCompile Include="..\test\loot.t.cpp">
       <Filter>test</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\loot_table.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\engine_client.hpp">
@@ -255,6 +258,9 @@
       <Filter>include\common</Filter>
     </ClInclude>
     <ClInclude Include="..\include\combat_types.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\loot_table.hpp">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

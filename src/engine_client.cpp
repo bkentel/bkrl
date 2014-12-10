@@ -16,6 +16,8 @@
 #include "definitions.hpp"
 #include "gui.hpp"
 
+#include "loot_table.hpp"
+
 #include <boost/container/static_vector.hpp>
 #include <boost/format.hpp>
 
@@ -950,6 +952,9 @@ private:
         item_birthplace origin;
         origin.type = item_birthplace::floor;
 
+        //TODO temp
+        loot_table_definitions defs;
+
         for (auto const& room : rooms_) {
             if (random::percent(substantive) < 70) {
                 continue;
@@ -967,10 +972,10 @@ private:
                 }
             }
 
-            items_.insert_at(
-                p
-              , generate_item(substantive, items, item_defs, loot_table {}, origin)
-            );
+            //items_.insert_at(
+            //    p
+            //  , generate_item(substantive, items, item_defs, loot_table {}, origin)
+            //);
         }
     }
 

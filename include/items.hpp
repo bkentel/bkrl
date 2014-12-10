@@ -29,6 +29,7 @@ class item_stack;
 class item_store;
 class item_definitions;
 class equipment;
+class loot_table;
 
 class message_map;
 
@@ -560,17 +561,6 @@ private:
 };
 
 //==============================================================================
-//! @TODO
-//==============================================================================
-class loot_table {
-public:
-    item_def_id operator()(random_t&) const {
-        return item_def_id {0};
-    }
-private:
-};
-
-//==============================================================================
 //!
 //==============================================================================
 class equipment {
@@ -604,9 +594,9 @@ private:
 //==============================================================================
 item_id generate_item(
     random_t&               gen
+  , item_def_id             id
   , item_store&             store
   , item_definitions const& defs
-  , loot_table       const& table
   , item_birthplace         origin
 );
 

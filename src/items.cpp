@@ -5,6 +5,7 @@
 #include "assert.hpp"
 #include "algorithm.hpp"
 #include "json.hpp"
+#include "loot_table.hpp"
 
 #include "messages.hpp" //TODO
 
@@ -916,15 +917,13 @@ bkrl::item_definitions::get_definition_at(int const index) const {
 bkrl::item_id
 bkrl::generate_item(
     random_t&               gen
+  , item_def_id      const  id
   , item_store&             store
   , item_definitions const& item_defs
-  , loot_table       const& table
   , item_birthplace  const  origin
-) {
-    auto const size = item_defs.get_definitions_size();
-    auto const i    = random::uniform_range(gen, 0, size - 1);
-    auto const& def = item_defs.get_definition_at(i);
-    
+) {   
+    auto const& def = item_defs.get_definition(id);
+
     item itm;
     itm.id     = def.id;;
     itm.type   = def.type;

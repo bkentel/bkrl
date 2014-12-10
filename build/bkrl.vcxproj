@@ -153,6 +153,7 @@
     <ClCompile Include="..\src\items.cpp" />
     <ClCompile Include="..\src\json.cpp" />
     <ClCompile Include="..\src\keyboard.cpp" />
+    <ClCompile Include="..\src\loot_table.cpp" />
     <ClCompile Include="..\src\main.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)'=='Test_Debug'">true</ExcludedFromBuild>
     </ClCompile>
@@ -185,7 +186,14 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="..\test\loot.t.cpp" />
+    <ClCompile Include="..\test\loot.t.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Test_Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\test\main.t.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)'!='Test_Debug'">true</ExcludedFromBuild>
     </ClCompile>
@@ -225,6 +233,7 @@
     <ClInclude Include="..\include\json.hpp" />
     <ClInclude Include="..\include\json_forward.hpp" />
     <ClInclude Include="..\include\keyboard.hpp" />
+    <ClInclude Include="..\include\loot_table.hpp" />
     <ClInclude Include="..\include\macros.hpp" />
     <ClInclude Include="..\include\math.hpp" />
     <ClInclude Include="..\include\messages.hpp" />

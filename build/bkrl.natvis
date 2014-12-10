@@ -28,7 +28,7 @@
     </Expand>
   </Type>
 
-  <Type Name="bkrl::loot_table_">
+  <Type Name="bkrl::loot_table">
     <DisplayString Condition="id_.value_" >{{ id={id_string_} }}</DisplayString>
     <DisplayString Condition="!id_.value_">{{ anonymous }}</DisplayString>
     <Expand>
@@ -46,20 +46,20 @@
 
           <Item
            Name      = "[{i}] weight"
-           Condition = "type_ == bkrl::loot_table_::roll_t::choose_one"
+           Condition = "type_ == bkrl::loot_table::roll_t::choose_one"
           >
             roll_data_._Mypair._Myval2._Myfirst[i] - sum
           </Item>
           
           <Item
            Name      = "[{i}] chance"
-           Condition = "type_ == bkrl::loot_table_::roll_t::roll_all"
+           Condition = "type_ == bkrl::loot_table::roll_t::roll_all"
           >
             ((float)roll_data_._Mypair._Myval2._Myfirst[2*i + 0] / roll_data_._Mypair._Myval2._Myfirst[2*i + 1])*100
           </Item>
           
           <Exec>++i</Exec>
-          <Exec Condition="type_ == bkrl::loot_table_::roll_t::choose_one">sum = roll_data_._Mypair._Myval2._Myfirst[i - 1]</Exec>
+          <Exec Condition="type_ == bkrl::loot_table::roll_t::choose_one">sum = roll_data_._Mypair._Myval2._Myfirst[i - 1]</Exec>
         </Loop>
       </CustomListItems>
     </Expand>
