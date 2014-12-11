@@ -14,7 +14,7 @@ int main(int, char**) try {
     bkrl::engine_client client {defs};
 
     return 0;
-} catch (std::exception& e) {
+} catch (std::exception&) {
     std::abort();
 } catch (...) {
     std::abort();

@@ -23,6 +23,7 @@ class loot_table_definitions;
 class loot_table;
 
 namespace detail { class loot_table_definitions_impl; }
+namespace detail { class loot_table_parser_impl; }
 
 //==============================================================================
 //! data defining the result of a successful roll.
@@ -87,16 +88,16 @@ public:
     loot_table();
 
     //--------------------------------------------------------------------------
-    static loot_table make_table(json::cref data);
-
-    //--------------------------------------------------------------------------
     template <typename Data, typename Rules>
     loot_table(
-        roll_t const  type
-      , Data   const& data
-      , Rules  const& rules
+        string_ref const  id_string
+      , roll_t     const  type
+      , Data       const& data
+      , Rules      const& rules
     )
-      : type_ {type}
+      : id_string_(std::begin(id_string), std::end(id_string))
+      , id_ {slash_hash32(id_string)}
+      , type_ {type}
     {
         auto const size_data  = data.size();
         auto const size_rules = rules.size();
@@ -151,6 +152,19 @@ private:
     utf8string                    id_string_;
     loot_table_def_id             id_;
     roll_t                        type_;
+};
+
+//==============================================================================
+//! json parser for loot tables.
+//==============================================================================
+class loot_table_parser {
+public:
+    ~loot_table_parser();
+    loot_table_parser();
+
+    loot_table parse(json::cref data);
+private:
+    std::unique_ptr<detail::loot_table_parser_impl> impl_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////

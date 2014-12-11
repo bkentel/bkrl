@@ -285,6 +285,7 @@ extern field_string const filetype_entity;
 extern field_string const filetype_tilemap;
 extern field_string const filetype_keymap;
 extern field_string const filetype_messages;
+extern field_string const filetype_loot;
 //------------------------------------------------------------------------------
 template <typename T> path_string         get_path_string(T)          = delete;
 template <typename T> path_string         get_filename(T)             = delete;

@@ -49,6 +49,7 @@ field_string const jc::filetype_entity   {"ENTITY"};
 field_string const jc::filetype_tilemap  {"TILEMAP"};
 field_string const jc::filetype_keymap   {"KEYMAP"};
 field_string const jc::filetype_messages {"MESSAGE"};
+field_string const jc::filetype_loot     {"LOOT"};
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------

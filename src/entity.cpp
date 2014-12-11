@@ -136,15 +136,13 @@ public:
 
     //--------------------------------------------------------------------------
     void rule_ent_items(cref value) {
-        //TODO need to reuse the parser somehow
-
         auto const& items = value[jc::field_items];
 
         if (items.is_null()) {
             return;
         }
         
-        cur_def_.drops = loot_table::make_table(items);
+        cur_def_.drops = loot_parser_.parse(items);
     }
 
     //--------------------------------------------------------------------------
@@ -238,6 +236,8 @@ private:
     using map_t = boost::container::flat_map<K, V, std::less<>>;
 
     using locale_map = map_t<entity_def_id, locale>;
+
+    loot_table_parser loot_parser_;
 
     definition cur_def_;
     locale     cur_loc_;

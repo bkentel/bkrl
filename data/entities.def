@@ -4,7 +4,16 @@
 , "player" : [13, 13]
 , "definitions": [
     { "id": "SKELETON"
-    , "items": [[100, "ARMOR_LEATHER_COAT"]]
+    , "items": [
+        [10, "ARMOR_LEATHER_COAT"]
+      , [10, "ARMOR_LEATHER_LEGGINGS"]
+      , [10, "ARMOR_LEATHER_BOOTS"]
+      , [10, "ARMOR_LEATHER_CAP"]
+      , [10, "WEAPON_DAGGER"]
+      , [10, "POTION_HEALTH_MINOR"]
+      , [3,  "POTION_HEALTH_MEDIUM"]
+      , [1,  "POTION_HEALTH_MAJOR"]
+      ]
     , "tile": [5, 9]
     , "color": [85, 85, 85]
     , "health": ["dice", 3, 4]

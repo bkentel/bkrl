@@ -97,12 +97,10 @@ inline void append_to(SrcCont const& src, DstCont& dst) {
     dst.insert(end(dst), begin(src), end(src));
 }
 
-
-
 //==============================================================================
-//! loot_table_parser
+//! loot_table_parser_impl
 //==============================================================================
-class loot_table_parser {
+class detail::loot_table_parser_impl {
 public:
     using id_t    = loot_rule_data_t::id_t;
     using roll_t  = loot_table::roll_t;
@@ -373,10 +371,7 @@ public:
             BK_TODO_FAIL();
         }
 
-        auto result = loot_table {table_type_, rule_data_, rules_};
-        result.set_id(table_string_, table_id_);
-        
-        return result;
+        return loot_table {table_string_, table_type_, rule_data_, rules_};
     }
 private:
     loot_rule_data_t              cur_rule_;
@@ -428,7 +423,7 @@ public:
         rule_definitions(definitions);
     }
 protected:
-    loot_table_parser table_parser_;
+    detail::loot_table_parser_impl table_parser_;
 
     template <typename K, typename V>
     using map_t = boost::container::flat_map<K, V, std::less<>>;
@@ -446,13 +441,6 @@ protected:
 bkrl::loot_table::loot_table()
   : type_ {roll_t::roll_all}
 {
-}
-
-//--------------------------------------------------------------------------
- bkrl::loot_table
- bkrl::loot_table::make_table(json::cref data) {
-    loot_table_parser parser;
-    return parser.rule_root(data);
 }
 
 //--------------------------------------------------------------------------
@@ -571,7 +559,6 @@ void bkrl::loot_table::roll_one_table_(random_t& gen, defs_t defs, rule_t rule, 
     });
 }
 
-
 //==============================================================================
 //! loot_table_definitions_impl
 //==============================================================================
@@ -616,4 +603,19 @@ void bkrl::loot_table_definitions::load_definitions(json::cref data) {
 bkrl::loot_table const&
 bkrl::loot_table_definitions::operator[](loot_table_def_id const id) const {
     return (*impl_)[id];
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// loot_table_parser
+////////////////////////////////////////////////////////////////////////////////
+
+bkrl::loot_table_parser::~loot_table_parser() = default;
+
+bkrl::loot_table_parser::loot_table_parser()
+  : impl_ {std::make_unique<detail::loot_table_parser_impl>()}
+{
+}
+
+bkrl::loot_table bkrl::loot_table_parser::parse(json::cref data) {
+    return impl_->rule_root(data);
 }

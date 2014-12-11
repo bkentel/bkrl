@@ -20,12 +20,15 @@ bkrl::data_definitions::set_language(lang_id const lang) {
 
 bkrl::filetype
 bkrl::data_definitions::get_file_type(json::cref value) {
+    //TODO clean this up
+
     static auto const hash_config  = slash_hash32(jc::filetype_config);
     static auto const hash_locale  = slash_hash32(jc::filetype_locale);
     static auto const hash_texmap  = slash_hash32(jc::filetype_tilemap);
     static auto const hash_item    = slash_hash32(jc::filetype_item);
     static auto const hash_entitiy = slash_hash32(jc::filetype_entity);
     static auto const hash_keymap  = slash_hash32(jc::filetype_keymap);
+    static auto const hash_loot    = slash_hash32(jc::filetype_loot);
 
     auto const type = jc::get_filetype(value);
     auto const hash = slash_hash32(type);
@@ -36,6 +39,7 @@ bkrl::data_definitions::get_file_type(json::cref value) {
     else if (hash == hash_item)    { return filetype::item; }
     else if (hash == hash_entitiy) { return filetype::entity; }
     else if (hash == hash_keymap)  { return filetype::keymap; }
+    else if (hash == hash_loot)    { return filetype::loot_table; }
 
     return filetype::invalid;
 }
@@ -92,18 +96,24 @@ bkrl::data_definitions::load_keymap(json::cref value) {
 }
 
 void
+bkrl::data_definitions::load_loot_table(json::cref value) {
+    loot_table_defs_.load_definitions(value);
+}
+
+void
 bkrl::data_definitions::load_files() {
     for (auto const& filename : files_) {
         auto const value = jc::from_file(filename);
         auto const type  = get_file_type(value);
 
         switch (type) {
-        case filetype::config  : load_config(value);  break;
-        case filetype::locale  : load_locale(value);  break;
-        case filetype::texmap  : load_texmap(value);  break;
-        case filetype::item    : load_item(value);    break;
-        case filetype::entity  : load_entity(value);  break;
-        case filetype::keymap  : load_keymap(value);  break;
+        case filetype::config     : load_config(value);     break;
+        case filetype::locale     : load_locale(value);     break;
+        case filetype::texmap     : load_texmap(value);     break;
+        case filetype::item       : load_item(value);       break;
+        case filetype::entity     : load_entity(value);     break;
+        case filetype::keymap     : load_keymap(value);     break;
+        case filetype::loot_table : load_loot_table(value); break;
         }
     }
 }
