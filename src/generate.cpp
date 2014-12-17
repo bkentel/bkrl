@@ -17,20 +17,18 @@ simple_room::generate(
   , grid_region        const bounds
   , bkrl::room_id      const id
 ) {
-    random::uniform_int dist;
-
     //TODO temp
     //auto const w = bounds.width();
     //auto const h = bounds.height();
 
-    auto const w = dist.generate(gen, 4, bounds.width());
-    auto const h = dist.generate(gen, 4, bounds.height());
+    auto const w = random::uniform_range(gen, 4, bounds.width());
+    auto const h = random::uniform_range(gen, 4, bounds.height());
 
     auto const slack_w = bounds.width()  - w;
     auto const slack_h = bounds.height() - h;
 
-    auto const left   = dist.generate(gen, 0, slack_w);
-    auto const top    = dist.generate(gen, 0, slack_h);
+    auto const left   = random::uniform_range(gen, 0, slack_w);
+    auto const top    = random::uniform_range(gen, 0, slack_h);
     auto const right  = left + w;
     auto const bottom = top + h;
 

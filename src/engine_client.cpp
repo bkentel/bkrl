@@ -708,19 +708,8 @@ public:
             return move_result::blocked_bounds;
         }
 
-        switch (grid_.get(attribute::tile_type, p)) {
-        case tile_type::invalid  : // TODO for debug
-        case tile_type::floor    :
-        case tile_type::corridor :
-        case tile_type::stair    :
-            break;
-        case tile_type::door :
-            if (door_data {grid_, p}.is_closed()) {
-                return move_result::blocked_terrain;
-            }
-            break;
-        default :
-            return move_result::blocked_terrain;
+        if (!ent.can_pass_tile(p, grid_)) {
+            return move_result::blocked_terrain; 
         }
 
         auto const& other_ent = entity_at(p);
@@ -946,14 +935,12 @@ private:
 
     //--------------------------------------------------------------------------
     void place_items_(random::generator& substantive) {
-        auto& items     = *item_store_;
+        auto&       items     = *item_store_;
         auto const& item_defs = definitions_->get_items();
+        auto const& loot_defs = definitions_->get_loot_tables();
 
         item_birthplace origin;
         origin.type = item_birthplace::floor;
-
-        //TODO temp
-        loot_table_definitions defs;
 
         for (auto const& room : rooms_) {
             if (random::percent(substantive) < 70) {
@@ -970,7 +957,9 @@ private:
                 if (grid_.get(attribute::tile_type, q) == tile_type::floor) {
                     p = q;
                 }
-            }
+            }          
+
+            //TODO
 
             //items_.insert_at(
             //    p
@@ -980,32 +969,33 @@ private:
     }
 
     //--------------------------------------------------------------------------
-    move_result can_place_at(ipoint2 const p, entity const& ent) const {
-        if (!grid_.is_valid(p)) {
-            return move_result::blocked_bounds;
-        }
+    //move_result can_place_at(ipoint2 const p, entity const& ent) const {
+    //   
+    //    if (!grid_.is_valid(p)) {
+    //        return move_result::blocked_bounds;
+    //    }
 
-        switch (grid_.get(attribute::tile_type, p)) {
-        case tile_type::floor    :
-        case tile_type::corridor :
-        case tile_type::stair    :
-            break;
-        case tile_type::door : //TODO
-        default :
-            return move_result::blocked_terrain;
-        }
+    //    switch (grid_.get(attribute::tile_type, p)) {
+    //    case tile_type::floor    :
+    //    case tile_type::corridor :
+    //    case tile_type::stair    :
+    //        break;
+    //    case tile_type::door : //TODO
+    //    default :
+    //        return move_result::blocked_terrain;
+    //    }
 
-        auto const& other_ent = entity_at(p);
-        if (!other_ent) {
-            return move_result::ok;
-        }
+    //    auto const& other_ent = entity_at(p);
+    //    if (!other_ent) {
+    //        return move_result::ok;
+    //    }
 
-        if (*other_ent == ent) {
-            return move_result::ok;
-        }
+    //    if (*other_ent == ent) {
+    //        return move_result::ok;
+    //    }
 
-        return move_result::blocked_entity;
-    }
+    //    return move_result::blocked_entity;
+    //}
 
     
     //--------------------------------------------------------------------------
@@ -1034,7 +1024,7 @@ private:
             auto const q = p + v;
 
             if (!intersects(bounds, q)) { continue; }
-            if (can_place_at(q, ent) != move_result::ok) { continue; }
+            if (can_move_to(ent, q) != move_result::ok) { continue; }
             
             return {q};
         }
@@ -1079,7 +1069,7 @@ private:
         // try all positions in bounds
         //
         auto const is_ok = [&](ipoint2 const p) {
-            return can_place_at(p, ent) == move_result::ok;
+            return can_move_to(ent, p) == move_result::ok;
         };
 
         for (auto xi = min_x; xi < max_x + 1; ++xi) {
@@ -1104,8 +1094,10 @@ private:
         
         spawn_table stable {};
 
-        auto const& items    = definitions_->get_items();
-        auto const& entities = definitions_->get_entities();
+        auto const& items       = definitions_->get_items();
+        auto const& entities    = definitions_->get_entities();
+        auto const& loot_tables = definitions_->get_loot_tables();
+        auto&       istore      = *item_store_;
 
         for (auto const& room : rooms_) {
             auto const count = [&] {
@@ -1123,7 +1115,7 @@ private:
             auto const bounds = room.bounds();
 
             for (int i = 0; i < count; ++i) {
-                auto ent = generate_entity(substantive, entities, items, *item_store_, stable);
+                auto ent = generate_entity(substantive, entities, items, loot_tables, istore, stable);
                 
                 auto const p = generate_entity_placement(substantive, bounds, ent);
                 if (!p) {

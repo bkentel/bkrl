@@ -1,14 +1,14 @@
 {
-    "file_type": "CONFIG"
-    
-  , "substantive_seed": "Brandon"
-  , "trivial_seed": "Misako"
-  
-  , "window_size": [1280, 1024]
-  , "window_pos": [100, 100]
-  
-  , "font": "meiryo.ttc"
-  
-  , "language": "ja"
-  
+  "file_type": "CONFIG"
+
+, "substantive_seed": "Brandon"
+, "trivial_seed": "Misako"
+
+, "window_size": [1280, 1024]
+, "window_pos": [100, 100]
+
+, "font": "meiryo.ttc"
+
+, "language": "en"
+
 }

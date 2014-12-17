@@ -363,6 +363,14 @@ public:
         table_string_.clear();
         table_id_ = loot_table_def_id {0};
 
+        if (value.is_null()) {
+            return loot_table {};
+        }
+
+        if (value.is_string()) {
+            return loot_table {json::require_string(value)};
+        }
+
         if (value.is_object()) {
             rule_named_table(value);
         } else if (value.is_array()) {
@@ -441,6 +449,22 @@ protected:
 bkrl::loot_table::loot_table()
   : type_ {roll_t::roll_all}
 {
+}
+
+//--------------------------------------------------------------------------
+bkrl::loot_table::loot_table(string_ref const table_name)
+  : type_ {roll_t::choose_one}
+{
+    roll_data_.push_back(1);
+        
+    loot_rule_data_t data {};
+    data.count_lo = 1;
+    data.count_hi = 1;
+    data.id = slash_hash32(table_name);
+    data.id_type = loot_rule_data_t::id_t::table_ref;
+    assign(table_name, data.id_debug_string);
+
+    rules_.push_back(std::move(data));
 }
 
 //--------------------------------------------------------------------------

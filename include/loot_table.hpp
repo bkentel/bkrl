@@ -19,6 +19,23 @@
 namespace bkrl {
 ////////////////////////////////////////////////////////////////////////////////
 
+//TODO move elsewhere
+template <size_t N>
+using fixed_string = std::array<char, N>;
+
+template <size_t N>
+inline void assign(string_ref const src, fixed_string<N>& dst) {
+    using std::begin;
+
+    auto const src_size = src.size();
+    auto const dst_size = dst.size() - 1; //null terminator
+
+    auto const n = std::min(src_size, dst_size);
+    std::copy_n(begin(src), n, begin(dst));
+
+    dst[dst_size] = 0;
+}
+
 class loot_table_definitions;
 class loot_table;
 
@@ -34,7 +51,7 @@ struct loot_rule_data_t {
       , table_ref //!< the rule refers to a loot table definition.
     };
 
-    using string_t = std::array<char, 31>;
+    using string_t = fixed_string<31>;
 
     hash_t   id;              //!< id of the resulting item or table.
     uint16_t count_lo;        //!< the lower bound on the quantity generated.
@@ -86,6 +103,9 @@ public:
 
     //--------------------------------------------------------------------------
     loot_table();
+   
+    //--------------------------------------------------------------------------
+    explicit loot_table(string_ref const table_name);
 
     //--------------------------------------------------------------------------
     template <typename Data, typename Rules>

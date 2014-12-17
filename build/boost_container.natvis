@@ -1,7 +1,12 @@
 <?xml version='1.0' encoding='utf-8'?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
-<Type Name="boost::circular_buffer&lt;*&gt;">
+  <Type Name="boost::optional &lt; * &gt;">
+    <DisplayString Condition="m_initialized == true">{*($T1*)m_storage.dummy_.data}</DisplayString>
+    <DisplayString Condition="m_initialized == false">{{ empty }}</DisplayString>
+  </Type>
+
+  <Type Name="boost::circular_buffer&lt;*&gt;">
     <DisplayString>{{ size={m_size} }}</DisplayString>
     <Expand>
         <Item Name="[size]" ExcludeView="simple">m_size</Item>

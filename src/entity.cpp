@@ -19,7 +19,7 @@ struct bkrl::entity_definition {
     utf8string    id_string;
     loot_table    drops;
     tex_point_i   tile_position = tex_point_i {0, 0};
-    argb8         tile_color = argb8 {255, 255, 255, 255};
+    argb8         tile_color    = argb8 {255, 255, 255, 255};
     dist_t        health;  //!< health
 };
 
@@ -140,6 +140,7 @@ public:
 
         if (items.is_null()) {
             return;
+        } else if (items.is_string()) {
         }
         
         cur_def_.drops = loot_parser_.parse(items);
@@ -363,11 +364,12 @@ bkrl::entity_definitions::get_definition_at(int const index) const {
 ////////////////////////////////////////////////////////////////////////////////
 bkrl::entity
 bkrl::generate_entity(
-    random::generator&        gen
-  , entity_definitions const& entity_defs
-  , item_definitions   const& item_defs
-  , item_store&               items
-  , spawn_table        const& table
+    random::generator&            gen
+  , entity_definitions     const& entity_defs
+  , item_definitions       const& item_defs
+  , loot_table_definitions const& loot_defs
+  , item_store&                   items
+  , spawn_table            const& table
 ) {
     //TODO not thread safe; can't be initialized (save / load)
     static auto next_instance_id = uint32_t {0x80000000};
@@ -391,10 +393,7 @@ bkrl::generate_entity(
     origin.type = item_birthplace::entity;
     origin.id   = id_to_value(id);
 
-    //TODO temp
-    loot_table_definitions defs;
-
-    def.drops.generate(gen, defs, [&](item_def_id const itm_id, uint16_t const n) {
+    def.drops.generate(gen, loot_defs, [&](item_def_id const itm_id, uint16_t const n) {
         result.data.items.insert(
             generate_item(gen, itm_id, items, item_defs, origin)
         );

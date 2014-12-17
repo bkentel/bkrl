@@ -14,9 +14,13 @@
 #include "random.hpp"
 #include "combat_types.hpp"
 
+#include "grid.hpp" //change to fwd def
+
 ////////////////////////////////////////////////////////////////////////////////
 namespace bkrl {
 ////////////////////////////////////////////////////////////////////////////////
+class loot_table_definitions;
+
 class entity;
 class entity_definitions;
 
@@ -113,8 +117,8 @@ public:
 //==============================================================================
 struct entity_data_t {
     ranged_value<health_t> health;
-    ipoint2    position;
-    item_collection items;
+    ipoint2                position;
+    item_collection        items;
 };
 
 //==============================================================================
@@ -147,6 +151,9 @@ public:
     entity_render_info_t render_info(defs_t defs) const;
 
     //--------------------------------------------------------------------------
+    bool is_player() const noexcept;
+
+    //--------------------------------------------------------------------------
     string_ref name(defs_t defs) const;
     string_ref description(defs_t defs) const;
 
@@ -162,6 +169,36 @@ public:
 
     bool apply_damage(health_t delta);
 
+    damage_t  get_attack_value(random_t& gen, defs_t defs);
+    defence_t get_defence_value(random_t& gen, defs_t defs, damage_type type);
+
+    bool can_pass_tile(ipoint2 const p, grid_storage const& grid) const {
+        using tt = tile_type;
+
+        BK_ASSERT(grid.is_valid(p));
+
+        auto const type = grid.get(attribute::tile_type, p);
+
+        switch (type) {
+        case tt::floor :    //fallthrough true
+        case tt::corridor : //fallthrough true
+        case tt::stair :
+            return true;
+
+        case tt::door :
+            return door_data {grid, p}.is_open();
+
+        case tt::invalid : //fallthrough false
+        case tt::empty :   //fallthrough false
+        case tt::wall :    //fallthrough false
+        default :
+            break;
+        }
+
+        return false;
+    }
+
+    //--------------------------------------------------------------------------
     friend bool operator==(entity const& lhs, entity const& rhs) noexcept {
         return lhs.instance_id == rhs.instance_id;
     }
@@ -177,9 +214,6 @@ public:
     friend bool operator!=(entity const& lhs, entity const& rhs) noexcept {
         return !(lhs == rhs);
     }
-
-    damage_t  get_attack_value(random_t& gen, defs_t defs);
-    defence_t get_defence_value(random_t& gen, defs_t defs, damage_type type);
 public:
     entity_id     instance_id;
     entity_def_id id;
@@ -424,6 +458,7 @@ entity generate_entity(
     random::generator&        gen
   , entity_definitions const& entity_defs
   , item_definitions   const& item_defs
+  , loot_table_definitions const& loot_defs
   , item_store&               items
   , spawn_table        const& table
 );
@@ -451,7 +486,13 @@ public:
     
     defence_t get_defence_value(random_t& gen, defs_t defs, damage_type type);
 
-    
+    bool can_pass_tile(ipoint2 const p, grid_storage const& grid) const {
+        if (grid.get(attribute::tile_type, p) == tile_type::invalid) {
+            return true;
+        }
+
+        return entity::can_pass_tile(p, grid);
+    }
 private:
     equipment equip_;
 };

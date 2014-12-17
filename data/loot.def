@@ -20,5 +20,21 @@
       , [1, "ARMOR_LEATHER_CAP"]
       ]
     }
+  , { "id": "T_POTIONS"
+    , "type": "choose_one"
+    , "rules": [
+        [5, "POTION_HEALTH_MINOR"]
+      , [2, "POTION_HEALTH_MEDIUM"]
+      , [1, "POTION_HEALTH_MAJOR"]
+      ]
+    }
+  , { "id": "T_BASIC"
+    , "type": "roll_all"
+    , "rules": [
+        [10, "T_BASIC_WEAPONS", 1, "table"]
+      , [15, "T_ARMOR_LEATHER", 1, "table"]
+      , [5,  "T_POTIONS", 1, "table"]
+      ]
+    }
   ]
 }

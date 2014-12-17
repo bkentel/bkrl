@@ -1,14 +1,171 @@
 <?xml version='1.0' encoding='utf-8'?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
-    <Type Name="bkrl::tagged_id &lt; * &gt;">
+  <Type Name="bkrl::random::random_dist">
+    <DisplayString>{{ type={type} }}</DisplayString>
+    <Expand>
+      <Item Condition="type == bkrl::random::random_dist::dist_type::none"     Name="[none]"    >data.dummy</Item>
+      <Item Condition="type == bkrl::random::random_dist::dist_type::constant" Name="[constant]">data.constant</Item>
+      <Item Condition="type == bkrl::random::random_dist::dist_type::uniform"  Name="[uniform]" >data.uniform</Item>
+      <Item Condition="type == bkrl::random::random_dist::dist_type::dice"     Name="[dice]"    >data.dice</Item>
+      <Item Condition="type == bkrl::random::random_dist::dist_type::normal"   Name="[normal]"  >data.normal</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="bkrl::color4 &lt; * &gt;">
+    <DisplayString>{{ argb={*((int*)this),x} }}</DisplayString>
+    <Expand>
+      <Item Name="[r]">(int)r &lt;&lt; 8 ,x</Item>
+      <Item Name="[g]">(int)g &lt;&lt; 16,x</Item>
+      <Item Name="[b]">(int)b &lt;&lt; 24,x</Item>
+      <Item Name="[a]">(int)a &lt;&lt; 0 ,x</Item>
+    </Expand>
+  </Type>
+  
+  <Type Name="bkrl::item_collection">
+    <DisplayString>[item collection] size={items_._Mypair._Myval2._Mylast - items_._Mypair._Myval2._Myfirst}</DisplayString>
+    <Expand>
+      <ExpandedItem>items_</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="bkrl::detail::application_base::mouse_button_state">
+    <Expand>
+      <Item Condition="(state &amp; (1 &lt;&lt; 0)) == 1" Name="button 0">true</Item>
+      <Item Condition="(state &amp; (1 &lt;&lt; 1)) == 2" Name="button 1">true</Item>
+      <Item Condition="(state &amp; (1 &lt;&lt; 2)) == 4" Name="button 2">true</Item>
+      <Item Condition="(state &amp; (1 &lt;&lt; 4)) == 8" Name="button 3">true</Item>
+    </Expand>
+  </Type>
+  
+  <Type Name="bkrl::detail::application_base::mouse_move_info">
+    <Expand>
+      <Synthetic Name="[pos]">
+        <DisplayString>({x}, {y})</DisplayString>
+      </Synthetic>
+
+      <Synthetic Name="[vec]">
+        <DisplayString>({dx}, {dy})</DisplayString>
+      </Synthetic>
+
+      <Item Name="[buttons]">buttons</Item>
+    </Expand>
+  </Type>
+  
+  <Type Name="bkrl::equipment">
+    <DisplayString>[equipment]</DisplayString>
+    <Expand>
+      <ExpandedItem>impl_._Mypair._Myval2->items_</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="bkrl::view">
+    <DisplayString>{{ d=({(int)display_w_}, {(int)display_h_}) s=({scroll_x_}, {scroll_y_}) z={zoom_} }}</DisplayString>
+  </Type>
+
+  <Type Name="bkrl::entity">
+    <DisplayString>{{ [entity] {data.position} }}</DisplayString>
+  </Type>
+
+  <Type Name="bkrl::entity_definition">
+    <DisplayString>{{ [edef] {id_string} }}</DisplayString>
+  </Type>
+
+  <Type Name="bkrl::entity_definitions">
+    <DisplayString>[entity definitions]</DisplayString>
+    <Expand>
+      <ExpandedItem>impl_._Mypair._Myval2->definitions_</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="bkrl::item_birthplace">
+    <DisplayString Condition="type == bkrl::item_birthplace::source_type::entity">{{ [entity] id={id,x} }}</DisplayString>
+  </Type>
+
+  <Type Name="bkrl::weapon_data">
+    <DisplayString>{{ [{dmg_min}, {dmg_max}] {dmg_type} }}</DisplayString>
+  </Type>
+
+  <Type Name="bkrl::item">
+    <DisplayString>{{ type={type} {id} }}</DisplayString>
+    <Expand>
+      <Item Condition="type == bkrl::item_type::weapon"    Name="[weapon]"   >data.weapon</Item>
+      <Item Condition="type == bkrl::item_type::armor"     Name="[armor]"    >data.armor</Item>
+      <Item Condition="type == bkrl::item_type::scroll"    Name="[scroll]"   >"TODO"</Item>
+      <Item Condition="type == bkrl::item_type::potion"    Name="[potion]"   >data.potion</Item>
+      <Item Condition="type == bkrl::item_type::container" Name="[container]">"TODO"</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="bkrl::item_store">
+    <DisplayString>[item store]</DisplayString>
+    <Expand>
+      <Item Name="[next]">impl_._Mypair._Myval2->next_id_,x</Item>
+      <ExpandedItem>impl_._Mypair._Myval2->data_</ExpandedItem>
+    </Expand>
+  </Type>
+  
+  <Type Name="bkrl::loot_table_definitions">
+    <DisplayString>[loot definitions]</DisplayString>
+    <Expand>
+      <ExpandedItem>impl_._Mypair._Myval2->tables_</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="bkrl::item_definition">
+    <Expand>
+      <Item Name="id">id_string</Item>
+    </Expand>
+  </Type>
+ 
+  <Type Name="bkrl::item_definitions">
+    <DisplayString>[item definitions]</DisplayString>
+    <Expand>
+      <ExpandedItem>impl_._Mypair._Myval2->definitions_</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="bkrl::grid_storage">
+    <DisplayString>size=({width_}, {height_})</DisplayString>
+    <Expand>
+      <ArrayItems>
+        <Direction>Backward</Direction>
+        <Rank>2</Rank>
+        <Size>$i == 0 ? width_ : height_</Size>
+        <ValuePointer>tile_type_._Mypair._Myval2._Myfirst</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  
+  <Type Name="bkrl::random::generator">
+    <DisplayString>[random] n={count_}</DisplayString>
+    <Expand>
+      <Item Name="[seed]">seed_,x</Item>
+      <Item Name="[count]">count_</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="bkrl::xy_type &lt; *, * &gt;">
+    <DisplayString Condition="$T2 == 0">v=({x}, {y})</DisplayString>
+    <DisplayString Condition="$T2 == 1">p=({x}, {y})</DisplayString>
+  </Type>
+
+  <Type Name="bkrl::axis_aligned_rect &lt; * &gt;">
+    <DisplayString>{{ x=[{left}, {right}) y=[{top}, {bottom}) }}</DisplayString>
+    <Expand>
+      <Item Name="[width]">right - left</Item>
+      <Item Name="[height]">bottom - top</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="bkrl::tagged_id &lt; * &gt;">
       <DisplayString>{{ id={value_,x} }}</DisplayString>
       <Expand>
         <Item Name="[tag]">"$T1"</Item>
       </Expand>
     </Type>
 
-    <Type Name="bkrl::loot_rule_data_t">
+  <Type Name="bkrl::loot_rule_data_t">
     <DisplayString
      Condition = "id_type == loot_rule_data_t::id_t::item_ref">
       {{ (item) [{count_lo}, {count_hi}] {id_debug_string._Elems,s} }}
@@ -30,7 +187,8 @@
 
   <Type Name="bkrl::loot_table">
     <DisplayString Condition="id_.value_" >{{ id={id_string_} }}</DisplayString>
-    <DisplayString Condition="!id_.value_">{{ anonymous }}</DisplayString>
+    <DisplayString Condition="!id_.value_ &amp;&amp; rules_._Mypair._Myval2._Mylast - rules_._Mypair._Myval2._Myfirst == 1">{{ anonymous {*rules_._Mypair._Myval2._Myfirst} }}</DisplayString>
+    <DisplayString Condition="!id_.value_ &amp;&amp; rules_._Mypair._Myval2._Mylast - rules_._Mypair._Myval2._Myfirst != 1">{{ anonymous }}</DisplayString>
     <Expand>
       <Item Name="[type]">type_</Item>
       <Item Name="[size]">rules_._Mypair._Myval2._Mylast - rules_._Mypair._Myval2._Myfirst</Item>
