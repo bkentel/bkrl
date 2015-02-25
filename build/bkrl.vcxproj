@@ -200,6 +200,7 @@
     <ClCompile Include="..\test\math.t.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)'!='Test_Debug'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\test\random.t.cpp" />
     <ClCompile Include="..\test\spatial_map.t.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)'!='Test_Debug'">true</ExcludedFromBuild>
     </ClCompile>
